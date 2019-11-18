@@ -1,0 +1,54 @@
+{
+  "jit_all": true,
+  "plugins": [
+    {
+      "path": "/hello_count.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_hello_send",
+      "type": "bpf_pre",
+      "name": "hello_count"
+    },
+    {
+      "path": "/ism_change_state.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_ism_change",
+      "type": "bpf_pre",
+      "name": "ospf_ism_change_state"
+    },
+    {
+      "path": "/originate_my_lsa.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_spf_next",
+      "type": "bpf_pre",
+      "name": "lsa_type_13_handler"
+    },
+    {
+      "path": "/ospf_spf_next.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_spf_next",
+      "type": "bpf_replace",
+      "name": "spf_next_bpf"
+    },
+    {
+      "path": "/spf_time.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_spf_next",
+      "type": "bpf_pre",
+      "name": "spf_time_pre"
+    },
+    {
+      "path": "/spf_time_post.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_spf_next",
+      "type": "bpf_post",
+      "name": "spf_time_post"
+    },
+    {
+      "path": "/lsa_flood.o",
+      "extra_mem": 65536,
+      "id_plugin": "ospf_lsa_flood",
+      "type": "bpf_pre",
+      "name": "lsa_flood_monit"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "folder_conf": "/home/thomas/Documents/GitHub/frr_ubpf/ubpf_tools/misc/network_simu/example_conf",
+  "link": [
+    [{"name": "R1", "iface": "eth1"}, {"name":  "R2", "iface":  "eth1"}],
+    [{"name": "R2", "iface": "eth2"}, {"name":  "R3", "iface":  "eth2"}],
+    [{"name": "R3", "iface": "eth1"}, {"name":  "R4", "iface":  "eth1"}],
+    [{"name": "R4", "iface": "eth2"}, {"name":  "R1", "iface":  "eth2"}]
+  ],
+  "R1": {
+    "folder": "R1",
+    "daemons_start": [
+      "/usr/lib/frr/zebra -A 127.0.0.1 -f/tmp/topo_manager/R1/zebra.conf -z/tmp/r1_zebra.api -i/tmp/r1_zebra.pid",
+      "/usr/lib/frr/ospfd -A 127.0.0.1 -f/tmp/topo_manager/R1/ospfd.conf -z/tmp/r1_zebra.api -i/tmp/r1_ospfd.pid"
+    ],
+    "ifaces" : {
+      "lo": {
+        "ipv4": ["192.168.254.1/32"],
+        "ipv6": ["fd00:23:abc::1/128"]
+      },
+      "eth1" : {
+        "ipv4": ["192.168.12.1/24"],
+        "ipv6": ["fd00:23:12::1/64"]
+      },
+      "eth2": {
+        "ipv4": ["192.168.14.1/24"],
+        "ipv6": ["fd00:23:14::1/64"]
+      }
+    }
+  },
+  "R2": {
+    "folder": "R2",
+    "daemons_start": [
+      "/usr/lib/frr/zebra -A 127.0.0.1 -f/tmp/topo_manager/R2/zebra.conf -z/tmp/r2_zebra.api -i/tmp/r2_zebra.pid",
+      "/usr/lib/frr/ospfd -A 127.0.0.1 -f/tmp/topo_manager/R2/ospfd.conf -z/tmp/r2_zebra.api -i/tmp/r2_ospfd.pid"
+    ],
+    "ifaces" : {
+      "lo": {
+        "ipv4": ["192.168.254.2/32"],
+        "ipv6": ["fd00:23:abc::2/128"]
+      },
+      "eth1" : {
+        "ipv4": ["192.168.12.2/24"],
+        "ipv6": ["fd00:23:12::2/64"]
+      },
+      "eth2": {
+        "ipv4": ["192.168.23.2/24"],
+        "ipv6": ["fd00:23:23::2/64"]
+      }
+    }
+  },
+  "R3": {
+    "folder": "R3",
+    "daemons_start": [
+      "/usr/lib/frr/zebra -A 127.0.0.1 -f/tmp/topo_manager/R3/zebra.conf -z/tmp/r3_zebra.api -i/tmp/r3_zebra.pid",
+      "/usr/lib/frr/ospfd -A 127.0.0.1 -f/tmp/topo_manager/R3/ospfd.conf -z/tmp/r3_zebra.api -i/tmp/r3_ospfd.pid"
+    ],
+    "start_file": "start",
+    "ifaces" : {
+      "lo": {
+        "ipv4": ["192.168.254.3/32"],
+        "ipv6": ["fd00:23:abc::3/128"]
+      },
+      "eth1" : {
+        "ipv4": ["192.168.34.3/24"],
+        "ipv6": ["fd00:23:34::3/64"]
+      },
+      "eth2": {
+        "ipv4": ["192.168.23.3/24"],
+        "ipv6": ["fd00:23:23::3/64"]
+      }
+    }
+  },
+  "R4": {
+    "folder": "R4",
+    "daemons_start": [
+      "/usr/lib/frr/zebra -A 127.0.0.1 -f/tmp/topo_manager/R4/zebra.conf -z/tmp/r4_zebra.api -i/tmp/r4_zebra.pid",
+      "/usr/lib/frr/ospfd -A 127.0.0.1 -f/tmp/topo_manager/R4/ospfd.conf -z/tmp/r4_zebra.api -i/tmp/r4_ospfd.pid"
+    ],
+    "ifaces" : {
+      "lo": {
+        "ipv4": ["192.168.254.4/32"],
+        "ipv6": ["fd00:23:abc::4/128"]
+      },
+      "eth1" : {
+        "ipv4": ["192.168.34.4/24"],
+        "ipv6": ["fd00:23:34::4/64"]
+      },
+      "eth2": {
+        "ipv4": ["192.168.14.4/24"],
+        "ipv6": ["fd00:23:14::4/64"]
+      }
+    }
+  }
+}

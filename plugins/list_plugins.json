@@ -1,0 +1,218 @@
+{
+  "jit_all": true,
+  "plugins": [
+    {
+      "path": "bgp_keepalive_monit.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_keepalive",
+      "type": "bpf_pre",
+      "name": "ka_monit"
+    },
+    {
+      "path": "open_bgp_begin.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_open_msg",
+      "type": "bpf_pre",
+      "name": "open_begin"
+    },
+    {
+      "path": "open_bgp_end.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_open_msg",
+      "type": "bpf_post",
+      "name": "open_end"
+    },
+    {
+      "path": "update_time_bgp_begin.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_update_time_msg",
+      "type": "bpf_pre",
+      "name": "time_begin"
+    },
+    {
+      "path": "update_time_bgp_end.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_update_time_msg",
+      "type": "bpf_post",
+      "name": "time_end"
+    },
+    {
+      "path": "update_routine_monit.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_prefix_update",
+      "type": "bpf_pre",
+      "name": "update_monit"
+    },
+    {
+      "path": "withdraw_routine_monit.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_prefix_withdraw",
+      "type": "bpf_pre",
+      "name": "withdraw_monit"
+    },
+    {
+      "path": "decision_process_begin.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_process",
+      "type": "bpf_pre",
+      "name": "dec_proc_begin"
+    },
+    {
+      "path": "decision_process_end.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_process",
+      "type": "bpf_post",
+      "name": "dec_proc_end"
+    },
+    {
+      "path": "bgp_inbound_filter_monit.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_invalid_update_inbound",
+      "type": "bpf_post",
+      "name": "filter_in_monit"
+    },
+    {
+      "path": "bgp_step01_weight_check.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_weight",
+      "type": "bpf_replace",
+      "name" : "dec_step01"
+    },
+    {
+      "path": "bgp_step02_local_pref.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_local_pref",
+      "type": "bpf_replace",
+      "name" : "dec_step02"
+    },
+    {
+      "path": "bgp_step03_local_route.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_local_route",
+      "type": "bpf_replace",
+      "name" : "dec_step03"
+    },
+    {
+      "path": "bgp_step04_as_path.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_aspath",
+      "type": "bpf_replace",
+      "name" : "dec_step04"
+    },
+    {
+      "path": "bgp_step05_origin_check.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_origin_check",
+      "type": "bpf_replace",
+      "name" : "dec_step05"
+    },
+    {
+      "path": "bgp_step06_med_check.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_med_check",
+      "type": "bpf_replace",
+      "name" : "dec_step06"
+    },
+    {
+      "path": "bgp_step07_peer_type.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_peer_type",
+      "type": "bpf_replace",
+      "name" : "dec_step07"
+    },
+    {
+      "path": "bgp_step10_confed_check.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_confed_check",
+      "type": "bpf_replace",
+      "name" : "dec_step10"
+    },
+    {
+      "path": "bgp_step11_igp_all.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_igp_all",
+      "type": "bpf_replace",
+      "name" : "dec_step11"
+    },
+    {
+      "path": "bgp_step12_prefer_first_path.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_prefer_first_path",
+      "type": "bpf_replace",
+      "name" : "dec_step12"
+    },
+    {
+      "path": "bgp_step13_router_id_cmp.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_route_id",
+      "type": "bpf_replace",
+      "name" : "dec_step13"
+    },
+    {
+      "path": "bgp_step14_cluster_id_cmp.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_cluster_id_cmp",
+      "type": "bpf_replace",
+      "name" : "dec_step14"
+    },
+    {
+      "path": "bgp_step15_neighbor_addr_cmp.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_decision_neighbor_addr_cmp",
+      "type": "bpf_replace",
+      "name" : "dec_step15"
+    },
+    {
+      "path": "filter_test.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_input_filter_apply_proc",
+      "type": "bpf_append_pre",
+      "name": "filter_test",
+      "jit": true
+    },
+    {
+      "path": "filter_3.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_input_filter_apply_proc",
+      "type": "bpf_append_pre",
+      "name": "filter_test_3"
+    },
+    {
+      "path": "bgp_filter_as_path.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_input_filter_apply_proc",
+      "type": "bpf_append_pre",
+      "name": "filter_as_path"
+    },
+    {
+      "path": "filter_2_test.o",
+      "extra_mem": 65536,
+      "id_plugin": "bgp_input_filter_apply_proc",
+      "type": "bpf_append_pre",
+      "name": "filter_test_2",
+      "after": "filter_test"
+    },
+    {
+      "path": "filter_max_routes.o",
+      "extra_mem": 512,
+      "id_plugin": "bgp_input_filter_apply_proc",
+      "type": "bpf_append_pre",
+      "name": "filter_max_route",
+      "after": "filter_test"
+    },
+    {
+      "path": "on_announce.o",
+      "extra_mem": 128,
+      "id_plugin": "bgp_zebra_announce_prefix",
+      "type": "bpf_pre",
+      "name": "on_announce"
+    },
+    {
+      "path": "on_withdraw.o",
+      "extra_mem": 128,
+      "id_plugin": "bgp_zebra_rm_prefix",
+      "type": "bpf_pre",
+      "name": "on_withdraw"
+    }
+  ]
+}

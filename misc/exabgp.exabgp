@@ -1,0 +1,20 @@
+process announce-routes {
+    encoder json;
+	run routes.py;
+}
+
+neighbor 192.168.56.11 {
+	router-id 192.168.56.22;
+	local-address 192.168.56.22;
+	local-as 64511;
+	peer-as 64522;
+	group-updates false;
+
+	capability {
+		graceful-restart;
+	}
+
+	api {
+		processes [ announce-routes ];
+	}
+}

@@ -1,0 +1,183 @@
+{
+  "t2_path": "docker run -v/home/thomas/Documents/GitHub/frr_ubpf:/work -w/work/ubpf_tools/plugins -it clangkittel T2-proof",
+  "cflags": "-I ../.. -I../../lib",
+  "cwd" : null,
+  "files": [
+    {
+      "path": "./withdraw_routine_monit.c",
+      "func_name": "monit_withdraw_routine"
+    },
+    {
+      "path": "./update_routine_monit.c",
+      "func_name": "monit_update_routine"
+    },
+    {
+      "path": "./update_time_bgp_end.c",
+      "func_name": "update_time__bgp_end"
+    },
+    {
+      "path": "./decision_steps/bgp_step13_router_id_cmp.c",
+      "func_name": "ebpf_router_id_cmp"
+    },
+    {
+      "path": "./decision_steps/bgp_step06_med_check.c",
+      "func_name": "ebpf_med_check"
+    },
+    {
+      "path": "./decision_steps/bgp_step05_origin_check.c",
+      "func_name": "ebpf_origin_check"
+    },
+    {
+      "path": "./decision_steps/bgp_step14_cluster_id_cmp.c",
+      "func_name": "ebpf_cluster_id_cmp"
+    },
+    {
+      "path": "./decision_steps/bgp_step12_prefer_first_path.c",
+      "func_name": "ebpf_bgp_prefer_first_path"
+    },
+    {
+      "path": "./decision_steps/bgp_step10_confed_check.c",
+      "func_name": "ebpf_confed_check"
+    },
+    {
+      "path": "./decision_steps/bgp_step15_neighbor_addr_cmp.c",
+      "func_name": "ebpf_neighbor_addr_cmp"
+    },
+    {
+      "path": "./decision_steps/bgp_step03_local_route.c",
+      "func_name": "ebpf_bgp_local_route"
+    },
+    {
+      "path": "./decision_steps/bgp_step_extra_bgp_communities.c",
+      "func_name": "bgp_communities_cmp"
+    },
+    {
+      "path": "./decision_steps/bgp_step01_weight_check.c",
+      "func_name": "ebpf_bgp_weight_check"
+    },
+    {
+      "path": "./decision_steps/bgp_step11_igp_all.c",
+      "func_name": "ebpf_bgp_igp_m"
+    },
+    {
+      "path": "./decision_steps/bgp_step02_local_pref.c",
+      "func_name": "ebpf_bgp_local_pref"
+    },
+    {
+      "path": "./decision_steps/bgp_step04_as_path.c",
+      "func_name": "ebpf_bgp_as_path_length"
+    },
+    {
+      "path": "./decision_steps/bgp_step07_peer_type.c",
+      "func_name": "ebpf_bgp_peer_type"
+    },
+    {
+      "path": "./bgp_inbound_filter_monit.c",
+      "func_name": "invalid_update"
+    },
+    {
+      "path": "./open_bgp_end.c",
+      "func_name": "init_bgp_open_end_monitoring"
+    },
+    {
+      "path": "./decision_process_begin.c",
+      "func_name": "start_decision_process"
+    },
+    {
+      "path": "./withdraw_routine_monit.c",
+      "func_name": "monit_withdraw_routine"
+    },
+    {
+      "path": "./decision_process_end.c",
+      "func_name": "end_decision_process"
+    },
+    {
+      "path": "./filters/filter_max_routes.c",
+      "func_name": "rib_max_lookup"
+    },
+    {
+      "path": "./filters/filter_3.c",
+      "func_name": "filter_input_test_must_pass"
+    },
+    {
+      "path": "./filters/bgp_filter_as_path.c",
+      "func_name": "filter_router_aspath"
+    },
+    {
+      "path": "./filters/filter_2_test.c",
+      "func_name": "filter_input_test_must_pass"
+    },
+    {
+      "path": "./bgp_keepalive_monit.c",
+      "func_name": "bgp_keepalive_monitoring"
+    },
+    {
+      "path": "./open_bgp_begin.c",
+      "func_name": "init_bgp_open_monitoring"
+    },
+    {
+      "path": "./zebra/on_announce.c",
+      "func_name": "pre_on_announce"
+    },
+    {
+      "path": "./zebra/on_withdraw.c",
+      "func_name": "pre_on_withdraw"
+    },
+    {
+      "path": "./update_time_bgp_begin.c",
+      "func_name": "bgp_update_time"
+    },
+    {
+      "path": "./simple_test.c",
+      "func_name": "my_super_complicated_function"
+    },
+    {
+      "path": "./ospf/originate_my_lsa.c",
+      "func_name": "originate_my_lsa"
+    },
+    {
+      "path": "./ospf/test_plugin.c",
+      "func_name": "my_super_complicated_function"
+    },
+    {
+      "path": "./withdraw_routine_monit.c",
+      "func_name": "monit_withdraw_routine"
+    },
+    {
+      "path": "./ospf/ospf_spf_next.c",
+      "func_name": "ospf_spf_next"
+    },
+    {
+      "path": "./ospf/ism_change_state.c",
+      "func_name": "ism_change_state"
+    },
+    {
+      "path": "./ospf/lsa_flood.c",
+      "func_name": "lsa_flood"
+    },
+    {
+      "path": "./ospf/spf_time_post.c",
+      "func_name": "spf_count"
+    },
+    {
+      "path": "./ospf/rcv_packet.c",
+      "func_name": "rcv_packet"
+    },
+    {
+      "path": "./ospf/hello_count.c",
+      "func_name": "hello_count"
+    },
+    {
+      "path": "./ospf/send_packet.c",
+      "func_name": "send_packet"
+    },
+    {
+      "path": "./ospf/spf_time.c",
+      "func_name": "spf_count"
+    }
+  ]
+}
+
+
+
+

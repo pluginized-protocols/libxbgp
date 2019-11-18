@@ -1,0 +1,6 @@
+/plugins/test_plugin.o 1 0
+/plugins/hello_count.o 4 0
+/plugins/spf_time.o 6 0
+/plugins/spf_time_post.o 6 2
+/plugins/originate_my_lsa.o 14 0
+/plugins/ospf_spf_next.o 15 1
