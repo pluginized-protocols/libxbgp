@@ -3,22 +3,25 @@
 //
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <stdint.h>
 #include <sys/msg.h>
 #include <pwd.h>
 #include "plugins_manager.h"
-#include "defaults.h"
+#include <string.h>
+#include <linux/limits.h>
+#include <getopt.h>
+
+#include <stdlib.h>
+#include <limits.h>
 
 
 
 
-
-static inline void change_id_process(){
+static inline void change_id_process(const char* user){
     struct passwd *pwd;
-    pwd = getpwnam(FRR_USER);
+    pwd = getpwnam(user);
 
     if(pwd == NULL){
         perror("Can't retrieve info frr user");

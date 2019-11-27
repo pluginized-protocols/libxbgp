@@ -7,7 +7,8 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "ubpf_tools/map.h"
+#include "map.h"
+#include <sys/ipc.h>
 
 #define MAGIC 0xCAFEBABEDEADBEEF
 

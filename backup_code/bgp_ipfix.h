@@ -6,7 +6,7 @@
 #define FRR_UBPF_BGP_IPFIX_H
 
 #include <fixbuf/public.h>
-#include "ubpf_tools/bgp_ipfix_templates.h"
+#include "bgp_ipfix_templates.h"
 
 #define BGP_IPFIX_H_DESTINATION_IPV4_ADDRESS "destinationIPv4Address"
 #define BGP_IPFIX_H_LOCAL_AS "local_as"

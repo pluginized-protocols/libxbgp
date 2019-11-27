@@ -6,44 +6,20 @@
 #define FRR_THESIS_MONITORING_SERVER_H
 
 
-#include "ubpf_tools/monitor_manager.h"
 #include <semaphore.h>
-#include "ubpf_tools/map.h"
-#include "bgp_ipfix_templates.h"
+#include "map.h"
+#include "backup_code/bgp_ipfix_templates.h"
+#include "list.h"
+#include "queue.h"
 
-#define MAX_CHAR_IPV4_ARRAY 16
-#define SLEEP_IPFIX_SEND  15 // TODO change (just for debug purpose)
-#define MAX_PEERS_IN_MAP 150
+#define header_tlv_size 8u
 
-typedef map_t(bgp_ipfix_state_t *) ipfix_msg_map_t;
+typedef struct tlv_record {
+    uint32_t type;
+    uint32_t length; // length of value field in bytes.
+    uint8_t *value;
+} data_t;
 
-typedef struct monit_state {
-
-    ipfix_msg_map_t msg;
-    pthread_mutex_t mtx; /* should not update state while sending IPFIX msg (and vice versa) */
-    local_bgp_state_t local_state;
-    sem_t data_rm; /* wait for available data */
-    int available_data;
-
-} monit_state_t;
-
-monit_state_t *init_state(void);
-void flush_local_state(local_bgp_state_t *local);
-
-int
-get_or_new_ipfix_state(ipfix_msg_map_t *state, const char *ip_id, const char *local_id, bgp_ipfix_state_t **message);
-
-int get_current_state(ipfix_msg_map_t *state, const char *ip_id, bgp_ipfix_state_t **message);
-
-int new_ipfix_state(ipfix_msg_map_t *state, const char *ip_id, const char *local_id, bgp_ipfix_state_t **message);
-
-void put_list_to_subtemplate(list_t *list, fbSubTemplateList_t *fbl, int type);
-
-void free_state(bgp_ipfix_state_t *state);
-
-int state_to_ipfix_msg(bgp_ipfix_state_t *state, bgp_ipfix_t *message);
-int add_local_state_to_ipfix_msg(local_bgp_state_t *local, bgp_ipfix_t *msg);
-int send_states_ipfix(monit_state_t *state);
 
 void *send_to_collector(void *args);
 /**
@@ -89,8 +65,7 @@ int data_handling(data_t *data);
  * @return 1 if operation succeed
  *         0 otherwise ( - unable to launch threads )
  */
-int main_monitor2(const char *address, const char *port, int fd_read);
-int main_monitor(const char *address, const char *port);
+int main_monitor(const char *address, const char *port, int fd_read);
 
 /**
  * Thread processing a new monitoring data sent by an uBPF
@@ -122,6 +97,13 @@ void *processing_data(void *args);
  * @param args nothing is passed to this thread
  * @return should not return since it will indefinitely loop.
  */
-void *launch_monitoring(void *args);
+void *monitor_loop(void *args);
+int open_exporter_connexion(const char *host, const char *port, int force);
+void close_exporter_connexion();
+int send_to_exporter(uint8_t *buffer, size_t len);
+void *aggregate_data(void *args);
+int init_monitoring(const char *address, const char *port, int require_monitoring);
+int is_monit_required();
+int has_monit_fd();
 
 #endif //FRR_THESIS_MONITORING_SERVER_H

@@ -2,32 +2,38 @@
 // Created by thomas on 4/11/18.
 //
 
-#include <defaults.h>
 #include <sys/un.h>
-#include "ubpf_tools/include/monitoring_struct.h"
-#include <ubpf_tools/include/plugin_arguments.h>
-#include <ubpf_tools/include/decision_process_manager.h>
-#include "ubpf_tools/include/ebpf_mod_struct.h"
+#include "include/monitoring_struct.h"
+#include <include/plugin_arguments.h>
+#include "include/ebpf_mod_struct.h"
 #include <json-c/json_object.h>
-#include <ubpf_tools/ubpf_api.h>
+#include <ubpf_api.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <stdio.h>
+#include <time.h>
+#include <sys/time.h>
+#include "ubpf_context.h"
 
-#include "ubpf_tools/ubpf_context.h"
-
-#include "ubpf_tools/include/tools_ubpf_api.h"
+#include "include/tools_ubpf_api.h"
 #include "bpf_plugin.h"
+#include <unistd.h>
+
+#include "stdarg.h"
+
+#include <netinet/in.h>
 
 
-static int write_fd = -1;
+static int write_fd = -1; // fd to talk to monitoring manager of this library
 static int ebpf_msgid = -1;
 
-int init_queue_ext_send(void) {
+
+int init_queue_ext_send(const char *working_dir) {
     key_t key;
     int msgid;
 
     // ftok to generate unique key
-    key = ftok(DAEMON_VTY_DIR, 65);
+    key = ftok(working_dir, 65);
     if (key == -1) {
         perror("ftok ebpf msg export error");
         return -1;
@@ -74,24 +80,6 @@ void set_write_fd(int fd) {
     write_fd = fd;
 }
 
-static int establish_connection(int *sock) {
-    struct sockaddr_un addr = {0};
-    *sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (*sock < 0) {
-        perror("Can't create socket");
-        return 0;
-    }
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path + 1, SOCKET_PATH + 1, sizeof addr.sun_path - 1);
-    if (connect(*sock, (struct sockaddr *) &addr, sizeof addr) < 0) {
-        perror("Can't establish connection with monitor");
-        close(*sock);
-        return 0;
-    }
-    return 1;
-}
-
-
 static int send_all(int socket, const void *buffer, size_t length) {
     ssize_t n;
     const char *p = buffer;
@@ -108,23 +96,6 @@ static int send_all(int socket, const void *buffer, size_t length) {
 }
 
 static int packet_send(const void *data, size_t len, unsigned int type, int sock_fd) {
-
-    switch (type) {
-        case BGP_PREFIX_UPDATE:
-        case BGP_TEST:
-        case BGP_KEEPALIVE:
-        case BGP_OPEN_MSG:
-        case BGP_ASPATH_SEND:
-        case BGP_UPDATE_TIME_MSG:
-        case BGP_PREFIX_WITHDRAW:
-        case BGP_DECISION_PROCESS:
-        case BGP_INVALID_UPDATE_INBOUND:
-        case BGP_PREFIX_UPDATE_TEST:
-            break;
-        default:
-            fprintf(stderr, "Invalid type, unable to send to monitor\n");
-            return 0;
-    }
 
     uint32_t _type = (uint32_t) type;
 
@@ -165,6 +136,8 @@ void *ctx_realloc(context_t *vm_ctx, void *ptr, size_t size) {
 }
 
 void ctx_free(context_t *vm_ctx, void *ptr) {
+    UNUSED(vm_ctx);
+    UNUSED(ptr);
     // bump alloc is a stack like alloc --> everything is removed after
     // the plugin call
     // my_free(&vm_ctx->p->heap.mp, ptr);
@@ -351,9 +324,54 @@ void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args
     return ret_arg;
 }
 
-int bpf_sockunion_cmp(context_t *vm_ctx, const union sockunion *su1, const union sockunion *su2) {
+
+static int in6addr_cmp(const struct in6_addr *addr1,
+                       const struct in6_addr *addr2)
+{
+    size_t i;
+    const uint8_t *p1, *p2;
+
+    p1 = (const uint8_t *)addr1;
+    p2 = (const uint8_t *)addr2;
+
+    for (i = 0; i < sizeof(struct in6_addr); i++) {
+        if (p1[i] > p2[i])
+            return 1;
+        else if (p1[i] < p2[i])
+            return -1;
+    }
+    return 0;
+}
+
+
+int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2) {
     UNUSED(vm_ctx);
-    return sockunion_cmp(su1, su2);
+    uint32_t ipsu1;
+    uint32_t ipsu2;
+
+    if (su1->sa_family > su2->sa_family) {
+        return 1;
+    }
+    if (su1->sa_family < su2->sa_family) {
+        return -1;
+    }
+
+    if (su1->sa_family == AF_INET) {
+
+        ipsu1 = ntohl(((struct sockaddr_in *) su1)->sin_addr.s_addr);
+        ipsu2 = ntohl(((struct sockaddr_in *) su2)->sin_addr.s_addr);
+
+        if (ipsu1 == ipsu2)
+            return 0;
+        if (ipsu1 > ipsu2)
+            return 1;
+        else
+            return -1;
+    }
+    if (su1->sa_family == AF_INET6) {
+        return in6addr_cmp(&((struct sockaddr_in6 *) su1)->sin6_addr, &((struct sockaddr_in6 *) su2)->sin6_addr);
+    }
+    return 0;
 }
 
 void membound_fail(uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr) {

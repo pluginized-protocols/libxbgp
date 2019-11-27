@@ -6,7 +6,7 @@
 #define FRR_UBPF_BGP_IPFIX_TEMPLATES_H
 
 #include <fixbuf/public.h>
-#include "ubpf_tools/list.h"
+#include "list.h"
 
 #define E_NUM 2568 /* private enterprise number, (here this number is totally random) */
 

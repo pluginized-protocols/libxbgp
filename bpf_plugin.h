@@ -6,10 +6,9 @@
 #define FRR_UBPF_BPF_PLUGIN_H
 
 #include <stdint.h>
-#include "lib/prefix.h"
-#include "ubpf_tools/list.h"
-#include "ubpf_tools/include/public.h"
-#include <ubpf_tools/ubpf_manager.h>
+#include "list.h"
+#include "include/public.h"
+#include <ubpf_manager.h>
 
 #define MAX_HEAP_PLUGIN 1048576 // 1MB
 #define MAX_SIZE_ARGS_PLUGIN 512 // 512B must be checked before memcpy args
@@ -61,8 +60,7 @@ typedef struct plugin {
     map_vm_t pre_functions;
     map_vm_t post_functions;
     vm_container_t *replace_function;
-    plugin_type_t plugin_id;
-    argument_type_t argument_type;
+    unsigned int plugin_id;
 
     int is_active_replace : 1;
     int is_active_pre : 1;
@@ -72,7 +70,7 @@ typedef struct plugin {
 
 } plugin_t;
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, plugin_type_t plugid);
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid);
 
 void destroy_plugin(plugin_t *p);
 

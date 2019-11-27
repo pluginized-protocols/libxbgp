@@ -3,8 +3,8 @@
 //
 
 #include "ipfix_collector.h"
-#include "bgp_ipfix.h"
-#include "bgp_ipfix_templates.h"
+#include "backup_code/bgp_ipfix.h"
+#include "backup_code/bgp_ipfix_templates.h"
 #include <mongoc.h>
 #include <time.h>
 #include <pthread.h>

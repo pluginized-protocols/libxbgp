@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "ubpf_tools/map.h"
+#include "map.h"
 
 typedef enum TYPE_MEM {
     SHARED,

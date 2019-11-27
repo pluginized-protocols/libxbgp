@@ -3,24 +3,25 @@
 //
 
 #include "plugins_manager.h"
-#include "ubpf_tools/bgp_ipfix.h"
+#include "backup_code/bgp_ipfix.h"
 
 #include <sys/msg.h>
 #include <sys/shm.h>
-#include <ubpf_tools/ubpf_prereq.h>
+#include <ubpf_prereq.h>
 #include <assert.h>
 #include <json-c/json_object.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <json-c/json.h>
 #include <pthread.h>
-#include <lib/libfrr.h>
 #include "ubpf_manager.h"
-#include "ubpf_tools/map.h"
-#include "defaults.h"
+#include "map.h"
 #include "bpf_plugin.h"
-#include "ubpf_tools/include/plugin_arguments.h"
+#include "include/plugin_arguments.h"
 #include "ubpf_api.h"
+#include "monitoring_server.h"
+
+#include <linux/limits.h>
 
 #define ADD_TYPE_OWNPTR 1
 #define ADD_TYPE_FILE 2
@@ -28,10 +29,31 @@
 typedef struct args_plugin_msg_handler {
     int msqid;
     proto_ext_fun_t *protocol;
+    char *daemon_vty_dir;
+    size_t len;
+    plugin_info_t *plugins_info;
+    /*** Monitoring part ***/
+    const char *host;
+    const char *host_port;
+    int monit;
 } args_plugins_msg_hdlr_t;
 
 plugins_t *plugins_manager = NULL;
 int already_init = 0;
+
+static char daemon_vty_dir[PATH_MAX];
+static plugin_info_t *plugins_info;
+static int max_plugin;
+
+static int nb_plugins(plugin_info_t *info) {
+
+    int count;
+    int max = -1;
+    for (count = 0; info[count].plugin_id != 0 && info[count].plugin_str != NULL; count++)
+        if (info[count].plugin_id > max)
+            max = info[count].plugin_id;
+    return max;
+}
 
 static int is_directory(const char *path) {
     struct stat statbuf;
@@ -40,33 +62,49 @@ static int is_directory(const char *path) {
     return S_ISDIR(statbuf.st_mode);
 }
 
+static char *set_daemon_vty_dir(const char *path, size_t len) {
+    size_t len_cpy = len > PATH_MAX ? PATH_MAX : len;
 
-argument_type_t get_args_id_by_plug_id(plugin_type_t type) {
-
-    int j;
-    int max = sizeof(map_args_plug_id) / sizeof(map_args_plug_id[0]);
-
-    for (j = 0; j < max; ++j)
-        if (map_args_plug_id[j].plug_id == type)
-            return map_args_plug_id[j].args_id;
-
-    return ARGS_INVALID;
-
+    memset(daemon_vty_dir, 0, PATH_MAX * sizeof(char));
+    strncpy(daemon_vty_dir, path, len_cpy);
+    return daemon_vty_dir;
 }
 
-int init_plugin_manager(proto_ext_fun_t *api_proto) {
+static int set_plugins_info(plugin_info_t *pi_array) {
+
+    if (!pi_array) return 1;
+
+    plugins_info = pi_array;
+    return 0;
+}
+
+plugin_info_t *get_plugin_info() {
+    return plugins_info;
+}
+
+int get_max_plugins() {
+    return max_plugin;
+}
+
+/* should be used in the protocol to "pluginize" */
+int
+init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
+                    const char *monitoring_address, const char *monitoring_port, int require_monit) {
 
     if (already_init) return 1;
+    if (!process_vty_dir) return 0;
 
-    // start monitor server
-    /*if (!main_monitor()) {
-        fprintf(stderr, "Starting monitor failed\n");
-        return 0;
-    }*/
+    set_daemon_vty_dir(process_vty_dir, len);
+    if (set_plugins_info(plugins_array) != 0) return 0;
+    max_plugin = nb_plugins(plugins_array);
 
     int i;
-
     if (plugins_manager) return 1; // already init, exit
+
+    // start monitor server
+    if (init_monitoring(monitoring_address, monitoring_port, require_monit) == -1) {
+        return 0;
+    }
 
 
     plugins_manager = malloc(sizeof(plugins_t));
@@ -150,18 +188,6 @@ static struct json_object *read_json(const char *file_path) {
     return parsed_json;
 }
 
-plugin_type_t id_plugin_to_enum(const char *str) {
-    int j;
-
-    int max = sizeof(conversion_id_plugin) / sizeof(conversion_id_plugin[0]);
-
-    for (j = 0; j < max; ++j)
-        if (!strncmp(str, conversion_id_plugin[j].str, strlen(conversion_id_plugin[j].str)))
-            return conversion_id_plugin[j].val;
-
-    return -1;
-}
-
 int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *port, size_t len_port) {
 
     struct json_object *json;
@@ -213,7 +239,16 @@ int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *po
 
 }
 
-int load_from_json(const char *file_path) {
+static int str_plugin_to_int(const char *plugin_str) {
+    int i;
+
+    for (i = 0; plugins_info[i].plugin_id != 0 && plugins_info[i].plugin_str == NULL; i -= -1) {
+        if (strncmp(plugin_str, plugins_info[i].plugin_str, 0) == 0) return plugins_info[i].plugin_id;
+    }
+    return -1;
+}
+
+int load_from_json(const char *file_path, const char *sysconfdir) {
 
     // TODO: JSON plugin structure must be refactored
 
@@ -302,7 +337,7 @@ int load_from_json(const char *file_path) {
         strncpy(conc_path, dir_obj_file, len_path);
 
     } else {
-        dir_obj_file = frr_sysconfdir;
+        dir_obj_file = sysconfdir;
         len_path = snprintf(conc_path, PATH_MAX, "%splugins/", dir_obj_file);
     }
 
@@ -355,7 +390,7 @@ int load_from_json(const char *file_path) {
         if (!(id_plugin_str = json_object_get_string(id_plugin))) return -1;
         if (!(type_str = json_object_get_string(type))) return -1;
 
-        if ((id_plugin_int = id_plugin_to_enum(id_plugin_str)) == -1) return -1;
+        if ((id_plugin_int = str_plugin_to_int(id_plugin_str)) == -1) return -1;
         if ((type_enum = bpf_type_str_to_enum(type_str)) == 0) return -1;
 
         if (after) {
@@ -397,17 +432,19 @@ int load_from_json(const char *file_path) {
 }
 
 int is_volatile_plugin(int plug_ID) {
-    return plug_ID > BGP_NOT_ASSIGNED_TO_ANY_FUNCTION;
+
+    return plug_ID > max_plugin;
 }
 
 static int
 __add_plugin_generic(const void *generic_ptr, int id_plugin, int type_plug, int type_ptr,
-                     size_t len, size_t add_mem_len, size_t shared_mem, const char *sub_plug_name, const char *after, uint8_t jit,
+                     size_t len, size_t add_mem_len, size_t shared_mem, const char *sub_plug_name, const char *after,
+                     uint8_t jit,
                      const char **err) {
 
     plugin_t *plugin_ptr;
     plugin_t *plugin;
-    void *bytecode;
+    const void *bytecode;
     size_t bytecode_len;
 
     if (!err) {
@@ -440,7 +477,7 @@ __add_plugin_generic(const void *generic_ptr, int id_plugin, int type_plug, int 
             }
             break;
         case ADD_TYPE_OWNPTR:
-            bytecode = (void *) generic_ptr;
+            bytecode = generic_ptr;
             bytecode_len = len;
             break;
         default:
@@ -507,7 +544,8 @@ int __add_plugin(const char *path_code, int id_plugin, int type_plugin, size_t a
 int add_plugin(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugin,
                const char *sub_plugin_name, uint8_t jit, const char *after) {
     const char *err;
-    if (__add_plugin(path_code, id_plugin, type_plugin, add_mem_len, shared_mem, sub_plugin_name, after, jit, &err) == -1) {
+    if (__add_plugin(path_code, id_plugin, type_plugin, add_mem_len, shared_mem, sub_plugin_name, after, jit, &err) ==
+        -1) {
         fprintf(stderr, "%s\n", err);
         return -1;
     }
@@ -680,7 +718,7 @@ int init_ubpf_inject_queue(int type) {
             return -1;
     }
 
-    key = ftok(E_BPF_QUEUE_PATH, E_BPF_QUEUE_KEY);
+    key = ftok(daemon_vty_dir, E_BPF_QUEUE_KEY);
     if (key == -1) {
         perror("ftok can't generate key queue");
         return -1;
@@ -756,7 +794,7 @@ size_t store_plugin(size_t size, const char *path) {
     uint8_t *data;
     size_t plugin_length;
 
-    key = ftok(E_BPF_QUEUE_PATH, E_BPF_SHMEM_KEY);
+    key = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
 
     if (key == -1) {
         perror("Key allocation failed");
@@ -813,13 +851,15 @@ static void *plugin_msg_handler(void *args) {
 
     if (!plugins_manager) {
         fprintf(stderr, "Plugin manager not initialised");
-        if (!init_plugin_manager(cast_args->protocol)) {
+        if (!init_plugin_manager(cast_args->protocol, cast_args->daemon_vty_dir, cast_args->len,
+                                 cast_args->plugins_info, cast_args->host, cast_args->host_port,
+                                 cast_args->monit)) {
             fprintf(stderr, "Could not start plugin manager, EXITING...\n");
             exit(EXIT_FAILURE);
         }
     }
 
-    key = ftok(E_BPF_QUEUE_PATH, E_BPF_SHMEM_KEY);
+    key = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
     if (key == -1) {
         perror("Key generation failed");
         return NULL;
@@ -863,7 +903,8 @@ static void *plugin_msg_handler(void *args) {
         switch (rcvd_msg.plugin_action) {
             case E_BPF_ADD:
                 if (__add_plugin_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
-                                     rcvd_msg.length, 0, 0, rcvd_msg.name, rcvd_msg.after, rcvd_msg.jit, &str_err) < 0) {
+                                     rcvd_msg.length, 0, 0, rcvd_msg.name, rcvd_msg.after, rcvd_msg.jit, &str_err) <
+                    0) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
                 }
@@ -880,7 +921,7 @@ static void *plugin_msg_handler(void *args) {
                     strncpy(info.reason, str_err, strlen(str_err));
                 } else if (
                         __add_plugin_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
-                                         rcvd_msg.length, 0,0, rcvd_msg.name, rcvd_msg.after, rcvd_msg.jit, &str_err) <
+                                         rcvd_msg.length, 0, 0, rcvd_msg.name, rcvd_msg.after, rcvd_msg.jit, &str_err) <
                         0) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
@@ -964,11 +1005,11 @@ void remove_xsi() {
     int msqid, memid;
     key_t msqkey, memkey;
 
-    msqkey = ftok(E_BPF_QUEUE_PATH, E_BPF_QUEUE_KEY);
+    msqkey = ftok(daemon_vty_dir, E_BPF_QUEUE_KEY);
     if (msqkey == -1) {
         perror("Can't generate key");
     }
-    memkey = ftok(E_BPF_QUEUE_PATH, E_BPF_SHMEM_KEY);
+    memkey = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
     if (memkey == -1) {
         perror("Can't generate key");
     }

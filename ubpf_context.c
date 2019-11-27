@@ -2,7 +2,9 @@
 // Created by thomas on 14/08/19.
 //
 
-#include "ubpf_tools/ubpf_context.h"
+#include "ubpf_context.h"
+#include <string.h>
+#include <stdlib.h>
 
 static map_allowed_ctx_t current_context;
 map_allowed_ctx_t *map_ctx = NULL;

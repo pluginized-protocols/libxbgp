@@ -5,11 +5,9 @@
 #ifndef FRR_UBPF_PUBLIC_BPF_H
 #define FRR_UBPF_PUBLIC_BPF_H
 
-#include <defaults.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include "tools_ubpf_api.h"
-#include <ubpf_tools/include/ebpf_mod_struct.h>
 
 
 /**

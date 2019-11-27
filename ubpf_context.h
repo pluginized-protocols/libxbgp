@@ -6,8 +6,8 @@
 #define FRR_UBPF_UBPF_CONTEXT_H
 
 
-#include "ubpf_tools/bpf_plugin.h"
-#include "ubpf_tools/map.h"
+#include "bpf_plugin.h"
+#include "map.h"
 
 typedef map_t(short) map_allowed_ctx_t;
 typedef struct bytecode_context context_t;
@@ -27,7 +27,6 @@ struct bytecode_context {
     // a given plugin
     plugin_t *p;
     void *args;    // pointer to the argument of the plugin used to
-    unsigned int args_type; // move data to plugin allowed memory.
 #define LENGTH_CONTEXT_ERROR 50
     char error[LENGTH_CONTEXT_ERROR]; // string with small indication of the error;
     int error_status;

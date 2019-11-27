@@ -5,9 +5,20 @@
 #ifndef FRR_UBPF_TOOLS_UBPF_API_H
 #define FRR_UBPF_TOOLS_UBPF_API_H
 
-#include "ubpf_tools/include/plugin_arguments.h"
-#include "ubpf_tools/ubpf_context.h"
+#include "include/plugin_arguments.h"
+#include "ubpf_context.h"
 
+
+struct prefix {
+    uint8_t family;
+    uint16_t prefixlen;
+    uint8_t u[20];
+};
+
+enum RESERVED_RETURN_VAL {
+    BPF_CONTINUE = 0,
+
+};
 
 
 #define UNUSED(arg) ((void) arg)

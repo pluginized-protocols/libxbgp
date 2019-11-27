@@ -9,14 +9,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "plugin_arguments.h"
-#include "decision_process_manager.h"
-#include "plugins_id.h"
 #include "ebpf_mod_struct.h"
 
 
 extern void set_write_fd(int fd);
 
-extern int init_plugin_manager(proto_ext_fun_t *api_proto);
+int
+init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
+                    const char *monitoring_address, const char *monitoring_port, int require_monit);
 
 int main_monitor2(const char *address, const char *port, int fd_read);
 
@@ -24,7 +24,7 @@ extern void start_ubpf_plugin_listener(proto_ext_fun_t *api_proto);
 
 extern void remove_xsi();
 
-extern int load_from_json(const char *file_path);
+extern int load_from_json(const char *file_path, const char *sysconfdir);
 
 extern int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *port, size_t len_port);
 

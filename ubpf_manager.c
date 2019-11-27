@@ -5,7 +5,7 @@
 
 #include "ubpf_manager.h"
 #include "ubpf_api.h"
-#include "ubpf/vm/inc/ubpf.h"
+#include "ubpf_vm/vm/inc/ubpf.h"
 #include "bpf_plugin.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -15,11 +15,12 @@
 #include <errno.h>
 #include <elf.h>
 #include <time.h>
-#include <ubpf_tools/include/plugin_arguments.h>
-#include "ubpf_tools/ubpf_context.h"
+#include <include/plugin_arguments.h>
+#include "ubpf_context.h"
 #include "hashmap.h"
 #include <pthread.h>
-#include <ubpf_tools/include/ebpf_mod_struct.h>
+#include <include/ebpf_mod_struct.h>
+#include <assert.h>
 
 
 static proto_ext_fun_t *proto_ext_fn = NULL;
@@ -356,13 +357,10 @@ bpf_full_args_t *valid_args(bpf_full_args_t *args) {
 
 }
 
-int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, unsigned int id_args, uint64_t *ret_val) {
+int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *ret_val) {
 
     uint64_t ret;
 
-    if (!(id_args > 0 && id_args < ARGS_ID_KNOWN_MAX)) return -1; // bad ID
-
-    vmc->ctx->args_type = id_args;
     vmc->ctx->args = mem; // bpf_full_args pointer
 
     if (vmc->jit) { // NON INTERPRETED MODE
@@ -382,7 +380,6 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, unsigned i
 
     // reset --> this VM is not in use for now
     vmc->ctx->args = NULL;
-    vmc->ctx->args_type = 0;
 
     if (ret_val) *ret_val = ret;
     // flush heap is done just before returning
@@ -394,7 +391,7 @@ void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data
 
     FILE *file;
     if (!strcmp(path, "-")) {
-        file = fdopen(STDIN_FILENO, "r");
+        file = stdin; //fdopen(STDIN_FILENO, "r");
     } else {
         file = fopen(path, "r");
     }

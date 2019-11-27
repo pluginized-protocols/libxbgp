@@ -5,10 +5,12 @@
 #ifndef FRR_THESIS_UBPF_MANAGER_H
 #define FRR_THESIS_UBPF_MANAGER_H
 
-#include <ubpf_tools/shared_memory.h>
-#include <ubpf/vm/inc/ubpf.h>
-#include <ubpf_tools/include/public.h>
+#include "shared_memory.h"
+#include <ubpf_vm/vm/inc/ubpf.h>
+#include <include/public.h>
 #include "include/plugin_arguments.h"
+#include "map.h"
+
 
 typedef struct bytecode_context context_t;
 
@@ -86,7 +88,7 @@ int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len);
  * @param mem_len size of the memory pointed by mem
  * @return the result of the execution of the loaded code
  */
-int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, unsigned int id, uint64_t *ret_val);
+int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *ret_val);
 
 void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data);
 

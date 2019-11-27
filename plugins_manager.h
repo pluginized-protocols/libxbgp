@@ -8,9 +8,10 @@
 
 //#include "lib/prefix.h"
 
-#include <ubpf_tools/include/plugin_arguments.h>
+#include <include/plugin_arguments.h>
 #include "include/public.h"
-#include <ubpf_tools/bpf_plugin.h>
+#include <bpf_plugin.h>
+#include "map.h"
 
 
 #define MAX_PLUGINS 128
@@ -54,7 +55,7 @@
 // Indeed, this kind of plugin must be handled in a different
 // way than a one executed inside a real function (need to
 // manually call run_pre, run_replace and run_post)
-
+/*
 static const struct {
     plugin_type_t val;
     const char *str;
@@ -91,8 +92,8 @@ static const struct {
         {OSPF_LSA_FLOOD,                 "ospf_lsa_flood"},
         {OSPF_ISM_CHANGE,                "ospf_ism_change"},
         {OSPF_HELLO_SEND,                "ospf_hello_send"}
-};
-
+};*/
+/*
 static const struct {
     plugin_type_t plug_id;
     argument_type_t args_id;
@@ -129,7 +130,7 @@ static const struct {
         {OSPF_LSA_FLOOD,                 ARGS_OSPF_LSA_FLOOD},
         {OSPF_ISM_CHANGE,                ARGS_OSPF_ISM_CHANGE},
         {OSPF_HELLO_SEND,                ARGS_OSPF_HELLO_SEND}
-};
+};*/
 
 typedef struct ubpf_queue_msg {
 
@@ -180,7 +181,9 @@ extern plugins_t *plugins_manager;
  * @return 1 if the operation succeed
  *         0 otherwise
  */
-int init_plugin_manager(proto_ext_fun_t *api_proto);
+int
+init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
+                    const char *monitoring_address, const char *monitoring_port, int require_monit);
 
 /**
  * Add an uBPF plugin to the plugin_manager given in argument
@@ -243,11 +246,11 @@ int is_volatile_plugin(int plugin_id);
 // (plugins_t *plugin_manager, void *generic_ptr, int id_plugin, int type_plug, int type_ptr, size_t len, size_t add_mem_len,
 //                     const char **err)
 
-plugin_type_t id_plugin_to_enum(const char *str);
+// plugin_type_t id_plugin_to_enum(const char *str);
 
-argument_type_t get_args_id_by_plug_id(plugin_type_t type);
+// argument_type_t get_args_id_by_plug_id(plugin_type_t type);
 
-int load_from_json(const char *file_path);
+int load_from_json(const char *file_path, const char *sysconfdir);
 
 int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *port, size_t len_port);
 

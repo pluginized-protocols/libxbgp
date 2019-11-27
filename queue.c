@@ -2,7 +2,8 @@
 // Created by thomas on 4/11/18.
 //
 
-#include "ubpf_tools/queue.h"
+#include "queue.h"
+#include "list.h"
 
 
 queue_t *init_queue(size_t len) {

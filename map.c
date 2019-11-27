@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "ubpf_tools/map.h"
+#include "map.h"
 
 struct map_node_t {
   unsigned hash;

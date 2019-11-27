@@ -17,6 +17,12 @@ typedef struct mesg_buffer {
     char mesg_text[20];
 } ebpf_message_t;
 
+typedef struct plugin_info {
+    const char *plugin_str;
+    int plugin_id;
+} plugin_info_t;
+
+plugin_info_t plugin_info_null = {NULL, 0};
 
 
 #endif //FRR_UBPF_EBPF_MOD_STRUCT_H

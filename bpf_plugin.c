@@ -3,11 +3,19 @@
 //
 
 #include "bpf_plugin.h"
-#include "ubpf_tools/list.h"
-#include "ubpf_tools/hashmap.h"
-#include "ubpf_tools/include/plugin_arguments.h"
+#include "list.h"
+#include "hashmap.h"
+#include "include/plugin_arguments.h"
 #include "plugins_manager.h"
 #include "ubpf_context.h"
+#include "ubpf_manager.h"
+#include "memory_manager.h"
+#include "shared_memory.h"
+#include "map.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <include/tools_ubpf_api.h>
 
 #define STRING_PTR_ARRAY 17
 
@@ -34,17 +42,6 @@ bpf_plugin_type_placeholder_t bpf_type_str_to_enum(const char *str) {
     return 0;
 }
 
-const char *id_plugin_to_str(unsigned int id) {
-    int i, max;
-
-    max = sizeof(conversion_id_plugin) / sizeof(conversion_id_plugin[0]);
-
-    for (i = 0; i < max; i++) {
-        if (conversion_id_plugin[i].val == id) return conversion_id_plugin[i].str;
-    }
-    return "UNK";
-}
-
 int ptr_to_string(char *dest, void *ptr, size_t len) {
 
     if (len < STRING_PTR_ARRAY) return -1;
@@ -57,12 +54,12 @@ int ptr_to_string(char *dest, void *ptr, size_t len) {
 }
 
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, plugin_type_t plugid) {
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) {
 
     size_t total_allowed_mem;
     uint8_t *super_block;
     plugin_t *p;
-    argument_type_t args_id;
+    unsigned int args_id;
 
     heap_size = (heap_size + 7u) & (-8u);
     sheap_size = (sheap_size + 7u) & (-8u);
@@ -114,22 +111,11 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, plugin_type_t plugid)
 
     p->replace_function = NULL;
 
-    if (plugid == 0 || plugid == BGP_NOT_ASSIGNED_TO_ANY_FUNCTION) {
+    if (plugid == 0) { // TODO additional check
         free(super_block);
         free(p);
         return NULL;
     }
-    p->plugin_id = plugid;
-
-    args_id = get_args_id_by_plug_id(p->plugin_id);
-
-    if (args_id == ARGS_INVALID) {
-        free(super_block);
-        free(p);
-        return NULL;
-    }
-
-    p->argument_type = args_id;
     p->plugin_id = plugid;
 
     return p;
@@ -290,33 +276,33 @@ generic_add_function(plugin_t *p, const uint8_t *bytecode, size_t len, const cha
 
 int add_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, const char *sub_plugin_name, uint8_t jit) {
     if (!p) return -1;
-    p->is_active_pre = 1;
+    p->is_active_pre = 1u;
     return generic_add_function(p, bytecode, len, sub_plugin_name, NULL, BPF_PRE, jit);
 }
 
 int add_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, const char *sub_plugin_name, uint8_t jit) {
     if (!p) return -1;
-    p->is_active_post = 1;
+    p->is_active_post = 1u;
     return generic_add_function(p, bytecode, len, sub_plugin_name, NULL, BPF_POST, jit);
 }
 
 int add_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, const char *sub_plugin_name, uint8_t jit) {
     if (!p) return -1;
-    p->is_active_replace = 1;
+    p->is_active_replace = 1u;
     return generic_add_function(p, bytecode, len, sub_plugin_name, NULL, BPF_REPLACE, jit);
 }
 
 int add_pre_append_function(plugin_t *p, const uint8_t *bytecode, size_t len, const char *after,
                             const char *sub_plugin_name, uint8_t jit) {
     if (!p) return -1;
-    p->is_active_pre_append = 1;
+    p->is_active_pre_append = 1u;
     return generic_add_function(p, bytecode, len, sub_plugin_name, after, BPF_PRE_APPEND, jit);
 }
 
 int add_post_append_function(plugin_t *p, const uint8_t *bytecode, size_t len, const char *after,
                              const char *sub_plugin_name, uint8_t jit) {
     if (!p) return -1;
-    p->is_active_post_append = 1;
+    p->is_active_post_append = 1u;
     return generic_add_function(p, bytecode, len, sub_plugin_name, after, BPF_POST_APPEND, jit);
 }
 
@@ -327,7 +313,7 @@ static inline int generic_run_function(plugin_t *p, uint8_t *args, size_t args_s
     const char *key;
     vm_container_t *vm;
     int exec_ok;
-    argument_type_t args_id;
+    unsigned int args_id;
 
     switch (type) {
         case BPF_PRE:
@@ -344,9 +330,7 @@ static inline int generic_run_function(plugin_t *p, uint8_t *args, size_t args_s
 
     while ((key = map_next(vm_map, &it))) {
         vm = *map_get(vm_map, key);
-
-        args_id = p->argument_type;
-        exec_ok = run_injected_code(vm, args, args_size, args_id, ret);
+        exec_ok = run_injected_code(vm, args, args_size, ret);
         if (exec_ok != 0) {
             // fprintf(stderr, "bytecode execution encountered an error\n");
         }
@@ -370,16 +354,14 @@ int run_post_functions(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *r
 int run_replace_function(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret_val) {
 
     int exec_ok;
-    argument_type_t args_id;
+    unsigned int args_id;
     uint64_t return_value;
 
     if (!p) return -1;
     if (!p->is_active_replace) return -1;
     if (!p->replace_function) return -1; // double check
 
-    args_id = p->argument_type;
-
-    exec_ok = run_injected_code(p->replace_function, args, args_size, args_id, &return_value);
+    exec_ok = run_injected_code(p->replace_function, args, args_size, &return_value);
 
     if (ret_val) *ret_val = return_value;
 
@@ -413,9 +395,9 @@ int run_append_function(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *
     if (list_iterator(l, &it) != 0) return -1;
 
     while ((c = iterator_next(&it)) != NULL) {
-        exec_ok = run_injected_code(*c, args, args_size, p->argument_type, &return_value);
+        exec_ok = run_injected_code(*c, args, args_size, &return_value);
         if (exec_ok != 0) return -1;
-        if (return_value != BGP_CONTINUE) {
+        if (return_value != BPF_CONTINUE) {
             if (ret_val) *ret_val = return_value;
             return -1;
         }

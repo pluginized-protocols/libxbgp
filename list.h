@@ -5,7 +5,7 @@
 #ifndef FRR_UBPF_STACK_H
 #define FRR_UBPF_STACK_H
 
-//#include <stdint.h>
+#include <stddef.h>
 
 #define iterator_next(iterator) \
     (iterator)->next((iterator))

@@ -6,8 +6,10 @@
 #define FRR_THESIS_UBPF_API_H
 
 #include "ubpf_manager.h"
-#include <lib/sockunion.h>
-
+#include <time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 #define OFFSET_UNIX_EPOCH_TO_NTP 2208988800
 #define SOCKET_PATH "\0monitor_ubpf_plug.socket"
@@ -84,10 +86,10 @@ void rm_ipc(void);
 
 int send_ipc_msg(context_t *vm_ctx, ebpf_message_t *msg);
 
-int init_queue_ext_send(void);
+int init_queue_ext_send(const char *working_dir);
 
 void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args);
 
-int bpf_sockunion_cmp(context_t *vm_ctx, const union sockunion *su1, const union sockunion *su2);
+int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2);
 
 #endif //FRR_THESIS_UBPF_API_H
