@@ -7,10 +7,10 @@
 
 
 #include "bpf_plugin.h"
-#include "map.h"
+#include "hashmap.h"
 
-typedef map_t(short) map_allowed_ctx_t;
 typedef struct bytecode_context context_t;
+typedef hashmap_t(short) map_allowed_ctx_t;
 
 /**
  * This structure is passed to every plugins
@@ -40,6 +40,8 @@ int register_context(context_t *ctx);
 int unregister_context(context_t *ctx);
 
 int context_ok(context_t *ctx);
+
+void destroy_context(void);
 
 
 #endif //FRR_UBPF_UBPF_CONTEXT_H

@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/socket.h>
 #include "tools_ubpf_api.h"
 
 
@@ -24,7 +25,7 @@ extern int send_to_monitor(const void *data, size_t len, unsigned int type);
 
 extern int get_time(uint64_t *time);
 
-extern clock_t bpf_clock();
+extern clock_t bpf_clock(void);
 
 extern void *ebpf_memcpy(void *dst0, const void *src0, size_t length);
 
@@ -56,7 +57,7 @@ extern int send_ipc_msg(ebpf_message_t *msg);
 
 extern void *bpf_get_args(unsigned int arg_nb, bpf_full_args_t *args);
 
-extern int bpf_sockunion_cmp(const union sockunion *su1, const union sockunion *su2);
+extern int bpf_sockunion_cmp(const struct sockaddr *su1, const struct sockaddr *su2);
 
 
 #endif //FRR_UBPF_PUBLIC_BPF_H

@@ -38,7 +38,6 @@ int init_queue_ext_send(const char *working_dir) {
         perror("ftok ebpf msg export error");
         return -1;
     }
-
     // msgget creates a message queue
     // and returns identifier
     msgid = msgget(key, 0666u | (unsigned int)IPC_CREAT);
@@ -157,8 +156,6 @@ void *ctx_shmget(context_t *vm_ctx, key_t key) {
 void ctx_shmrm(context_t *vm_ctx, key_t key) {
     ubpf_shmrm(&vm_ctx->p->mem.shared_heap.smp, key);
 }
-
-
 
 int get_time(context_t *vm_ctx, uint64_t *time) {
     UNUSED(vm_ctx);

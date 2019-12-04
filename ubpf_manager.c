@@ -21,12 +21,11 @@
 #include <pthread.h>
 #include <include/ebpf_mod_struct.h>
 #include <assert.h>
+#include <limits.h>
+#include <stdlib.h>
 
 
 static proto_ext_fun_t *proto_ext_fn = NULL;
-
-static pthread_mutex_t _vm_call;
-static pthread_mutex_t *vm_call = NULL;
 
 static pthread_mutex_t _vm_args;
 static pthread_mutex_t *vm_args = NULL;
@@ -126,25 +125,12 @@ static inline int base_register(vm_container_t *vmc) {
     return 1;
 }
 
-context_t *get_curr_context() {
-    return NULL;
-}
-
 int init_ubpf_manager(proto_ext_fun_t *fn) {
 
     proto_ext_fn = fn;
 
-    if (!vm_call) {
-        if (pthread_mutex_init(&_vm_call, NULL) != 0) {
-            perror("Can't init mutex");
-            return -1;
-        }
-        vm_call = &_vm_call;
-    }
-
     if (!vm_args) {
         if (pthread_mutex_init(&_vm_args, NULL) != 0) {
-            pthread_mutex_destroy(vm_call);
             perror("Can't init mutex");
             return -1;
         }
@@ -154,7 +140,19 @@ int init_ubpf_manager(proto_ext_fun_t *fn) {
     return 0;
 }
 
-int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, const char *name, size_t len,
+int destroy_ubpf_manager() {
+    if (vm_args) {
+        pthread_mutex_destroy(vm_args);
+    }
+
+    proto_ext_fn = NULL;
+    hashmap_destroy(args_ebpf);
+    args_ebpf = NULL;
+
+    return 0;
+}
+
+int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, uint32_t seq,
             size_t tot_extra, uint8_t jit) {
     *vmc = malloc(sizeof(vm_container_t));
 
@@ -178,13 +176,8 @@ int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, const char 
     } else {
         return 0; // every plugin must have a context
     }
-    memset((*vmc)->name, 0, 21);
 
-    if (len <= 20) {
-        memcpy((*vmc)->name, name, len);
-        (*vmc)->name[20] = 0;
-    }
-
+    (*vmc)->seq = seq;
     (*vmc)->total_mem = tot_extra;
     (*vmc)->jit = jit;
     (*vmc)->ctx_specific = NULL;
@@ -278,21 +271,6 @@ int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
 
 }
 
-int inject_code(vm_container_t *vmc, const char *path_code) { // TODO useless function --> delete
-
-    assert(0 && "Obsolete function");
-
-    size_t code_len = 0;
-    void *loaded_code;
-
-    loaded_code = readfile(path_code, 1024 * 1024, &code_len);
-
-    if (!inject_code_ptr(vmc, loaded_code, code_len)) return 0;
-
-    free(loaded_code);
-    return 1;
-}
-
 bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs, bpf_full_args_t *fargs) {
 
     assert(fargs != NULL);
@@ -375,7 +353,7 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
     }
 
     if (ret == UINT64_MAX) {
-        fprintf(stderr, "Plugin crashed (%s)\n", vmc->name);
+        fprintf(stderr, "Plugin crashed (%d)\n", vmc->seq);
     }
 
     // reset --> this VM is not in use for now
@@ -389,15 +367,22 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
 
 void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data) {
 
+    char absolute_path[PATH_MAX];
+    const char *sel_path;
+
     FILE *file;
     if (!strcmp(path, "-")) {
         file = stdin; //fdopen(STDIN_FILENO, "r");
+        sel_path = path;
     } else {
+        memset(absolute_path, 0, PATH_MAX * sizeof(char));
+        realpath(path, absolute_path);
+        sel_path = absolute_path;
         file = fopen(path, "r");
     }
 
     if (file == NULL) {
-        fprintf(stderr, "Failed to open %s: %s (uid %u)\n", path, strerror(errno), getuid());
+        fprintf(stderr, "Failed to open %s: %s (uid %u)\n", sel_path, strerror(errno), getuid());
         return NULL;
     }
 
@@ -418,7 +403,7 @@ void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data
     }
 
     if (ferror(file)) {
-        fprintf(stderr, "Failed to read %s: %s\n", path, strerror(errno));
+        fprintf(stderr, "Failed to read %s: %s\n", sel_path, strerror(errno));
         fclose(file);
         free(data);
         return NULL;
@@ -426,7 +411,7 @@ void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data
 
     if (!feof(file)) {
         fprintf(stderr, "Failed to read %s because it is too large (max %u bytes)\n",
-                path, (unsigned) maxlen);
+                sel_path, (unsigned) maxlen);
         fclose(file);
         free(data);
         return NULL;

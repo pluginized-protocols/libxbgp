@@ -3,11 +3,10 @@
 //
 
 #include "plugins_manager.h"
-#include "backup_code/bgp_ipfix.h"
 
 #include <sys/msg.h>
 #include <sys/shm.h>
-#include <ubpf_prereq.h>
+#include <ubpf_misc.h>
 #include <assert.h>
 #include <json-c/json_object.h>
 #include <stdint.h>
@@ -20,30 +19,37 @@
 #include "include/plugin_arguments.h"
 #include "ubpf_api.h"
 #include "monitoring_server.h"
+#include "ubpf_context.h"
+
+#include <stdio.h>
 
 #include <linux/limits.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define ADD_TYPE_OWNPTR 1
 #define ADD_TYPE_FILE 2
 
+static void *plugin_msg_handler(void *args);
+
 typedef struct args_plugin_msg_handler {
     int msqid;
-    proto_ext_fun_t *protocol;
-    char *daemon_vty_dir;
-    size_t len;
-    plugin_info_t *plugins_info;
-    /*** Monitoring part ***/
-    const char *host;
-    const char *host_port;
-    int monit;
 } args_plugins_msg_hdlr_t;
+
+struct json_pluglet_args {
+    const char *name;
+    int32_t str_len;
+    int jit;
+};
 
 plugins_t *plugins_manager = NULL;
 int already_init = 0;
 
-static char daemon_vty_dir[PATH_MAX];
-static plugin_info_t *plugins_info;
-static int max_plugin;
+static char daemon_vty_dir[PATH_MAX]; // config folder of the protocol
+static plugin_info_t *plugins_info; // insertion points for the protocol
+static int max_plugin; // number of insertion points
+pthread_t plugin_listener; // thread receiving pluglets from outside the main process
+unsigned int finished = 0;
 
 static int nb_plugins(plugin_info_t *info) {
 
@@ -91,26 +97,27 @@ int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
                     const char *monitoring_address, const char *monitoring_port, int require_monit) {
 
-    if (already_init) return 1;
-    if (!process_vty_dir) return 0;
+    int msqid;
+    if (already_init) return 0;
+    if (!process_vty_dir) return -1;
 
     set_daemon_vty_dir(process_vty_dir, len);
-    if (set_plugins_info(plugins_array) != 0) return 0;
+    if (set_plugins_info(plugins_array) != 0) return -1;
     max_plugin = nb_plugins(plugins_array);
 
     int i;
-    if (plugins_manager) return 1; // already init, exit
+    if (plugins_manager) return 0; // already init, exit
 
     // start monitor server
     if (init_monitoring(monitoring_address, monitoring_port, require_monit) == -1) {
-        return 0;
+        return -1;
     }
 
 
     plugins_manager = malloc(sizeof(plugins_t));
     if (!plugins_manager) {
         perror("Cannot create plugin manager");
-        return 0;
+        return -1;
     }
     plugins_manager->size = 0;
 
@@ -120,12 +127,47 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
 
     if (init_ubpf_manager(api_proto) != 0) {
         fprintf(stderr, "Can't start ubpf manager\n");
-        return 0;
+        return -1;
+    }
+
+    args_plugins_msg_hdlr_t *msg_hdlr_args = malloc(sizeof(args_plugins_msg_hdlr_t));
+    if (!msg_hdlr_args) {
+        perror("Thread args malloc failure");
+        return -1;
+    }
+
+    msqid = init_ubpf_inject_queue_rcv();
+    msg_hdlr_args->msqid = msqid;
+
+    if (msqid == -1) {
+        fprintf(stderr, "Unable to start dynamic plugin injection\n");
+        return -1;
+    }
+
+    if (pthread_create(&plugin_listener, NULL, &plugin_msg_handler, msg_hdlr_args) != 0) {
+        fprintf(stderr, "Unable to create thread for dynamic plugin injection\n");
+        return -1;
+    }
+
+    if (pthread_detach(plugin_listener) != 0) {
+        fprintf(stderr, "Thread detachment failed (%s)", __func__);
+        return -1;
     }
 
     already_init = 1;
+    return 0;
+}
 
-    return 1;
+
+void ubpf_terminate() {
+
+    turnoff_monitoring();
+    destroy_ubpf_manager();
+    finished = 1;
+    remove_xsi();
+    free(plugins_manager);
+    destroy_context();
+
 }
 
 static inline plugin_t *get_plugin(int plugin_id) {
@@ -150,285 +192,183 @@ static inline int is_id_in_use(int id) {
 }
 
 
-static struct json_object *read_json(const char *file_path) {
-    FILE *fp;
-    char *json_str; // may be big. Hence, allocate memory on the heap
-    size_t read_size;
-    struct json_object *parsed_json;
-    size_t max_size;
-    enum json_tokener_error err;
-
-    max_size = 131072; //(128KiB)
-    json_str = malloc(max_size * sizeof(char));
-    if (!json_str) return NULL; // OOM
-    memset(json_str, 0, max_size * sizeof(char));
-
-    fp = fopen(file_path, "r");
-    if (!fp) {
-        perror("Can't open json file");
-        return NULL;
-    }
-
-    read_size = fread(json_str, sizeof(char), max_size - 1, fp);
-    if (read_size == 0) {
-        fprintf(stderr, "Can't read file\n");
-        return NULL;
-    }
-    if (fclose(fp) != 0) return NULL;
-
-    json_str[max_size - 1] = 0;
-    parsed_json = json_tokener_parse_verbose(json_str, &err);
-
-    if (err != json_tokener_success) {
-        fprintf(stderr, "%s\n", json_tokener_error_desc(err));
-        return NULL;
-    }
-    free(json_str);
-
-    return parsed_json;
-}
-
-int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *port, size_t len_port) {
-
-    struct json_object *json;
-
-    struct json_object *port_json = NULL;
-    struct json_object *addr_json = NULL;
-
-    const char *port_str = NULL;
-    const char *addr_str = NULL;
-
-    memset(addr, 0, sizeof(char) * len_addr);
-    memset(port, 0, sizeof(char) * len_port);
-
-    if (!(json = read_json(file_path))) {
-        return -1;
-    }
-
-    json_object_object_get_ex(json, "port_exporter", &port_json);
-    if (port_json) {
-
-        port_str = json_object_get_string(port_json);
-
-        if (port_str)
-            strncpy(port, port_str, len_port - 1);
-
-
-    } else {
-        strncpy(port, "4739", 5);
-    }
-    port[len_port - 1] = 0;
-
-    json_object_object_get_ex(json, "addr_exporter", &addr_json);
-
-    if (addr_json) {
-
-        addr_str = json_object_get_string(addr_json);
-        strncpy(addr, addr_str, len_addr - 1);
-
-    } else {
-        strncpy(addr, "localhost", 10);
-    }
-
-    addr[len_addr - 1] = 0;
-
-
-    json_object_put(json);
-
-    return 0;
-
-}
-
 static int str_plugin_to_int(const char *plugin_str) {
     int i;
 
-    for (i = 0; plugins_info[i].plugin_id != 0 && plugins_info[i].plugin_str == NULL; i -= -1) {
-        if (strncmp(plugin_str, plugins_info[i].plugin_str, 0) == 0) return plugins_info[i].plugin_id;
+    for (i = 0; plugins_info[i].plugin_id != 0 && plugins_info[i].plugin_str != NULL; i += 1) {
+        if (strncmp(plugin_str, plugins_info[i].plugin_str, 50) == 0) {
+            return plugins_info[i].plugin_id;
+        }
     }
     return -1;
 }
 
-int load_from_json(const char *file_path, const char *sysconfdir) {
+const char *id_plugin_to_str(unsigned int plugin_id) {
+    int i;
 
-    // TODO: JSON plugin structure must be refactored
-
-    size_t nb_plugins;
-    size_t i;
-    size_t len_path;
-
-    int err;
-    enum json_type json_type;
-
-    char conc_path[PATH_MAX + NAME_MAX + 1];
-    char *name_plugin;
-
-    int jit_all, len, final_jit;
-
-    struct json_object *json;
-    struct json_object *jit_all_j = NULL;
-    struct json_object *plugins_array;
-    struct json_object *plugin;
-
-    struct json_object *path;
-    struct json_object *extra_mem;
-    struct json_object *name;
-    struct json_object *id_plugin;
-    struct json_object *type;
-    struct json_object *shared_mem = NULL;
-    struct json_object *dir_json = NULL;
-    struct json_object *after = NULL;
-    struct json_object *jit = NULL;
-
-    const char *path_str;
-    const char *name_str;
-    const char *id_plugin_str;
-    const char *type_str;
-    const char *after_str = NULL;
-    const char *dir_obj_file = NULL;
-
-    int extra_mem_int;
-    int shared_mem_int;
-    int id_plugin_int;
-    int jit_bool = 0;
-    bpf_plugin_type_placeholder_t type_enum;
-
-    if (!(json = read_json(file_path))) {
-        return -1;
+    for (i = 0; plugins_info[i].plugin_id != 0 && plugins_info[i].plugin_str != NULL; i -= -1) {
+        if (plugins_info[i].plugin_id == plugin_id) return plugins_info[i].plugin_str;
     }
 
-    if (!json_object_object_get_ex(json, "plugins", &plugins_array)) {
+    return "UNK";
+}
+
+
+static int json_pluglet_parse(json_object *pluglet, struct json_pluglet_args *info) {
+
+    json_object *location;
+    json_object *jit_obj;
+    int32_t len;
+    const char *bytecode_name;
+    int jit;
+
+    if (!info) return -1;
+
+    if (!json_object_object_get_ex(pluglet, "path", &location)) return -1;
+
+    bytecode_name = json_object_get_string(location);
+    len = json_object_get_string_len(location);
+
+    if (!json_object_object_get_ex(pluglet, "jit", &jit_obj)) jit = json_object_get_boolean(jit_obj);
+    else jit = -1;
+
+    info->jit = jit;
+    info->name = bytecode_name;
+    info->str_len = len;
+
+    return 0;
+}
+
+
+int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir) {
+    int plugin_id;
+    int len;
+    int pluglet_type;
+    json_bool jit;
+    json_bool jit_master;
+
+    char *end_ptr;
+    const char *str_override_location;
+    const char *bytecode_name;
+    char *master_sysconfdir = NULL;
+    char *ptr_plug_dir; // points after the master_sysconfig string in the buffer
+    unsigned int seq;
+    char plug_dir[PATH_MAX];
+    int32_t shared_mem;
+    int32_t extra_mem;
+
+    struct json_pluglet_args info;
+
+    memset(plug_dir, 0, PATH_MAX * sizeof(char));
+
+    json_object *plugins;
+    json_object *main_obj = json_object_from_file(file_path);
+    json_object *override_location;
+
+    json_object *location;
+    json_object *jit_obj;
+
+    json_object *shared_mem_obj;
+    json_object *extra_mem_obj;
+
+    json_object *replace_pluglet;
+
+    if (main_obj == NULL) return -1;
+
+    if (!json_object_object_get_ex(main_obj, "plugins", &plugins)) {
         return -1; // malformed json
     }
-    nb_plugins = json_object_array_length(plugins_array);
-    err = 0; // number of plugin not loaded due to errors;
 
-    jit_all = 0;
+    if (!json_object_object_get_ex(main_obj, "dir", &override_location)) {
+        strncpy(plug_dir, sysconfdir, len_arg_sysconfdir);
+        master_sysconfdir = plug_dir;
+        ptr_plug_dir = master_sysconfdir + len_arg_sysconfdir;
+    } else {
+        len = json_object_get_string_len(override_location);
+        str_override_location = json_object_get_string(override_location);
 
-    json_object_object_get_ex(json, "jit_all", &jit_all_j);
-    if (jit_all_j) {
-        json_type = json_object_get_type(jit_all_j);
-        if (json_type == json_type_boolean) {
-            jit_all = json_object_get_boolean(jit_all_j);
-        } else {
-            fprintf(stderr, "Syntax error\n");
-            return -1;
-        }
-    }
+        if (len > PATH_MAX) return -1;
 
-    json_object_object_get_ex(json, "dir", &dir_json);
-
-    memset(conc_path, 0, (PATH_MAX + NAME_MAX + 1) * sizeof(char));
-
-    if (dir_json) {
-
-        dir_obj_file = json_object_get_string(dir_json);
-        len_path = json_object_get_string_len(dir_json);
-        if (len_path > PATH_MAX) return -1;
-
-        if (access(dir_obj_file, X_OK) != 0) {
+        if (access(str_override_location, X_OK) != 0) {
             perror("Folder access");
             return -1;
         }
-        if (!is_directory(dir_obj_file)) {
+        if (!is_directory(str_override_location)) {
             fprintf(stdout, "Not a directory\n");
             return -1;
         }
-
-        strncpy(conc_path, dir_obj_file, len_path);
-
-    } else {
-        dir_obj_file = sysconfdir;
-        len_path = snprintf(conc_path, PATH_MAX, "%splugins/", dir_obj_file);
+        strncpy(plug_dir, str_override_location, len);
+        master_sysconfdir = plug_dir;
+        ptr_plug_dir = master_sysconfdir + len;
     }
 
-    if (conc_path[len_path - 1] != '/') {
-        conc_path[len_path] = '/';
-        len_path++;
+    if (*ptr_plug_dir != '/') {
+        *ptr_plug_dir = '/';
+        ptr_plug_dir += 1;
     }
 
-    name_plugin = &conc_path[len_path];
+    if (json_object_object_get_ex(main_obj, "jit_all", &jit_obj)) jit_master = json_object_get_boolean(jit_obj);
+    else jit_master = 0;
 
-    if (json_object_object_get_ex(json, "shared_mem", &shared_mem)) {
-        if (!(shared_mem_int = json_object_get_int(shared_mem))) {
-            shared_mem_int = DEFAULT_SHARED_HEAP_SIZE;
-        }
-    } else {
-        shared_mem_int = DEFAULT_SHARED_HEAP_SIZE;
-    }
 
-    for (i = 0; i < nb_plugins; i++) {
+    json_object_object_foreach(plugins, plugin_str, curr_plugin) {
+        plugin_id = str_plugin_to_int(plugin_str);
+        if (plugin_id == -1) continue;
 
-        jit_bool = 0;
-        jit = NULL;
-        after_str = NULL;
-        after = NULL;
+        json_object_object_foreach(curr_plugin, hook, pluglets) {
+            pluglet_type = strncmp(hook, "pre", 3) == 0 ? BPF_PRE :
+                           strncmp(hook, "post", 4) == 0 ? BPF_POST :
+                           strncmp(hook, "replace", 6) == 0 ? BPF_REPLACE : -1;
 
-        plugin = json_object_array_get_idx(plugins_array, i);
-        if (!plugin) return -1; // ?
+            if (json_object_object_get_ex(curr_plugin, "extra_mem", &extra_mem_obj))
+                extra_mem = json_object_get_int(extra_mem_obj);
+            else extra_mem = 0;
 
-        if (!json_object_object_get_ex(plugin, "path", &path)) return -1;
-        if (!json_object_object_get_ex(plugin, "extra_mem", &extra_mem)) return -1;
-        if (!json_object_object_get_ex(plugin, "name", &name)) return -1;
-        if (!json_object_object_get_ex(plugin, "id_plugin", &id_plugin)) return -1;
-        if (!json_object_object_get_ex(plugin, "type", &type)) return -1;
-        json_object_object_get_ex(plugin, "after", &after);
-        json_object_object_get_ex(plugin, "jit", &jit);
 
-        if (!(path_str = json_object_get_string(path))) {
-            return -1;
-        } else {
-            len = json_object_get_string_len(path);
-            if (len > NAME_MAX) return -1;
+            if (json_object_object_get_ex(curr_plugin, "shared_mem", &shared_mem_obj))
+                shared_mem = json_object_get_int(shared_mem_obj);
+            else shared_mem = 0;
 
-            memset(name_plugin, 0, NAME_MAX + 1);
-            strncpy(name_plugin, path_str, len);
+            if (pluglet_type != -1) {
 
-        }
+                if (BPF_REPLACE == pluglet_type) {
 
-        if (!(extra_mem_int = json_object_get_int(extra_mem))) return -1;
-        if (!(name_str = json_object_get_string(name))) return -1;
-        if (!(id_plugin_str = json_object_get_string(id_plugin))) return -1;
-        if (!(type_str = json_object_get_string(type))) return -1;
+                    memset(&info, 0, sizeof(info));
+                    if (json_pluglet_parse(pluglets, &info) != 0) continue;
+                    strncpy(ptr_plug_dir, info.name, info.str_len);
+                    ptr_plug_dir[info.str_len] = 0;
 
-        if ((id_plugin_int = str_plugin_to_int(id_plugin_str)) == -1) return -1;
-        if ((type_enum = bpf_type_str_to_enum(type_str)) == 0) return -1;
+                    jit = info.jit == -1 ? jit_master : info.jit;
 
-        if (after) {
-            if (!(after_str = json_object_get_string(after))) return -1;
+                    if (add_pluglet(master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, 0, jit) == -1) {
+                        ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, 0, "Startup");
+                    }
+                } else {
+                    json_object_object_foreach(pluglets, seq_str, pluglet) {
 
-            if (type_enum != BPF_POST_APPEND && type_enum != BPF_PRE_APPEND) {
-                fprintf(stderr, "\"after\" must only be mentioned with either BFP_PRE_APPEND or BPF_POST_APPEND");
-                return -1;
+                        seq = strtoul(seq_str, &end_ptr, 10);
+                        if (*end_ptr != 0) continue;
+
+                        memset(&info, 0, sizeof(info));
+                        if (json_pluglet_parse(pluglet, &info) != 0) continue;
+                        strncpy(ptr_plug_dir, info.name, info.str_len);
+                        ptr_plug_dir[info.str_len] = 0;
+
+                        jit = info.jit == -1 ? jit_master : info.jit;
+
+                        if (add_pluglet(master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) ==
+                            -1) {
+                            ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, seq, "Startup");
+                        }
+                    }
+                }
             }
         }
-
-        if (jit) {
-            json_type = json_object_get_type(jit);
-
-            switch (json_type) {
-                case json_type_boolean:
-                    jit_bool = json_object_get_boolean(jit);
-                    break;
-                default:
-                    fprintf(stderr, "Syntax error\n");
-                    return -1;
-            }
-
-        }
-
-
-        final_jit = jit ? jit_bool : jit_all; // the most nested jit var is taken (override jit_all)
-        if (add_plugin(conc_path, (size_t) extra_mem_int, shared_mem_int, id_plugin_int,
-                       type_enum, name_str, final_jit, after_str != NULL ? after_str : NULL) == -1) {
-            fprintf(stderr, "Unable to add plugin %s. Abort...\n", name_str);
-            err++;
-        }
-
     }
 
-    json_object_put(json);
+    json_object_put(main_obj);
 
-    return err; // return the number of eBPF code not correctly loaded
+    return 0;
 }
 
 int is_volatile_plugin(int plug_ID) {
@@ -437,10 +377,9 @@ int is_volatile_plugin(int plug_ID) {
 }
 
 static int
-__add_plugin_generic(const void *generic_ptr, int id_plugin, int type_plug, int type_ptr,
-                     size_t len, size_t add_mem_len, size_t shared_mem, const char *sub_plug_name, const char *after,
-                     uint8_t jit,
-                     const char **err) {
+__add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int type_ptr,
+                      size_t len, size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
+                      const char **err) {
 
     plugin_t *plugin_ptr;
     plugin_t *plugin;
@@ -488,31 +427,19 @@ __add_plugin_generic(const void *generic_ptr, int id_plugin, int type_plug, int 
 
     switch (type_plug) {
         case BPF_PRE:
-            if (add_pre_function(plugin, bytecode, bytecode_len, sub_plug_name, jit) != 0) {
+            if (add_pre_function(plugin, bytecode, bytecode_len, seq, jit) != 0) {
                 *err = "Bytecode insertion failed";
                 return -1;
             }
             break;
         case BPF_POST:
-            if (add_post_function(plugin, bytecode, bytecode_len, sub_plug_name, jit) != 0) {
+            if (add_post_function(plugin, bytecode, bytecode_len, seq, jit) != 0) {
                 *err = "Bytecode insertion failed";
                 return -1;
             }
             break;
         case BPF_REPLACE:
-            if (add_replace_function(plugin, bytecode, bytecode_len, sub_plug_name, jit) != 0) {
-                *err = "Bytecode insertion failed";
-                return -1;
-            }
-            break;
-        case BPF_PRE_APPEND:
-            if (add_pre_append_function(plugin, bytecode, bytecode_len, after, sub_plug_name, jit) != 0) {
-                *err = "Bytecode insertion failed";
-                return -1;
-            }
-            break;
-        case BPF_POST_APPEND:
-            if (add_post_append_function(plugin, bytecode, bytecode_len, after, sub_plug_name, jit) != 0) {
+            if (add_replace_function(plugin, bytecode, bytecode_len, seq, jit) != 0) {
                 *err = "Bytecode insertion failed";
                 return -1;
             }
@@ -528,24 +455,23 @@ __add_plugin_generic(const void *generic_ptr, int id_plugin, int type_plug, int 
 
 }
 
-int __add_plugin_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
-                     size_t add_mem_len, size_t shared_mem, const char *sub_plugin_name, const char *after, uint8_t jit,
-                     const char **err) {
-    return __add_plugin_generic(bytecode, id_plugin, type_plugin, ADD_TYPE_OWNPTR, len, add_mem_len, shared_mem,
-                                sub_plugin_name, after, jit, err);
+int __add_pluglet_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
+                      size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
+                      const char **err) {
+    return __add_pluglet_generic(bytecode, id_plugin, type_plugin, ADD_TYPE_OWNPTR, len, add_mem_len, shared_mem,
+                                 seq, jit, err);
 }
 
-int __add_plugin(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
-                 const char *sub_plugin_name, const char *after, uint8_t jit, const char **err) {
-    return __add_plugin_generic(path_code, id_plugin, type_plugin, ADD_TYPE_FILE, 0, add_mem_len, shared_mem,
-                                sub_plugin_name, after, jit, err);
+int __add_pluglet(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
+                  uint32_t seq, uint8_t jit, const char **err) {
+    return __add_pluglet_generic(path_code, id_plugin, type_plugin, ADD_TYPE_FILE, 0, add_mem_len, shared_mem,
+                                 seq, jit, err);
 }
 
-int add_plugin(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugin,
-               const char *sub_plugin_name, uint8_t jit, const char *after) {
+int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugglet,
+                uint32_t seq, uint8_t jit) {
     const char *err;
-    if (__add_plugin(path_code, id_plugin, type_plugin, add_mem_len, shared_mem, sub_plugin_name, after, jit, &err) ==
-        -1) {
+    if (__add_pluglet(path_code, id_plugin, type_plugglet, add_mem_len, shared_mem, seq, jit, &err) == -1) {
         fprintf(stderr, "%s\n", err);
         return -1;
     }
@@ -558,26 +484,26 @@ int rm_plugin(int id_plugin, const char **err) {
     plugin_t *ptr_plugin;
 
     if (id_plugin <= 0 || id_plugin > MAX_PLUGINS) {
-        *err = PLUGIN_RM_ERROR_ID_NEG;
+        if (err) *err = PLUGIN_RM_ERROR_ID_NEG;
         return -1;
     }
 
     if (!is_id_in_use(id_plugin)) {
-        *err = PLUGIN_RM_ERROR_404;
+        if (err) *err = PLUGIN_RM_ERROR_404;
         return -1;
     }
 
     ptr_plugin = plugins_manager->ubpf_machines[id_plugin];
 
     if (ptr_plugin == NULL) {
-        *err = PLUGIN_RM_ERROR_404;
+        if (err) *err = PLUGIN_RM_ERROR_404;
         return -1;
     }
     destroy_plugin(ptr_plugin);
     plugins_manager->ubpf_machines[id_plugin] = NULL;
 
     plugins_manager->size--;
-    *err = NULL;
+    if (err) *err = NULL;
 
     return 0;
 
@@ -613,12 +539,6 @@ run_plugin_generic(int plug_id, int type, void *mem, size_t mem_len, uint64_t *r
         case BPF_REPLACE:
             exec_ok = run_replace_function(plugin_vm, mem, mem_len, &return_value);
             break;
-        case BPF_PRE_APPEND:
-            exec_ok = run_append_function(plugin_vm, mem, mem_len, &return_value, BPF_PRE_APPEND);
-            break;
-        case BPF_POST_APPEND:
-            exec_ok = run_append_function(plugin_vm, mem, mem_len, &return_value, BPF_POST_APPEND);
-            break;
         default:
             fprintf(stderr, "Plugin type not recognized\n");
             return 0;
@@ -630,12 +550,7 @@ run_plugin_generic(int plug_id, int type, void *mem, size_t mem_len, uint64_t *r
             fprintf(stderr, "plugin execution encountered an error %s\n", id_plugin_to_str(plug_id));*/
     }
 
-    if (type == BPF_POST_APPEND || type == BPF_PRE_APPEND) {
-
-        if (exec_ok == 0) return 0;
-        else return 1;
-
-    } else if (exec_ok != 0) {
+    if (exec_ok != 0) {
         // fprintf(stderr, "No eBPF code has been executed by the VM (%s)\n", id_plugin_to_str(plug_id));
         return 0;
     }
@@ -651,14 +566,6 @@ int run_plugin_post(int plugin_id, void *args, size_t args_len, uint64_t *ret_va
     return run_plugin_generic(plugin_id, BPF_POST, args, args_len, ret_val);
 }
 
-int run_plugin_post_append(int plugin_id, void *args, size_t args_len, uint64_t *ret_val) {
-    return run_plugin_generic(plugin_id, BPF_POST_APPEND, args, args_len, ret_val);
-}
-
-int run_plugin_pre_append(int plugin_id, void *args, size_t args_len, uint64_t *ret_val) {
-    return run_plugin_generic(plugin_id, BPF_PRE_APPEND, args, args_len, ret_val);
-}
-
 int run_plugin_replace(int plugin_id, void *args, size_t args_len, uint64_t *ret_val) {
 
     plugin_t *pptr;
@@ -667,7 +574,6 @@ int run_plugin_replace(int plugin_id, void *args, size_t args_len, uint64_t *ret
 
     pptr = plugins_manager->ubpf_machines[plugin_id];
     if (!pptr) return 0;
-    if (!pptr->is_active_replace) return 0; // error + do not execute eBPF bytecode
 
     return run_plugin_generic(plugin_id, BPF_REPLACE, args, args_len, ret_val);
 }
@@ -695,7 +601,8 @@ int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *re
 }
 
 int init_upbf_inject_queue_snd() {
-    return init_ubpf_inject_queue(1); // queue must be created !
+    // queue must be created before (and thus the "pluginized proto" must be running) !
+    return init_ubpf_inject_queue(1);
 }
 
 int init_ubpf_inject_queue_rcv() {
@@ -849,16 +756,6 @@ static void *plugin_msg_handler(void *args) {
     int mysqid = cast_args->msqid;
     ubpf_queue_msg_t rcvd_msg;
 
-    if (!plugins_manager) {
-        fprintf(stderr, "Plugin manager not initialised");
-        if (!init_plugin_manager(cast_args->protocol, cast_args->daemon_vty_dir, cast_args->len,
-                                 cast_args->plugins_info, cast_args->host, cast_args->host_port,
-                                 cast_args->monit)) {
-            fprintf(stderr, "Could not start plugin manager, EXITING...\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-
     key = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
     if (key == -1) {
         perror("Key generation failed");
@@ -878,7 +775,9 @@ static void *plugin_msg_handler(void *args) {
         return NULL;
     }
 
-    while (1) { // TODO additional memory in CLI (static now) see __add_plugin_ptr calls -> dynamic or static ?
+    free(args);
+
+    while (!finished) { // TODO additional memory in CLI (static now) see __add_plugin_ptr calls -> dynamic or static ?
         err = 0;
         memset(&rcvd_msg, 0, sizeof(ubpf_queue_msg_t));
         memset(info.reason, 0, sizeof(char) * MAX_REASON);
@@ -902,8 +801,8 @@ static void *plugin_msg_handler(void *args) {
 
         switch (rcvd_msg.plugin_action) {
             case E_BPF_ADD:
-                if (__add_plugin_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
-                                     rcvd_msg.length, 0, 0, rcvd_msg.name, rcvd_msg.after, rcvd_msg.jit, &str_err) <
+                if (__add_pluglet_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
+                                      rcvd_msg.length, 0, 0, rcvd_msg.after, rcvd_msg.jit, &str_err) <
                     0) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
@@ -920,8 +819,8 @@ static void *plugin_msg_handler(void *args) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
                 } else if (
-                        __add_plugin_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
-                                         rcvd_msg.length, 0, 0, rcvd_msg.name, rcvd_msg.after, rcvd_msg.jit, &str_err) <
+                        __add_pluglet_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
+                                          rcvd_msg.length, 0, 0, rcvd_msg.after, rcvd_msg.jit, &str_err) <
                         0) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
@@ -946,57 +845,6 @@ static void *plugin_msg_handler(void *args) {
         }
 
     }
-
-}
-
-void start_ubpf_plugin_listener(proto_ext_fun_t *fn) {
-
-    args_plugins_msg_hdlr_t *args;
-    int msqid;
-
-    pthread_t data;
-
-    args = malloc(sizeof(args_plugins_msg_hdlr_t));
-    if (!args) {
-        perror("Thread args malloc failure");
-        exit(EXIT_FAILURE);
-    }
-
-    msqid = init_ubpf_inject_queue_rcv();
-
-    args->msqid = msqid;
-    args->protocol = fn;
-
-    if (msqid == -1) {
-        fprintf(stderr, "Unable to start dynamic plugin injection\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pthread_create(&data, NULL, &plugin_msg_handler, args) != 0) {
-        fprintf(stderr, "Unable to create thread for dynamic plugin injection\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pthread_detach(data) != 0) {
-        fprintf(stderr, "Detachment of the thread failed (%s)", __func__);
-        exit(EXIT_FAILURE);
-    }
-
-}
-
-int notify_deactivate_replace(plugins_t *pm, int plugin_id) {
-    plugin_t *p_ptr, *p;
-    if (!pm) return -1;
-
-    if (plugin_id <= 0 || plugin_id > MAX_PLUGINS) return -1;
-
-    p_ptr = plugins_manager->ubpf_machines[plugin_id];
-
-    if (!p_ptr) return -1;
-    p = p_ptr;
-
-    p->is_active_replace = 0;
-
     return 0;
 }
 

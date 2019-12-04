@@ -1,0 +1,33 @@
+{
+  "jit_all": false,
+  "plugins": {
+    "add_two_insert": {
+      "extra_mem": 4,
+      "shared_mem": 0,
+      "replace": {
+        "path": "simple_test_api.o",
+        "jit": true
+      }
+    },
+    "full_plugin": {
+      "extra_mem": 64,
+      "shared_mem": 64,
+      "pre": {
+        "10": {
+          "path": "pre_simple_ten.o"
+        },
+        "0": {
+          "path": "pre_simple_zero.o"
+        }
+      },
+      "replace": {
+        "path": "replace_simple.o"
+      },
+      "post": {
+        "25": {
+          "path": "post_simple.o"
+        }
+      }
+    }
+  }
+}

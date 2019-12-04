@@ -54,7 +54,6 @@ int push(list_t *stack, void *data) {
     if(!node) return -1;
     memcpy(node->data, data, stack->len);
 
-
     if (stack->size != 0) {
         stack->top->previous = node;
     }

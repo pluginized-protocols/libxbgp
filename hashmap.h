@@ -16,21 +16,14 @@
 struct key {
     uint64_t val;
     char in_use;
-    unsigned int idx_free_lst;
-};
-
-struct alloc_keys {
-    unsigned int max_size;
-    unsigned int size;
-    void **alloc_keys;
 };
 
 typedef struct hashmap {
     unsigned int n;
     unsigned int m;
     struct key *keys;
-    struct alloc_keys alloc;
     void **values;
+    size_t size_val;
 } hashmap_t;
 
 #define hashmap_t(T) \
@@ -57,7 +50,7 @@ put(&(m)->base, key, &(m)->tmp, sizeof((m)->tmp)) )
 delete(&(m)->base, key)
 
 
-int new_hashmap(hashmap_t *hashmap, int size);
+int new_hashmap(hashmap_t *hashmap, unsigned int size);
 
 void free_hashmap(hashmap_t *hashmap);
 

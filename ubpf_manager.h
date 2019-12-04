@@ -16,11 +16,11 @@ typedef struct bytecode_context context_t;
 
 typedef struct vm_container {
     struct ubpf_vm *vm;
-    unsigned int num_ext_fun;
+    unsigned int num_ext_fun; // count the number of external API function already registered in this VM
     context_t *ctx;
     uint8_t *args;// this pointer points on the top of extra memory allowed for plugins
     size_t total_mem;
-    char name[21];
+    uint32_t seq;
     uint8_t jit;
     ubpf_jit_fn fun;
 
@@ -46,7 +46,7 @@ typedef map_t(vm_container_t *) map_vm_t;
  * @param vmc, pointer to a vm_container_t structure
  * @return 1 if uBPF machine is successfuly created, 0 otherwise
  */
-int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, const char *name, size_t len,
+int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, uint32_t seq,
             size_t tot_extra, uint8_t jit);
 
 /**
@@ -99,13 +99,16 @@ context_t *get_curr_context(void);
 int init_ubpf_manager(proto_ext_fun_t *fn);
 
 bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs, bpf_full_args_t *fargs);
+
 int unset_args(bpf_full_args_t *args);
+
 bpf_args_t *get_args(bpf_full_args_t *args);
+
 bpf_full_args_t *valid_args(bpf_full_args_t *args);
 
+int destroy_ubpf_manager(void);
+
 int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn);
-
-
 
 
 #endif //FRR_THESIS_UBPF_MANAGER_H

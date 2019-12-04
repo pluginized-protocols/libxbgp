@@ -5,17 +5,26 @@
 #include "ubpf_context.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
 
 static map_allowed_ctx_t current_context;
 map_allowed_ctx_t *map_ctx = NULL;
 
-#define STRING_PTR_ARRAY 17
+#define MAX_INIT_CONTEXT 32
 
 static inline void init_ctx_map() {
     if (!map_ctx) {
-        map_init(&current_context);
+        hashmap_new(&current_context, MAX_INIT_CONTEXT);
         map_ctx = &current_context;
     }
+}
+
+void destroy_context() {
+    if (!map_ctx) return;
+
+    hashmap_destroy(map_ctx);
+    map_ctx = NULL;
 }
 
 
@@ -33,43 +42,16 @@ context_t *new_context(plugin_t *p) {
 }
 
 int register_context(context_t *ctx) {
-
+    int return_val;
     init_ctx_map();
 
-    char key[STRING_PTR_ARRAY];
-
-    memset(key, 0, sizeof(char) * STRING_PTR_ARRAY);
-
-    if (ptr_to_string(key, ctx, STRING_PTR_ARRAY) != 0) {
-        return -1;
-    }
-
-    return map_set(map_ctx, key, 1) == 0;
+    return_val = hashmap_put(map_ctx, (uint64_t) ctx, 1) == 0;
+    return return_val;
 }
 
 int unregister_context(context_t *ctx) {
 
-    char key[STRING_PTR_ARRAY];
-    memset(key, 0, sizeof(char) * STRING_PTR_ARRAY);
-    if (ptr_to_string(key, ctx, STRING_PTR_ARRAY) != 0) {
-        return -1;
-    }
+    hashmap_delete(map_ctx, (uint64_t) ctx);
 
-    map_remove(map_ctx, key);
     return 0;
-}
-
-int context_ok(context_t *ctx) {
-
-    char key[STRING_PTR_ARRAY];
-    memset(key, 0, STRING_PTR_ARRAY * sizeof(char));
-
-    ptr_to_string(key, ctx, STRING_PTR_ARRAY * sizeof(char));
-
-    init_ctx_map();
-
-    if (!ctx) return 0;
-    if (!map_get(map_ctx, key)) return 0;
-
-    return ctx->args == NULL ? 0 : 1; // check if args pointer is not NULL
 }

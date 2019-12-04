@@ -28,8 +28,8 @@ typedef struct shared_memory {
     uint8_t *heap;
     size_t heap_len;
     header_block_t *start;
-    void *last_block; // sbrk limit
-    void *end; // end of allocated memory
+    uint8_t *last_block; // sbrk limit
+    uint8_t *end; // end of allocated memory
     map_shared_t shared_blocks;
     short corrupted;
 } heap_t;

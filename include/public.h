@@ -14,19 +14,11 @@
 
 extern void set_write_fd(int fd);
 
-int
+extern int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
                     const char *monitoring_address, const char *monitoring_port, int require_monit);
 
-int main_monitor2(const char *address, const char *port, int fd_read);
-
-extern void start_ubpf_plugin_listener(proto_ext_fun_t *api_proto);
-
-extern void remove_xsi();
-
-extern int load_from_json(const char *file_path, const char *sysconfdir);
-
-extern int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *port, size_t len_port);
+extern int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir);
 
 extern int run_plugin_pre(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 
@@ -34,13 +26,18 @@ extern int run_plugin_post(int plugin_id, void *args, size_t args_len, uint64_t 
 
 extern int run_plugin_replace(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 
-extern int run_plugin_pre_append(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
-extern int run_plugin_post_append(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
 extern bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs, bpf_full_args_t *fargs);
 
 extern int unset_args(bpf_full_args_t *args);
+
+extern bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs, bpf_full_args_t *fargs);
+
+extern int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugglet,
+                       uint32_t seq, uint8_t jit);
+
+extern int rm_plugin(int id_plugin, const char **err);
+
+extern void ubpf_terminate(void);
 
 #define RETVAL_VM(ret_val, plug_id, plug_args, plug_size, ...) \
 {\

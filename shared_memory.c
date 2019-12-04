@@ -153,7 +153,7 @@ static inline void *alloc_mem(heap_t *heap, size_t len, type_mem_t type) {
     size_t tot_len;
     uint8_t shared_flag = type == SHARED ? 1 : 0;
 
-    len = (0 == (len & 0x3)) ? len : (len + 3) & ~0x03; // 32bits alignment
+    len = (0 == (len & 0x3u)) ? len : (len + 3u) & ~0x03u; // 32bits alignment
 
     previous = heap->start;
     tot_len = len + sizeof(header_block_t);

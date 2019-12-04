@@ -7,10 +7,7 @@
 
 
 #include <semaphore.h>
-#include "map.h"
-#include "backup_code/bgp_ipfix_templates.h"
-#include "list.h"
-#include "queue.h"
+#include <stdint.h>
 
 #define header_tlv_size 8u
 
@@ -22,6 +19,7 @@ typedef struct tlv_record {
 
 
 void *send_to_collector(void *args);
+
 /**
  * When a new data is dequeued from the concurrent queue
  * (see @top_dir@/ubpf_tools/queue.h) this function will
@@ -98,12 +96,21 @@ void *processing_data(void *args);
  * @return should not return since it will indefinitely loop.
  */
 void *monitor_loop(void *args);
+
 int open_exporter_connexion(const char *host, const char *port, int force);
+
 void close_exporter_connexion();
+
 int send_to_exporter(uint8_t *buffer, size_t len);
+
 void *aggregate_data(void *args);
+
 int init_monitoring(const char *address, const char *port, int require_monitoring);
+
 int is_monit_required();
+
 int has_monit_fd();
+
+void turnoff_monitoring();
 
 #endif //FRR_THESIS_MONITORING_SERVER_H

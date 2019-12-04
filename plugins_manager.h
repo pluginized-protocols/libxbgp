@@ -196,8 +196,8 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
  *                       - provided uBPF file contains errors
  *                       - unable to allocate new memory for this plugin )
  */
-int add_plugin(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugin,
-               const char *sub_plugin_name, uint8_t jit, const char *after);
+int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugglet,
+                uint32_t seq, uint8_t jit);
 
 /**
  * Run the plugin associated to the ID given at argument. This ID should be
@@ -233,11 +233,12 @@ int send_plugin(const char *path, size_t path_len, unsigned int location, unsign
 
 int rm_plugin(int id_plugin, const char **err);
 
-int __add_plugin_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
-                     size_t add_mem_len, size_t shared_mem, const char *sub_plugin_name, const char *after, uint8_t jit, const char **err);
+int __add_pluglet_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
+                      size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
+                      const char **err);
 
-int __add_plugin(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
-                 const char *sub_plugin_name, const char *after, uint8_t jit, const char **err);
+int __add_pluglet(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
+                  uint32_t seq, uint8_t jit, const char **err);
 
 int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 
@@ -250,14 +251,14 @@ int is_volatile_plugin(int plugin_id);
 
 // argument_type_t get_args_id_by_plug_id(plugin_type_t type);
 
-int load_from_json(const char *file_path, const char *sysconfdir);
-
-int load_monit_info(const char *file_path, char *addr, size_t len_addr, char *port, size_t len_port);
+int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir);
 
 size_t store_plugin(size_t size, const char *path);
 
 int notify_deactivate_replace(plugins_t *plugins1, int plug_id);
 
 void remove_xsi(void);
+
+void ubpf_terminate();
 
 #endif //FRR_THESIS_PLUGINS_MANAGER_H

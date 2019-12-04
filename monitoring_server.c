@@ -2,30 +2,27 @@
 // Created by thomas on 4/11/18.
 //
 
-#include "backup_code/bgp_ipfix.h"
 #include "monitoring_server.h"
 #include "plugins_manager.h"
 #include "queue.h"
 #include "map.h"
 #include "list.h"
+#include "ubpf_misc.h"
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include <sys/socket.h>
+#include <unistd.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 // 1MB
 #define MAX_BUFFER_SIZE 1048576
 
 struct __attribute__((__packed__)) header_aggregate {
     uint32_t nb_tlv;
-};
-
-
-enum error_monit {
-    OK = 0,
-    CONN_ERROR,
-    MEM_ERROR,
-    THREAD_ERROR,
-    NOT_INIT_ERROR,
 };
 
 static queue_t *monit_queue;
@@ -36,6 +33,10 @@ static int server_fd = -1;
  * 1: monitoring is required
  */
 static int require_monit = 0;
+
+pthread_t thread_rec;
+pthread_t thread_send;
+pid_t child_pid = -1;
 
 struct monitor_loop_args {
     queue_t *monitoring_data;
@@ -138,18 +139,26 @@ int init_monitoring(const char *address, const char *port, int monit) {
         // init monitoring
         close(pipe_fd[1]);
         status = main_monitor(address, port, pipe_fd[0]);
+        child_pid = -1;
+        close_exporter_connexion();
 
         if (status == CONN_ERROR && monit) {
             exit(EXIT_SUCCESS);
-        } else  {
+        } else {
             fprintf(stderr, "Unable to launch monitoring server\n");
             exit(EXIT_FAILURE); // shouldn't be reached
         }
     } else { // parent
+        child_pid = pid;
         close(pipe_fd[0]);
         set_write_fd(pipe_fd[1]);
         return pipe_fd[1];
     }
+}
+
+void turnoff_monitoring() {
+    if (child_pid == -1) return;
+    kill(child_pid, SIGINT);
 }
 
 int send_to_exporter(uint8_t *buffer, size_t len) {
@@ -173,42 +182,39 @@ int send_to_exporter(uint8_t *buffer, size_t len) {
 int main_monitor(const char *address, const char *port, int fd_read) {
 
     monit_queue = init_queue(sizeof(data_t));
-    int *fd;
     struct monitor_loop_args *args;
 
     if (monit_queue == NULL) {
         return NOT_INIT_ERROR;
     }
 
-    if(open_exporter_connexion(address, port, 0) == -1) {
+    if (open_exporter_connexion(address, port, 0) == -1) {
         return CONN_ERROR;
     }
 
-    fd = malloc(sizeof(int));
-    if (!fd) return MEM_ERROR;
+
     args = malloc(sizeof(struct monitor_loop_args));
-    if (!args) {
-        free(fd);
-        return MEM_ERROR;
-    }
-    *fd = fd_read;
+    if (!args) return MEM_ERROR;
+
     args->fd_read = fd_read;
     args->monitoring_data = monit_queue;
 
-    pthread_t thread_data;
-    pthread_t agg_data;
-
-    if (pthread_create(&thread_data, NULL, &monitor_loop, NULL) != 0) {
+    if (pthread_create(&thread_rec, NULL, &monitor_loop, args) != 0) {
         perror("Can't create thread (data receiver)");
         return THREAD_ERROR;
     }
 
-    if (pthread_create(&agg_data, NULL, &aggregate_data, NULL) != 0) {
+    if (pthread_create(&thread_send, NULL, &aggregate_data, NULL) != 0) {
         perror("Can'y create thread (data aggregator)");
         return THREAD_ERROR;
     }
 
-    if (pthread_join(thread_data, NULL) != 0) {
+    if (pthread_join(thread_rec, NULL) != 0) {
+        perror("Thread join failure");
+        return THREAD_ERROR;
+    }
+
+    if (pthread_join(thread_send, NULL) != 0) {
         perror("Thread join failure");
         return THREAD_ERROR;
     }
@@ -251,6 +257,7 @@ void *aggregate_data(void *args) {
         index += curr_len;
         nb_record++;
     }
+    return NULL;
 }
 
 void *monitor_loop(void *args) {
@@ -266,6 +273,8 @@ void *monitor_loop(void *args) {
     uint8_t *recv_buf;
 
     data_t record;
+
+    free(args);
 
     while (1) {
 

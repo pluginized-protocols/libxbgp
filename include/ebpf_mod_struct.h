@@ -22,7 +22,7 @@ typedef struct plugin_info {
     int plugin_id;
 } plugin_info_t;
 
-plugin_info_t plugin_info_null = {NULL, 0};
+#define plugin_info_null {.plugin_str = NULL, .plugin_id = 0}
 
 
 #endif //FRR_UBPF_EBPF_MOD_STRUCT_H
