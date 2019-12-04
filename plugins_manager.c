@@ -249,7 +249,6 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
 
     char *end_ptr;
     const char *str_override_location;
-    const char *bytecode_name;
     char *master_sysconfdir = NULL;
     char *ptr_plug_dir; // points after the master_sysconfig string in the buffer
     unsigned int seq;
@@ -265,13 +264,10 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
     json_object *main_obj = json_object_from_file(file_path);
     json_object *override_location;
 
-    json_object *location;
     json_object *jit_obj;
 
     json_object *shared_mem_obj;
     json_object *extra_mem_obj;
-
-    json_object *replace_pluglet;
 
     if (main_obj == NULL) return -1;
 
@@ -373,7 +369,7 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
 
 int is_volatile_plugin(int plug_ID) {
 
-    return plug_ID > max_plugin;
+    return plug_ID >= max_plugin;
 }
 
 static int
@@ -648,27 +644,29 @@ static inline __off_t file_size(const char *path) {
     return st.st_size;
 }
 
-int send_plugin(const char *path, size_t path_len, unsigned int location, unsigned int action, int msqid) {
+int send_pluglet(const char *path, size_t path_len, short jit, int hook, unsigned int action,
+                 uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid) {
 
     ubpf_queue_msg_t msg;
     __off_t size;
     size_t len;
 
+    char rel_path[PATH_MAX];
+
     if (path) {
-        if (access(path, R_OK) == -1) {
+        if (path_len > PATH_MAX) {
+            fprintf(stderr, "Length path too high\n");
+            return -1;
+        }
+        realpath(path, rel_path);
+
+        if (access(rel_path, R_OK) == -1) {
             perror("Path not accessible in reading");
             return -1; // Can't read ubpf file
         }
-        if (path_len > PATH_MAX) {
-            fprintf(stderr, "Length path too high");
-            return -1;
-        }
-        if (path[0] != '/') {
-            fprintf(stderr, "Path not relative");
-            return -1; // the path is relative and not absolute
-        }
-    } else if (action != E_BPF_ADD && action != E_BPF_REPLACE) { // check if action is not add or replace
-        fprintf(stderr, "MISSING PATH...");
+    } else if (action != E_BPF_ADD && action != E_BPF_REPLACE &&
+               action != E_BPF_RM) { // check if action is not add or replace
+        fprintf(stderr, "Bad action\n");
         return -1;
     }
 
@@ -681,10 +679,13 @@ int send_plugin(const char *path, size_t path_len, unsigned int location, unsign
 
     assert(len == (size_t) size && "Read length vs actual size differ in size");
 
-    msg.location = location;
     msg.mtype = MTYPE_EBPF_ACTION;
     msg.plugin_action = action;
-    msg.length = len;
+    msg.jit = jit;
+    msg.hook = hook;
+    msg.seq = hook == BPF_REPLACE ? 0 : seq;
+    msg.extra_memory = extra_mem;
+    msg.shared_memory = shared_mem;
 
     if (msgsnd(msqid, &msg, sizeof(ubpf_queue_msg_t), 0) == -1) {
         perror("Plugin send error [msgsnd]");
@@ -745,6 +746,7 @@ static void *plugin_msg_handler(void *args) {
     int memid;
     uint8_t *data_ptr;
     key_t key;
+    int plugin_id;
 
     info.mtype = MTYPE_INFO_MSG;
 
@@ -777,18 +779,16 @@ static void *plugin_msg_handler(void *args) {
 
     free(args);
 
-    while (!finished) { // TODO additional memory in CLI (static now) see __add_plugin_ptr calls -> dynamic or static ?
+    while (!finished) {
         err = 0;
         memset(&rcvd_msg, 0, sizeof(ubpf_queue_msg_t));
         memset(info.reason, 0, sizeof(char) * MAX_REASON);
 
         if (msgrcv(mysqid, &rcvd_msg, sizeof(ubpf_queue_msg_t), MTYPE_EBPF_ACTION, 0) == -1) {
             continue;
-            //perror("msgrcv");
-            //remove_xsi();
         }
 
-        switch (rcvd_msg.plugin_type) {
+        switch (rcvd_msg.hook) {
             case BPF_PRE:
             case BPF_POST:
             case BPF_REPLACE:
@@ -799,29 +799,21 @@ static void *plugin_msg_handler(void *args) {
                 goto end;
         }
 
+        plugin_id = str_plugin_to_int(rcvd_msg.plugin_name);
+        if (plugin_id == -1) continue;
+
         switch (rcvd_msg.plugin_action) {
+            case E_BPF_REPLACE:
             case E_BPF_ADD:
-                if (__add_pluglet_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
-                                      rcvd_msg.length, 0, 0, rcvd_msg.after, rcvd_msg.jit, &str_err) <
-                    0) {
+                if (__add_pluglet_ptr(data_ptr, plugin_id, rcvd_msg.hook, rcvd_msg.bytecode_length,
+                                      rcvd_msg.extra_memory, rcvd_msg.shared_memory, rcvd_msg.seq,
+                                      rcvd_msg.jit, &str_err) < 0) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
                 }
                 break;
             case E_BPF_RM:
-                if (rm_plugin(rcvd_msg.location, &str_err) == -1) {
-                    err = 1;
-                    strncpy(info.reason, str_err, strlen(str_err));
-                }
-                break;
-            case E_BPF_REPLACE:
-                if (rm_plugin(rcvd_msg.location, &str_err) == -1) {
-                    err = 1;
-                    strncpy(info.reason, str_err, strlen(str_err));
-                } else if (
-                        __add_pluglet_ptr(data_ptr, rcvd_msg.location, rcvd_msg.plugin_type,
-                                          rcvd_msg.length, 0, 0, rcvd_msg.after, rcvd_msg.jit, &str_err) <
-                        0) {
+                if (rm_plugin(plugin_id, &str_err) == -1) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
                 }

@@ -125,7 +125,7 @@ generic_add_function(plugin_t *p, const uint8_t *bytecode, size_t len,
                      uint32_t seq, int type, uint8_t jit) {
 
     tree_t *l = NULL;
-    vm_container_t *new_vm;
+    vm_container_t *new_vm, *get_vm;
 
     if (!p || !bytecode) return -1;
 
@@ -151,6 +151,9 @@ generic_add_function(plugin_t *p, const uint8_t *bytecode, size_t len,
     }
 
     if (type != BPF_REPLACE) {
+        if (tree_get(l, seq, &get_vm) != 0) {
+            shutdown_vm(get_vm);
+        }
         tree_put(l, seq, &new_vm, sizeof(vm_container_t *));
     } else {
         p->replace_function = new_vm;
