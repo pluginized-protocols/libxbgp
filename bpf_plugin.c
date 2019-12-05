@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <include/tools_ubpf_api.h>
 
 
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) {
@@ -83,12 +84,10 @@ void destroy_plugin(plugin_t *p) {
             shutdown_vm(*curr_vm);
         }
         rm_tree_iterator(it);
+        delete_tree(it_list[i]);
     }
 
     if (p->replace_function) shutdown_vm(p->replace_function);
-
-    delete_tree(&p->pre_functions);
-    delete_tree(&p->post_functions);
 
     destroy_memory_management(&p->mem.shared_heap.smp);
     free(p->mem.block);
@@ -96,7 +95,7 @@ void destroy_plugin(plugin_t *p) {
 }
 
 static int init_ebpf_code(plugin_t *p, vm_container_t **new_vm, uint32_t seq,
-                          const uint8_t *bytecode, size_t len, uint8_t jit) {
+                          const uint8_t *bytecode, size_t len, int type, uint8_t jit) {
 
 
     context_t *ctx;
@@ -105,6 +104,8 @@ static int init_ebpf_code(plugin_t *p, vm_container_t **new_vm, uint32_t seq,
 
     ctx = new_context(p);
     if (!ctx) return -1;
+
+    ctx->type = type;
 
     if (!register_context(ctx)) {
         free(ctx);
@@ -146,12 +147,12 @@ generic_add_function(plugin_t *p, const uint8_t *bytecode, size_t len,
             return -1;
     }
 
-    if (init_ebpf_code(p, &new_vm, seq, bytecode, len, jit) != 0) {
+    if (init_ebpf_code(p, &new_vm, seq, bytecode, len, type, jit) != 0) {
         return -1;
     }
 
     if (type != BPF_REPLACE) {
-        if (tree_get(l, seq, &get_vm) != 0) {
+        if (tree_get(l, seq, &get_vm) == 0) {
             shutdown_vm(get_vm);
         }
         tree_put(l, seq, &new_vm, sizeof(vm_container_t *));
@@ -202,9 +203,19 @@ static inline int generic_run_function(plugin_t *p, uint8_t *args, size_t args_s
     it = new_tree_iterator(t, &_it);
     while ((vm = tree_iterator_next(it)) != NULL) {
         exec_ok = run_injected_code(*vm, args, args_size, ret);
+        if (ret) {
+            switch (*ret) {
+                case BPF_FAILURE:
+                case BPF_SUCCESS:
+                    rm_tree_iterator(it);
+                    return *ret;
+                case BPF_CONTINUE:
+                default:
+                    break;
+            }
+        }
     }
     rm_tree_iterator(it);
-
     return 0;
 }
 

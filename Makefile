@@ -67,4 +67,4 @@ lib_tests: $(LIBUBPF_A) $(OBJ_TESTS)
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ) $(LIBUBPF_A)
+	rm -f $(OBJ) $(OBJ_TESTS) $(LIBUBPF_A)

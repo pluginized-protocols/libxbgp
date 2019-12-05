@@ -37,7 +37,6 @@ context_t *new_context(plugin_t *p) {
     if (!ctx) return NULL;
 
     ctx->p = p;
-
     return ctx;
 }
 

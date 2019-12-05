@@ -39,62 +39,70 @@ extern int rm_plugin(int id_plugin, const char **err);
 
 extern void ubpf_terminate(void);
 
-#define RETVAL_VM(ret_val, plug_id, plug_args, plug_size, ...) \
+extern int rm_plugin(int id_plugin, const char **err);
+
+extern int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
+
+extern int send_pluglet(const char *path, size_t path_len, short jit, int hook, unsigned int action,
+                        uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid);
+
+
+#define RETURN_VM_VOID(ret_val, ...) \
 {\
-    run_plugin_post(plug_id, plug_args, plug_size, NULL);\
-    {__VA_ARGS__}\
-    unset_args(plug_args);\
+    run_plugin_post(___PLUGIN_ID, _____fargs, sizeof(__fargs), NULL);\
+    {##__VA_ARGS__}\
+    unset_args(_____fargs);\
+}
+
+#define RETURN_VM_VAL(ret_val, ...) \
+{\
+    RETURN_VM_VOID(ret_val, __VA_ARGS__)\
     return ret_val;\
 }
 
-#define POST_NO_RET(plug_id, plug_args, plug_size, ...) \
-{\
-    run_plugin_post(plug_id, plug_args, plug_size, NULL);\
-    {__VA_ARGS__}\
-    unset_args(plug_args);\
-}
-
-#define VM_CALL_COND(plug_id, plug_args, plug_size, ...)\
+#define VM_CALL_GEN(plug_id, plug_args, nargs, macro_def, ...)\
 {\
     uint64_t __ret_val__;\
-    run_plugin_pre(plug_id, plug_args, plug_size, NULL);\
-    \
-    if(!run_plugin_pre_append(plug_id, plug_args, plug_size, &__ret_val__)){\
-        if(!run_plugin_replace(plug_id, plug_args, plug_size, &__ret_val__)) {\
-            {__VA_ARGS__}\
-        } else {\
-            RETVAL_VM(__ret_val__, plug_id, plug_args, plug_size);\
-        }\
+    unsigned int ___PLUGIN_ID = plug_id;\
+    bpf_full_args_t __fargs, *_____fargs;\
+    _____fargs = new_argument(plug_args, ___PLUGIN_ID, nargs, &__fargs);\
+    run_plugin_pre(___PLUGIN_ID, _____fargs, sizeof(_____fargs), NULL);\
+    if(!run_plugin_replace(___PLUGIN_ID, _____fargs, sizeof(_____fargs), &__ret_val__)) { \
+        {__VA_ARGS__} \
+    } else {\
+        RETURN_VM_ ## macro_def (__ret_val__);\
     }\
-    RETVAL_VM(__ret_val__, plug_id, plug_args, plug_size);\
 }
 
-#define VM_CALL(plug_id, plug_args, plug_size, ...)\
+#define VM_CALL(plug_id, plug_args, nargs, ...) \
+VM_CALL_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
+
+#define VM_CALL_VOID(plug_id, plug_args, nargs, ...) \
+VM_CALL_GEN(plug_id, plug_args, nargs, VOID, __VA_ARGS__)
+
+#define VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, macro_def, ...) \
 {\
     uint64_t __ret_val__;\
-    run_plugin_pre(plug_id, plug_args, plug_size, NULL);\
-    if(!run_plugin_replace(plug_id, plug_args, plug_size, &__ret_val__)) { \
+    bpf_full_args_t __fargs, *_____fargs;\
+    _____fargs = new_argument(plug_args, plug_id, nargs, &__fargs);\
+    switch(run_plugin_pre(plug_id, plug_args, sizeof(_____fargs), NULL)) {\
+        case BPF_SUCCESS:\
+            RETURN_VM_ ## macro_def (__ret_val__, plug_id, plug_args);\
+        default:\
+            break;\
+    }\
+    if(!run_plugin_replace(plug_id, plug_args, sizeof(_____fargs), &__ret_val__)) { \
         {__VA_ARGS__} \
-    } else { \
-        RETVAL_VM(__ret_val__, plug_id, plug_args, plug_size);\
-    } \
+    } else {\
+        RETURN_VM_ ## macro_def (__ret_val__, plug_id, plug_args);\
+    }\
 }
 
-#define VM_CALL_NO_RET(plug_id, plug_args, plug_size, ...)\
-{\
-    uint64_t __ret_val__;\
-    run_plugin_pre(plug_id, plug_args, plug_size, NULL);\
-    if(!run_plugin_replace(plug_id, plug_args, plug_size, &__ret_val__)) { \
-        {__VA_ARGS__} \
-    } else { \
-        POST_NO_RET(plug_id, plug_args, plug_size);\
-    } \
-}
+#define VM_CALL_CHECK_VOID(plug_id, plug_args, nargs, ...)\
+VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VOID, __VA_ARGS__)
 
-#define DEFFUN_VM(func_name, ret_type, args, plug_id, plug_args, plug_size, ...) \
-ret_type func_name args { \
-    VM_CALL(plug_id, plug_args, plug_size, __VA_ARGS__)\
-}
+#define VM_CALL_CHECK(plug_id, plug_args, nargs, ...)\
+VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
 
 
 #endif //FRR_UBPF_PUBLIC_H

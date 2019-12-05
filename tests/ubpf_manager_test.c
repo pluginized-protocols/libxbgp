@@ -13,6 +13,27 @@
 
 char plugin_folder_path[PATH_MAX];
 
+static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c, short d) {
+
+    bpf_args_t args[] = {
+            [0] = {.arg = &a, .len = sizeof(a), .kind = kind_primitive, .type = 0},
+            [1] = {.arg = &b, .len = sizeof(b), .kind = kind_primitive, .type = 0},
+            [2] = {.arg = &c, .len = sizeof(c), .kind = kind_primitive, .type = 0},
+            [3] = {.arg = &d, .len = sizeof(d), .kind = kind_primitive, .type = 0},
+    };
+
+    VM_CALL(3, args, 4, {
+
+        int temp = a * b;
+        int temp2 = b + c;
+        int temp4 = c % d;
+
+
+        RETURN_VM_VAL(temp * temp2 * temp4)
+    })
+}
+
+
 int add_two(context_t *ctx, int a) {
     ((void) ctx); // trick to avoid generating useless compilation warnings
     return a + 2;
@@ -27,6 +48,7 @@ proto_ext_fun_t funcs[] = {
 plugin_info_t plugins[] = {
         {.plugin_str = "add_two_insert", .plugin_id = 1},
         {.plugin_str = "full_plugin", .plugin_id = 2},
+        {.plugin_str = "macro_test", .plugin_id = 3},
         plugin_info_null
 };
 
@@ -61,7 +83,7 @@ void test_add_plugin(void) {
     bpf_full_args_t fargs;
     new_argument(args, 1, 1, &fargs);
 
-    status = add_pluglet(path_pluglet, 4,
+    status = add_pluglet(path_pluglet, 8,
                          0, 1, BPF_REPLACE, 0, 0);
 
     CU_ASSERT_EQUAL(status, 0);
@@ -110,6 +132,27 @@ void test_read_json_add_plugins(void) {
     rm_plugin(2, NULL);
 }
 
+static void test_macro_function(void) {
+
+    int return_value, status;
+
+    char path_pluglet[PATH_MAX];
+    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
+    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "replace_fun_macro.o");
+
+    return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
+    CU_ASSERT_EQUAL(return_value, 30);
+
+    status = add_pluglet(path_pluglet, 64,
+                         0, 3, BPF_REPLACE, 0, 0);
+
+    CU_ASSERT_EQUAL(status, 0)
+    return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
+    CU_ASSERT_EQUAL(return_value, 10) // plugin should only make a sum (instead of weird computation)
+
+    rm_plugin(3, NULL);
+}
+
 int ubpf_manager_tests(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
@@ -122,8 +165,9 @@ int ubpf_manager_tests(const char *plugin_folder) {
         return CU_get_error();
     }
 
-    if ((NULL == CU_add_test(pSuite, "Test adding plugin and execute it", test_add_plugin)) ||
-        (NULL == CU_add_test(pSuite, "Test reading json plugin and execute it", test_read_json_add_plugins))) {
+    if ((NULL == CU_add_test(pSuite, "Adding plugin and execute it", test_add_plugin)) ||
+        (NULL == CU_add_test(pSuite, "Reading json plugin and execute it", test_read_json_add_plugins)) ||
+        (NULL == CU_add_test(pSuite, "Test pluginize function with macro", test_macro_function))) {
         CU_cleanup_registry();
         return CU_get_error();
     }

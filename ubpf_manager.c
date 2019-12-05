@@ -353,7 +353,12 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
     }
 
     if (ret == UINT64_MAX) {
-        fprintf(stderr, "Plugin crashed (%d)\n", vmc->seq);
+        fprintf(stderr, "Plugin %s crashed (%s seq %d)\n",
+                id_plugin_to_str(vmc->ctx->p->plugin_id),
+                vmc->ctx->type == BPF_REPLACE ? "replace" :
+                vmc->ctx->type == BPF_PRE ? "pre" :
+                vmc->ctx->type == BPF_POST ? "post" : "unk",
+                vmc->seq);
     }
 
     // reset --> this VM is not in use for now

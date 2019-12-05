@@ -25,6 +25,7 @@ struct bytecode_context {
     // contains internal information needed to run every plugins
     // You should add here every needed thing to correctly run
     // a given plugin
+    int type; // PRE REPLACE or POST
     plugin_t *p;
     void *args;    // pointer to the argument of the plugin used to
 #define LENGTH_CONTEXT_ERROR 50
