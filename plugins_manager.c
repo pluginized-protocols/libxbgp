@@ -505,7 +505,7 @@ int rm_plugin(int id_plugin, const char **err) {
 
 }
 
-static int
+static inline int
 run_plugin_generic(int plug_id, int type, void *mem, size_t mem_len, uint64_t *ret_val) {
 
     plugin_t *plugin_vm;

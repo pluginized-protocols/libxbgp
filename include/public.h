@@ -60,6 +60,11 @@ extern int send_pluglet(const char *path, size_t path_len, short jit, int hook, 
     return ret_val;\
 }
 
+#define MACRO_VAL(ret_val, ...)
+
+#define MACRO_VOID(ret_val, ...) \
+RETURN_VM_VOID(ret_val, ##__VA_ARGS__)
+
 #define VM_CALL_GEN(plug_id, plug_args, nargs, macro_def, ...)\
 {\
     uint64_t __ret_val__;\
@@ -69,6 +74,7 @@ extern int send_pluglet(const char *path, size_t path_len, short jit, int hook, 
     run_plugin_pre(___PLUGIN_ID, _____fargs, sizeof(_____fargs), NULL);\
     if(!run_plugin_replace(___PLUGIN_ID, _____fargs, sizeof(_____fargs), &__ret_val__)) { \
         {__VA_ARGS__} \
+        MACRO_ ## macro_def (__ret_val__)\
     } else {\
         RETURN_VM_ ## macro_def (__ret_val__);\
     }\

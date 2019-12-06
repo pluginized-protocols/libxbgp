@@ -7,9 +7,17 @@
 #include <bpf_plugin.h>
 #include <CUnit/Util.h>
 #include <limits.h>
+#include <include/tools_ubpf_api.h>
 
 
 #include "ubpf_manager_test.h"
+
+enum custom_user_type {
+    INT_EXAMPLE,
+};
+
+
+static unsigned int plugin_set_post = -1;
 
 char plugin_folder_path[PATH_MAX];
 
@@ -33,15 +41,42 @@ static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c,
     })
 }
 
+static inline void my_function_void(int *a) {
+
+    bpf_args_t args[] = {
+            [0] = {.arg = a, .len = sizeof(int), .kind = kind_ptr, .type = INT_EXAMPLE},
+    };
+
+
+    VM_CALL_VOID(1, args, 1, {
+        *a = 42;
+    })
+}
+
 
 int add_two(context_t *ctx, int a) {
     ((void) ctx); // trick to avoid generating useless compilation warnings
     return a + 2;
 }
 
+int set_int_example(api_args, int new_int_val) {
+
+    int *int_from_args = auto_get(INT_EXAMPLE, int *);
+    if (!int_from_args) return -1;
+
+    *int_from_args = new_int_val;
+    return 0;
+}
+
+void post_function_call(context_t *ctx) {
+    plugin_set_post = ctx->p->plugin_id;
+}
+
 
 proto_ext_fun_t funcs[] = {
         {.name = "add_two", .fn = add_two},
+        {.name = "set_int_example", .fn = set_int_example},
+        {.name = "post_function_call", .fn = post_function_call},
         {NULL}
 };
 
@@ -153,6 +188,43 @@ static void test_macro_function(void) {
     rm_plugin(3, NULL);
 }
 
+static void macro_void_example_with_set(void) {
+
+    int status;
+    char path_pluglet[PATH_MAX];
+    int my_arg_to_be_modified = 2142;
+
+    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
+    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "macro_void_test.o");
+
+    my_function_void(&my_arg_to_be_modified);
+    CU_ASSERT_EQUAL(my_arg_to_be_modified, 42);
+
+    // reset arg;
+    my_arg_to_be_modified = 2142;
+
+    status = add_pluglet(path_pluglet, 64, 0, 1,
+                         BPF_REPLACE, 0, 0);
+    CU_ASSERT_EQUAL(status, 0);
+
+    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
+    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "macro_void_test_post.o");
+
+    status = add_pluglet(path_pluglet, 64, 0,
+                         1, BPF_POST, 0, 0);
+    CU_ASSERT_EQUAL(status, 0);
+
+    my_function_void(&my_arg_to_be_modified);
+    CU_ASSERT_EQUAL(my_arg_to_be_modified, 2150);
+
+    // only way to check if 1) the post pluglet is executed
+    //                      2) the set function is applied on the real argument
+    //                         and not the one copied into the VM memory
+    CU_ASSERT_EQUAL(plugin_set_post, 1);
+
+    rm_plugin(1, NULL);
+}
+
 int ubpf_manager_tests(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
@@ -167,7 +239,8 @@ int ubpf_manager_tests(const char *plugin_folder) {
 
     if ((NULL == CU_add_test(pSuite, "Adding plugin and execute it", test_add_plugin)) ||
         (NULL == CU_add_test(pSuite, "Reading json plugin and execute it", test_read_json_add_plugins)) ||
-        (NULL == CU_add_test(pSuite, "Test pluginize function with macro", test_macro_function))) {
+        (NULL == CU_add_test(pSuite, "Test pluginize function with macro", test_macro_function)) ||
+        (NULL == CU_add_test(pSuite, "Setter and void function macro", macro_void_example_with_set))) {
         CU_cleanup_registry();
         return CU_get_error();
     }
