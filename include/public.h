@@ -89,18 +89,19 @@ VM_CALL_GEN(plug_id, plug_args, nargs, VOID, __VA_ARGS__)
 #define VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, macro_def, ...) \
 {\
     uint64_t __ret_val__;\
+    unsigned int ___PLUGIN_ID = plug_id;\
     bpf_full_args_t __fargs, *_____fargs;\
-    _____fargs = new_argument(plug_args, plug_id, nargs, &__fargs);\
-    switch(run_plugin_pre(plug_id, plug_args, sizeof(_____fargs), NULL)) {\
+    _____fargs = new_argument(plug_args, ___PLUGIN_ID, nargs, &__fargs);\
+    switch(run_plugin_pre(___PLUGIN_ID, plug_args, sizeof(_____fargs), NULL)) {\
         case BPF_SUCCESS:\
-            RETURN_VM_ ## macro_def (__ret_val__, plug_id, plug_args);\
+            RETURN_VM_ ## macro_def (__ret_val__);\
         default:\
             break;\
     }\
-    if(!run_plugin_replace(plug_id, plug_args, sizeof(_____fargs), &__ret_val__)) { \
+    if(!run_plugin_replace(___PLUGIN_ID, plug_args, sizeof(_____fargs), &__ret_val__)) { \
         {__VA_ARGS__} \
     } else {\
-        RETURN_VM_ ## macro_def (__ret_val__, plug_id, plug_args);\
+        RETURN_VM_ ## macro_def (__ret_val__);\
     }\
 }
 

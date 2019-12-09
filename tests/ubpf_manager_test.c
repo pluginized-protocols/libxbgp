@@ -16,7 +16,6 @@ enum custom_user_type {
     INT_EXAMPLE,
 };
 
-
 static unsigned int plugin_set_post = -1;
 
 char plugin_folder_path[PATH_MAX];
@@ -239,7 +238,7 @@ int ubpf_manager_tests(const char *plugin_folder) {
 
     if ((NULL == CU_add_test(pSuite, "Adding plugin and execute it", test_add_plugin)) ||
         (NULL == CU_add_test(pSuite, "Reading json plugin and execute it", test_read_json_add_plugins)) ||
-        (NULL == CU_add_test(pSuite, "Test pluginize function with macro", test_macro_function)) ||
+        (NULL == CU_add_test(pSuite, "\"Pluginize\" function with macro", test_macro_function)) ||
         (NULL == CU_add_test(pSuite, "Setter and void function macro", macro_void_example_with_set))) {
         CU_cleanup_registry();
         return CU_get_error();
