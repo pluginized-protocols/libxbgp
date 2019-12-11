@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" width="652px"
+     height="321px" viewBox="-0.5 -0.5 652 321"
+     content="&lt;mxfile host=&quot;www.draw.io&quot; modified=&quot;2019-12-10T15:08:16.841Z&quot; agent=&quot;Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36&quot; etag=&quot;LdR_OXXbZUFyyBsgopqc&quot; version=&quot;12.3.9&quot; type=&quot;device&quot; pages=&quot;1&quot;&gt;&lt;diagram id=&quot;1wyJd8A4zs1draZAAAee&quot; name=&quot;Page-1&quot;&gt;7Vpbk5owFP41PrYDAQI+Vte203an27Ez7falE0kUukhsjFX76xsgkZsC1gvq7s7OLDk5ufB9X05OsnSM/nT1jqGZd08xCTpAw6uOcdcBQDcB6ES/Gl4nFts0E8OE+Vg6pYah/5dIoyatCx+Tec6RUxpwf5Y3ujQMictzNsQYXebdxjTIjzpDE1IyDF0UlK3ffMy9xOoAO7W/J/7EUyPrsJvUTJFyll3MPYTpMjHFL2cMOkafUcqTp+mqT4IIPIVLgsDbHbWbiTES8iYNfuIPwP9IH4K7sPvZR/DLV0heWZKePyhYyDeWs+VrBQGjixCTqBetY/SWns/JcIbcqHYpSBc2j08DUdLF45iGvE8DyuK2Buw7g56YUQ+juRf3ETnJMQnjZLXzbfQNRkJchE4JZ2vhIhtYXSkQqSvgyPIyZUmH0uZlGFJ+SApjsuk6xU48SPj2gVK/Uih1rQGU4JxQms6VQgmMBlDaZ4XS3gIlDLgEJY6cChf4exEFIwGEocU/WROcyL9x25EyDDlyn5RVzHBU9BS2ZCBlPgWPx1gFoJ4666zMdU/L3GDFGRK93JMpjYHYeDDl8oOG5Ba4NS8uwiklnWxZegIcnGH3Vqm1GizbM1Nr1G9eJMRvouRUlMKIiD3QIriUsNZiVRPClI2RAHH/T777bfjIER6oH0t1Rx5hwALEc7pgLpGtsplqTUclrjhiE8JLHcV0bV77AAbNZ8qgbR2JwWJH52YQOmXCBOpDWaSMe3RCQxQMUmsvH9JSn0+UziSxvwjna3lIRQtO87STlc+/R81fW7L0mKm5W8me48JaFgpScUDPgDCy+0GQsY/HBLqusM85o08kU4Pt7kjT9hCXQCVmsWoBwMQxYakK5x1ybazDgyKtOmpfPsuCAbZOGgFLlR+zlWm7uHQb8khS2Lbkoc5ZL/K4UHlYWpvyUNPM7PIPwWLih8L2ppwwR3UBifa4qrsIvUEynOcGW8TB5jZuHDCSbO5iWdiVmtXl00FHYJjftTc3FXW5dDFNON4S1ktYX/4SPsUKxog4460rGLoOGY2PvIK7Tfd/cOAKjpuKRBqtMw6zKC2c705ToVPILs3CzXfRv2tV+YuHZAZHTUFt8wqlaz8j7R68+5xHu3ql/4m0a71o96K1e3BifRbtmsX/0Z1DuwrDvdM641bTOli4It2kea2ldbCMdWvxRauML7s42pXu6XVhJ68Sogud2NtU0oW2geBxw4visz682McIL7X3uqbZ7FZw3zi1ObeocbTqOKWbVpX/aeIUhNe+Bq5Ey61slftK0ISV/ieSoH0tEvzvcHvV0m3nhLKvdC2nDemW/3/eLMsrXyjdSJanFw6KJmg9y9v2QdzLp0dbqCveT7X96REEL8w1O1oVYuUJmRPF9FvhJIymX1wbg38=&lt;/diagram&gt;&lt;/mxfile&gt;">
+    <defs>
+        <style xmlns="http://www.w3.org/1999/xhtml" type="text/css">.MathJax_Hover_Frame {border-radius: .25em;
+            -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px
+            15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px
+            0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}&#xa;.MathJax_Menu_Button
+            .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA;
+            border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px;
+            font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}&#xa;.MathJax_Menu_Button
+            .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px;
+            line-height: 0; padding: 4px}&#xa;.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid
+            #CCC!important}&#xa;.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}&#xa;
+        </style>
+        <style xmlns="http://www.w3.org/1999/xhtml" type="text/css">#MathJax_About {position: fixed; left: 50%; width:
+            auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black;
+            cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0;
+            text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal;
+            white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px;
+            -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow:
+            0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080;
+            filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}&#xa;#MathJax_About.MathJax_MousePost
+            {outline: none}&#xa;.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto;
+            padding: 5px 0px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left;
+            text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;
+            word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 5px;
+            -webkit-border-radius: 5px; -moz-border-radius: 5px; -khtml-border-radius: 5px; box-shadow: 0px 10px 20px
+            #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080;
+            -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2,
+            OffY=2, Color='gray', Positive='true')}&#xa;.MathJax_MenuItem {padding: 1px 2em; background: transparent}&#xa;.MathJax_MenuArrow
+            {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}&#xa;.MathJax_MenuActive
+            .MathJax_MenuArrow {color: white}&#xa;.MathJax_MenuArrow.RTL {left: .5em; right: auto}&#xa;.MathJax_MenuCheck
+            {position: absolute; left: .7em}&#xa;.MathJax_MenuCheck.RTL {right: .7em; left: auto}&#xa;.MathJax_MenuRadioCheck
+            {position: absolute; left: .7em}&#xa;.MathJax_MenuRadioCheck.RTL {right: .7em; left: auto}&#xa;.MathJax_MenuLabel
+            {padding: 1px 2em 3px 1.33em; font-style: italic}&#xa;.MathJax_MenuRule {border-top: 1px solid #DDDDDD;
+            margin: 4px 3px}&#xa;.MathJax_MenuDisabled {color: GrayText}&#xa;.MathJax_MenuActive {background-color:
+            #606872; color: white}&#xa;.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}&#xa;.MathJax_ContextMenu:focus
+            {outline: none}&#xa;.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}&#xa;#MathJax_AboutClose
+            {top: .2em; right: .2em}&#xa;.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}&#xa;.MathJax_MenuClose
+            {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px;
+            -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier
+            New',Courier; font-size: 24px; color: #F0F0F0}&#xa;.MathJax_MenuClose span {display: block;
+            background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px;
+            -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}&#xa;.MathJax_MenuClose:hover
+            {color: white!important; border: 2px solid #CCC!important}&#xa;.MathJax_MenuClose:hover span
+            {background-color: #CCC!important}&#xa;.MathJax_MenuClose:hover:focus {outline: none}&#xa;
+        </style>
+        <style xmlns="http://www.w3.org/1999/xhtml" type="text/css">.MathJax_Preview .MJXf-math {color:
+            inherit!important}&#xa;
+        </style>
+        <style xmlns="http://www.w3.org/1999/xhtml" type="text/css">#MathJax_Zoom {position: absolute; background-color:
+            #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0;
+            font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none;
+            line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap;
+            float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box;
+            box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px
+            #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter:
+            progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}&#xa;#MathJax_ZoomOverlay
+            {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%;
+            border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}&#xa;#MathJax_ZoomFrame
+            {position: relative; display: inline-block; height: 0; width: 0}&#xa;#MathJax_ZoomEventTrap {position:
+            absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0;
+            background-color: white; opacity: 0; filter: alpha(opacity=0)}&#xa;
+        </style>
+        <style xmlns="http://www.w3.org/1999/xhtml" type="text/css">.MathJax_Preview {color: #888}&#xa;#MathJax_Message
+            {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin:
+            0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}&#xa;#MathJax_MSIE_Frame
+            {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}&#xa;.MathJax_Error
+            {color: #CC0000; font-style: italic}&#xa;
+        </style>
+        <style xmlns="http://www.w3.org/1999/xhtml" type="text/css">.MJXp-script {font-size: .8em}&#xa;.MJXp-right
+            {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right;
+            -o-transform-origin: right; transform-origin: right}&#xa;.MJXp-bold {font-weight: bold}&#xa;.MJXp-italic
+            {font-style: italic}&#xa;.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}&#xa;.MJXp-frak
+            {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}&#xa;.MJXp-sf {font-family:
+            MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}&#xa;.MJXp-cal {font-family:
+            MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}&#xa;.MJXp-mono {font-family:
+            MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}&#xa;.MJXp-largeop {font-size: 150%}&#xa;.MJXp-largeop.MJXp-int
+            {vertical-align: -.2em}&#xa;.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0;
+            font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}&#xa;.MJXp-display
+            {display: block; text-align: center; margin: 1em 0}&#xa;.MJXp-math span {display: inline-block}&#xa;.MJXp-box
+            {display: block!important; text-align: center}&#xa;.MJXp-box:after {content: " "}&#xa;.MJXp-rule {display:
+            block!important; margin-top: .1em}&#xa;.MJXp-char {display: block!important}&#xa;.MJXp-mo {margin: 0 .15em}&#xa;.MJXp-mfrac
+            {margin: 0 .125em; vertical-align: .25em}&#xa;.MJXp-denom {display: inline-table!important; width: 100%}&#xa;.MJXp-denom
+            &gt; * {display: table-row!important}&#xa;.MJXp-surd {vertical-align: top}&#xa;.MJXp-surd &gt; * {display:
+            block!important}&#xa;.MJXp-script-box &gt; * {display: table!important; height: 50%}&#xa;.MJXp-script-box
+            &gt; * &gt; * {display: table-cell!important; vertical-align: top}&#xa;.MJXp-script-box &gt; *:last-child
+            &gt; * {vertical-align: bottom}&#xa;.MJXp-script-box &gt; * &gt; * &gt; * {display: block!important}&#xa;.MJXp-mphantom
+            {visibility: hidden}&#xa;.MJXp-munderover, .MJXp-munder {display: inline-table!important}&#xa;.MJXp-over
+            {display: inline-block!important; text-align: center}&#xa;.MJXp-over &gt; * {display: block!important}&#xa;.MJXp-munderover
+            &gt; *, .MJXp-munder &gt; * {display: table-row!important}&#xa;.MJXp-mtable {vertical-align: .25em; margin:
+            0 .125em}&#xa;.MJXp-mtable &gt; * {display: inline-table!important; vertical-align: middle}&#xa;.MJXp-mtr
+            {display: table-row!important}&#xa;.MJXp-mtd {display: table-cell!important; text-align: center; padding:
+            .5em 0 0 .5em}&#xa;.MJXp-mtr &gt; .MJXp-mtd:first-child {padding-left: 0}&#xa;.MJXp-mtr:first-child &gt;
+            .MJXp-mtd {padding-top: 0}&#xa;.MJXp-mlabeledtr {display: table-row!important}&#xa;.MJXp-mlabeledtr &gt;
+            .MJXp-mtd:first-child {padding-left: 0}&#xa;.MJXp-mlabeledtr:first-child &gt; .MJXp-mtd {padding-top: 0}&#xa;.MJXp-merror
+            {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal;
+            font-size: 90%}&#xa;.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform:
+            scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}&#xa;.MJXp-scale1 {-webkit-transform:
+            scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform:
+            scaleX(.1)}&#xa;.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform:
+            scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}&#xa;.MJXp-scale3 {-webkit-transform:
+            scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform:
+            scaleX(.3)}&#xa;.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform:
+            scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}&#xa;.MJXp-scale5 {-webkit-transform:
+            scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform:
+            scaleX(.5)}&#xa;.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform:
+            scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}&#xa;.MJXp-scale7 {-webkit-transform:
+            scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform:
+            scaleX(.7)}&#xa;.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform:
+            scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}&#xa;.MJXp-scale9 {-webkit-transform:
+            scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform:
+            scaleX(.9)}&#xa;.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black;
+            padding: 1px 3px; border: 1px solid}&#xa;
+        </style>
+    </defs>
+    <g>
+        <rect x="490" y="120" width="160" height="80" fill="#ffffff" stroke="#000000" stroke-dasharray="3 3"
+              pointer-events="all"/>
+        <rect x="0" y="120" width="120" height="80" fill="#ffffff" stroke="#000000" stroke-dasharray="3 3"
+              pointer-events="all"/>
+        <rect x="130" y="120" width="170" height="80" fill="#ffffff" stroke="#000000" stroke-dasharray="3 3"
+              pointer-events="all"/>
+        <rect x="20" y="120" width="50" height="80" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <rect x="300" y="120" width="120" height="80" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <rect x="420" y="120" width="120" height="80" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <path d="M 0 200 L 0 120" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 650 200 L 650 120" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 120 70 L 120 113.63" fill="none" stroke="#d79b00" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 120 118.88 L 116.5 111.88 L 120 113.63 L 123.5 111.88 Z" fill="#d79b00" stroke="#d79b00"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 120 70 L 120 95 L 330 95 L 330 113.63" fill="none" stroke="#d79b00" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 330 118.88 L 326.5 111.88 L 330 113.63 L 333.5 111.88 Z" fill="#d79b00" stroke="#d79b00"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 120 70 L 120 95 L 450 95 L 450 113.63" fill="none" stroke="#d79b00" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 450 118.88 L 446.5 111.88 L 450 113.63 L 453.5 111.88 Z" fill="#d79b00" stroke="#d79b00"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="60" y="10" width="120" height="60" rx="9" ry="9" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/>
+        <path d="M 580 60 L 580 80 L 595 80 L 595 113.63" fill="none" stroke="#6c8ebf" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 595 118.88 L 591.5 111.88 L 595 113.63 L 598.5 111.88 Z" fill="#6c8ebf" stroke="#6c8ebf"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 580 60 L 580 80 L 510 80 L 510 113.63" fill="none" stroke="#6c8ebf" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 510 118.88 L 506.5 111.88 L 510 113.63 L 513.5 111.88 Z" fill="#6c8ebf" stroke="#6c8ebf"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 580 60 L 580 80 L 390 80 L 390 113.63" fill="none" stroke="#6c8ebf" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 390 118.88 L 386.5 111.88 L 390 113.63 L 393.5 111.88 Z" fill="#6c8ebf" stroke="#6c8ebf"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="520" y="0" width="120" height="60" rx="9" ry="9" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/>
+        <path d="M 70 260 L 70 240 L 45 240 L 45 206.37" fill="none" stroke="#9673a6" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 45 201.12 L 48.5 208.12 L 45 206.37 L 41.5 208.12 Z" fill="#9673a6" stroke="#9673a6"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 70 260 L 70 240 L 360 240 L 360 206.37" fill="none" stroke="#9673a6" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 360 201.12 L 363.5 208.12 L 360 206.37 L 356.5 208.12 Z" fill="#9673a6" stroke="#9673a6"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 70 260 L 70 240 L 480 240 L 480 206.37" fill="none" stroke="#9673a6" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 480 201.12 L 483.5 208.12 L 480 206.37 L 476.5 208.12 Z" fill="#9673a6" stroke="#9673a6"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="10" y="260" width="120" height="60" rx="9" ry="9" fill="#d5e8d4" stroke="#82b366"
+              pointer-events="all"/>
+        <rect x="95" y="120" width="50" height="80" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <rect x="570" y="120" width="50" height="80" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+    </g>
+    <g transform="translate(27.5,153.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="34" height="13"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(108, 142, 191); text-align: center; overflow-wrap: normal; width: 34px; left: 0px; top: 0px;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        <font color="#000000">
+                            <b>Stack</b>
+                        </font>
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="17" y="13" fill="#6C8EBF" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not
+                supported by viewer]
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(319.5,146.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="80" height="27"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(108, 142, 191); text-align: center; overflow-wrap: normal; width: 82px; left: 0px; top: 0px; cursor: move;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        <font color="#000000">
+                            <b>Extra Memory<br/>Zone
+                            </b>
+                        </font>
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="40" y="20" fill="#6C8EBF" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not
+                supported by viewer]
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(433.5,146.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="92" height="27"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(108, 142, 191); text-align: center; overflow-wrap: normal; width: 92px; left: 0px; top: 0px; cursor: move;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        <font color="#000000">
+                            <b>Shared Memory<br/>Zone
+                            </b>
+                        </font>
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="46" y="20" fill="#6C8EBF" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not
+                supported by viewer]
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(93.5,26.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="52" height="27"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(130, 179, 102); font-weight: bold; text-align: center; overflow-wrap: normal; width: 52px; left: 0px; top: 0px; cursor: move;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        Plugin A<br/>Pluglet 2
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="26" y="20" fill="#82B366" text-anchor="middle" font-size="12px" font-family="Helvetica"
+                  font-weight="bold">Plugin A&lt;br&gt;Pluglet 2
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(553.5,16.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="52" height="27"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(130, 179, 102); font-weight: bold; text-align: center; overflow-wrap: normal; width: 52px; left: 0px; top: 0px; cursor: move;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        Plugin A<br/>Pluglet 3
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="26" y="20" fill="#82B366" text-anchor="middle" font-size="12px" font-family="Helvetica"
+                  font-weight="bold">Plugin A&lt;br&gt;Pluglet 3
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(43.5,276.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="52" height="27"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(130, 179, 102); font-weight: bold; text-align: center; overflow-wrap: normal; width: 52px; left: 0px; top: 0px; cursor: move;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        Plugin A<br/>Pluglet 1
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="26" y="20" fill="#82B366" text-anchor="middle" font-size="12px" font-family="Helvetica"
+                  font-weight="bold">Plugin A&lt;br&gt;Pluglet 1
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(102.5,153.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="34" height="13"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(108, 142, 191); text-align: center; overflow-wrap: normal; width: 34px; left: 0px; top: 0px;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        <font color="#000000">
+                            <b>Stack</b>
+                        </font>
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="17" y="13" fill="#6C8EBF" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not
+                supported by viewer]
+            </text>
+        </switch>
+    </g>
+    <g transform="translate(577.5,153.5)">
+        <switch>
+            <foreignObject style="overflow:visible;" pointer-events="all" width="34" height="13"
+                           requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                <div xmlns="http://www.w3.org/1999/xhtml"
+                     style="position: absolute; white-space: nowrap; line-height: 1.2; font-size: 12px; font-family: Helvetica; vertical-align: top; color: rgb(108, 142, 191); text-align: center; overflow-wrap: normal; width: 34px; left: 0px; top: 0px; cursor: move;">
+                    <div style="zoom:1;display:inline-block;_display:inline;text-decoration:inherit;padding-bottom:1px;padding-right:1px;line-height:1.2">
+                        <font color="#000000">
+                            <b>Stack</b>
+                        </font>
+                    </div>
+                </div>
+            </foreignObject>
+            <text x="17" y="13" fill="#6C8EBF" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not
+                supported by viewer]
+            </text>
+        </switch>
+    </g>
+</svg>
