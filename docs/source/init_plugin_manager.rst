@@ -7,9 +7,13 @@ This must be done with the function call :
 
 .. code-block:: c
 
-    init_plugin_manager(proto_ext_fun_t *external_function, const char *project_conf_dir, size_t len_char,
-                        plugin_info_t *insertion_point, const char *monitoring_address, const char *port,
-                        int require_monitoring);
+    int init_plugin_manager(proto_ext_fun_t *external_function,
+                            const char *project_conf_dir,
+                            size_t len_char,
+                            plugin_info_t *insertion_point,
+                            const char *monitoring_address,
+                            const char *port,
+                            int require_monitoring);
 
 This is the only required function to call on the very beginning of the entry point of your program. The function
 takes multiple parameters which are explained below :
@@ -47,6 +51,176 @@ monitoring_port
 
 require_monitoring
     If no plugins are intended to send data, put this argument to 0. This tells to the library to not start the
-    monitoring listener. Also, if monitoring_address and monitoring_port are not null, but libubpf cannot
+    monitoring listener. Also, if monitoring_address, monitoring_port are not null, and libubpf cannot
     reach the external server, every data sent by plugins will be dropped. However, if require_monitoring is
-    set to 1, then the manager will wait until a connection is established with the server.
+    set to 1, the manager will wait until a connection is established with the server.
+
+-----------------------------------
+Loading bytecode at program startup
+-----------------------------------
+
+libubpf provide a function to load plugins from a JSON file. This latter must be formatted on a specific way
+to be recognised by the helper. It has the following definition :
+
+.. code-block:: c
+
+    int load_plugin_from_json(const char *path_json,
+                              const char *plugin_folder_path,
+                              size_t len_plugin_folder_path);
+
+
+path_json
+    Is the path to access to the json containing all the plugins to load when the program starts.
+
+plugin_folder_path
+    Default path to the folder containing every plugins referenced in the JSON
+
+len_plugin_folder_path
+    Length of the plugin_folder_path string
+
+The JSON file must be structured as the following :
+
+.. code-block:: json
+
+    {
+      "jit_all": true,
+      "dir": "override/default/path",
+      "plugins": {
+        "plugin_name_1": {
+          "extra_mem": 64,
+          "shared_mem": 64,
+          "pre": {
+            "0": {
+              "jit": false,
+              "name": "pre_plugin1_seq0.o"
+            },
+            "25": {
+              "jit": true,
+              "path": "pre_plugin1_seq25.o"
+            },
+            "6": {
+              "path": "pre_plugin1_seq6.o"
+            }
+          },
+          "replace": {
+            "jit": true,
+            "path": "replace_plugin1.o"
+          },
+          "post": {
+            "125": {
+              "jit": true,
+              "path": "post_plugin1_seq125.o"
+            },
+            "0": {
+              "jit": true,
+              "path": "post_plugin1_seq0.o"
+            }
+          }
+        },
+        "plugin_name_2": {
+          "extra_mem": 64,
+          "shared_mem": 0,
+          "replace": {
+            "path": "replace_plugin2.o"
+          },
+        }
+      }
+    }
+
+The structure follows the following syntax :
+
+jit_all
+    true or false. This is the main directive to tell to libubpf to compile the code in x86_64 machine code
+    and then directly execute the machine code when the plugin is called. If the attribute is missing the
+    default value is false.
+
+dir
+    Path of the folder containing of the eBPF bytecodes. If the variable is missing, libupf take the default
+    value passed to the project_conf_dir argument of init_plugin_manager.
+
+plugins
+    Is the most important variable since it contains every plugin to be loaded inside the program.
+    Each object of this variable takes as key, the name of the plugin such as defined in the array
+    insertion_point of the function init_plugin_manager.
+    The following keys are now used inside each plugins
+
+        extra_mem
+            The number of **bytes** granted to the current plugin. If omitted, no additional memory will be
+            provided for the plugin.
+
+        shared_mem
+            The number of **bytes** allowed to pass data through different pluglets of the same plugin.
+            If omitted no shared memory space is created.
+
+        pre
+            contains every pluglet associated to the "pre" hook of the plugin. Each pluglet are associated to
+            a sequence number which is the order of execution of the plugin. A smaller number will be thus
+            executed before an higher sequence number. Each pluglet can take two more keys :
+
+                jit
+                    true or false, override the jit_master choice defined on the root of the JSON object
+
+                name
+                    name of the eBPF bytecode. The supported format is ELF. Use a compiler such as clang or gcc
+                    to generate an eBPF bytecode of this format.
+                    The bytecode must be contained inside the default folder or the path defined in the "dir"
+                    variable.
+
+            The pre hook can be omitted. In this case, no pluglet will be attached to the pre hook of the plugin
+
+        replace
+            Only one pluglet can be defined for this hook. Hence no sequence number must be provided.
+
+        post
+            Same description as the pre hook. All pluglet attached to this hook, will be executed right before
+            returning the function associated to the plugin.
+
+
+-------
+Example
+-------
+
+Consider this small program :
+
+.. code-block:: c
+
+    int main(int argc, const char *argv[]) {
+
+        start_main_program_loop();
+        return EXIT_FAILURE;
+    }
+
+Suppose that you put one insertion point called "plugin1" with the ID 1 on a given function
+of your program. Suppose also one external call, "external_api_example", you specifically created for your
+new insertion point. The new entry point of your program becomes :
+
+.. code-block:: c
+
+    int external_api_example(context_t *ctx, int a) {
+        // some stuffs
+    }
+
+    int main(int argc, const char *argv[]) {
+
+        int status;
+
+        proto_ext_fun_t funcs[]  = {
+            {.name = "external_api_example", .fn = external_api_example },
+            plugin_info_null
+        }
+
+        plugin_info_t plugins[] = {
+            {.plugin_str =  "plugin1", .plugin_id = 1},
+            {NULL}
+        }
+
+        status = init_plugin_manager(funcs, NULL, 0, plugins, NULL, NULL, 0);
+        if (status != 0) return EXIT_FAILURE;
+
+        start_main_program_loop();
+        return EXIT_FAILURE;
+    }
+
+As the monitoring address and port are set to NULL, eBPF bytecode will not be able to send data to an external
+server. Also, the project_conf_dir path is NULL. Hence, it is in the charge of the programmer to manually load
+eBPF bytecodes if they must be loaded before executing the first instructions of the real program.
