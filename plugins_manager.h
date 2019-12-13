@@ -21,9 +21,13 @@
 #define E_BPF_SHMEM_KEY 220
 #define E_BPF_QUEUE_KEY 221  // TOTALLY RANDOM IDENTIFIER 8-bits only
 
-#define E_BPF_ADD 1
-#define E_BPF_RM 2
-#define E_BPF_REPLACE 3
+
+enum msg_type_id {
+    E_BPF_ADD = 1,
+    E_BPF_RM,
+    E_BPF_RM_PLUGLET,
+    E_BPF_REPLACE
+};
 
 #define MAX_SIZE_PLUGIN 1048576
 
@@ -122,10 +126,12 @@ int init_upbf_inject_queue_snd(void);
 
 int init_ubpf_inject_queue_rcv(void);
 
-int send_pluglet(const char *path, size_t path_len, short jit, int hook, unsigned int action,
+int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
                  uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid);
 
 int rm_plugin(int id_plugin, const char **err);
+
+int rm_plugin_str(const char *str, const char **err);
 
 int __add_pluglet_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
                       size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
@@ -145,5 +151,11 @@ size_t store_plugin(size_t size, const char *path);
 void remove_xsi(void);
 
 void ubpf_terminate(void);
+
+int rm_pluglet(int plugin_id, int seq, int anchor);
+
+int send_rm_plugin(int msqid, const char *plugin_name);
+
+int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
 
 #endif //FRR_THESIS_PLUGINS_MANAGER_H

@@ -178,6 +178,43 @@ int add_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint3
     return generic_add_function(p, bytecode, len, seq, BPF_REPLACE, jit);
 }
 
+static inline int generic_rm_function(plugin_t *p, uint32_t seq, int anchor) {
+
+    vm_container_t *vm;
+
+    switch (anchor) {
+        case BPF_PRE:
+            if (tree_get(&p->pre_functions, seq, &vm) != 0) return -1;
+            break;
+        case BPF_REPLACE:
+            vm = p->replace_function;
+            break;
+        case BPF_POST:
+            if (tree_get(&p->post_functions, seq, &vm) != 0) return -1;
+            break;
+        default:
+            return -1;
+    }
+
+    shutdown_vm(vm);
+    return 0;
+}
+
+int rm_pre_function(plugin_t *p, uint32_t seq) {
+    if (!p) return -1;
+    return generic_rm_function(p, seq, BPF_PRE);
+}
+
+int rm_replace_function(plugin_t *p, uint32_t seq) {
+    if (!p) return -1;
+    return generic_rm_function(p, seq, BPF_REPLACE);
+}
+
+int rm_post_function(plugin_t *p, uint32_t seq) {
+    if (!p) return -1;
+    return generic_rm_function(p, seq, BPF_POST);
+}
+
 static inline int generic_run_function(plugin_t *p, uint8_t *args, size_t args_size, int type, uint64_t *ret) {
 
     struct tree_iterator _it, *it;

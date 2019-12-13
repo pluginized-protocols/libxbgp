@@ -192,7 +192,7 @@ static inline int is_id_in_use(int id) {
 }
 
 
-static int str_plugin_to_int(const char *plugin_str) {
+int str_plugin_to_int(const char *plugin_str) {
     int i;
 
     for (i = 0; plugins_info[i].plugin_id != 0 && plugins_info[i].plugin_str != NULL; i += 1) {
@@ -475,6 +475,42 @@ int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, in
 }
 
 
+int rm_pluglet(int plugin_id, int seq, int anchor) {
+
+    plugin_t *p;
+    int status;
+    if (plugin_id >= get_max_plugins()) return -1;
+
+    p = plugins_manager->ubpf_machines[plugin_id];
+
+    switch (anchor) {
+        case BPF_PRE:
+            status = rm_pre_function(p, seq);
+            break;
+        case BPF_REPLACE:
+            status = rm_replace_function(p, seq);
+            break;
+        case BPF_POST:
+            status = rm_post_function(p, seq);
+            break;
+        default:
+            return -1;
+    }
+
+    return status == 0 ? 0 : -1;
+}
+
+int rm_plugin_str(const char *str, const char **err) {
+
+    int plug_id;
+    plug_id = str_plugin_to_int(str);
+
+    if (plug_id == -1) return -1;
+
+    return rm_plugin(plug_id, err);
+}
+
+
 int rm_plugin(int id_plugin, const char **err) {
 
     plugin_t *ptr_plugin;
@@ -644,7 +680,7 @@ static inline __off_t file_size(const char *path) {
     return st.st_size;
 }
 
-int send_pluglet(const char *path, size_t path_len, short jit, int hook, unsigned int action,
+int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
                  uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid) {
 
     ubpf_queue_msg_t msg;
@@ -652,16 +688,16 @@ int send_pluglet(const char *path, size_t path_len, short jit, int hook, unsigne
     size_t len;
 
     char rel_path[PATH_MAX];
+    int plug_id;
+
+    plug_id = str_plugin_to_int(plugin_name);
+    if (plug_id == -1) return -1;
 
     if (path) {
-        if (path_len > PATH_MAX) {
-            fprintf(stderr, "Length path too high\n");
-            return -1;
-        }
         realpath(path, rel_path);
 
         if (access(rel_path, R_OK) == -1) {
-            perror("Path not accessible in reading");
+            perror("Read attribute missing to the file");
             return -1; // Can't read ubpf file
         }
     } else if (action != E_BPF_ADD && action != E_BPF_REPLACE &&
@@ -694,6 +730,43 @@ int send_pluglet(const char *path, size_t path_len, short jit, int hook, unsigne
 
     return 0;
 }
+
+
+int send_rm_plugin(int msqid, const char *plugin_name) {
+
+    ubpf_queue_msg_t msg;
+
+    memset(&msg, 0, sizeof(msg));
+    msg.mtype = MTYPE_EBPF_ACTION;
+    msg.plugin_action = E_BPF_RM;
+    strncpy(msg.plugin_name, plugin_name, NAME_MAX);
+
+    if (msgsnd(msqid, &msg, sizeof(ubpf_queue_msg_t), 0) == -1) {
+        perror("Plugin send error [msgsnd]");
+        return -1;
+    }
+
+    return 0;
+}
+
+int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor) {
+
+    ubpf_queue_msg_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.mtype = MTYPE_EBPF_ACTION;
+    msg.plugin_action = E_BPF_RM_PLUGLET;
+    strncpy(msg.plugin_name, plugin_name, NAME_MAX);
+    msg.seq = seq;
+    msg.hook = anchor;
+
+    if (msgsnd(msqid, &msg, sizeof(ubpf_queue_msg_t), 0) == -1) {
+        perror("Message send error [msgsnd]");
+        return -1;
+    }
+
+    return 0;
+}
+
 
 size_t store_plugin(size_t size, const char *path) {
 
@@ -794,7 +867,7 @@ static void *plugin_msg_handler(void *args) {
             case BPF_REPLACE:
                 break;
             default:
-                fprintf(stderr, "Unrecognized plugin type\n");
+                fprintf(stderr, "Unrecognized plugin anchor/hook\n");
                 err = 1;
                 goto end;
         }
@@ -816,6 +889,12 @@ static void *plugin_msg_handler(void *args) {
                 if (rm_plugin(plugin_id, &str_err) == -1) {
                     err = 1;
                     strncpy(info.reason, str_err, strlen(str_err));
+                }
+                break;
+            case E_BPF_RM_PLUGLET:
+                if (rm_pluglet(plugin_id, rcvd_msg.seq, rcvd_msg.hook)) {
+                    err = 1;
+                    strncpy(info.reason, "Pluglet removal failed", 23);
                 }
                 break;
             default:

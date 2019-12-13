@@ -67,12 +67,14 @@ int run_post_functions(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *r
 
 int run_replace_function(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret_val);
 
-int run_append_function(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret_val, int type);
-
-int run_plugin_pre_append(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
-int run_plugin_post_append(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
 const char *id_plugin_to_str(unsigned int id);
+
+int str_plugin_to_int(const char *plugin_str);
+
+int rm_pre_function(plugin_t *p, uint32_t seq);
+
+int rm_replace_function(plugin_t *p, uint32_t seq);
+
+int rm_post_function(plugin_t *p, uint32_t seq);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H
