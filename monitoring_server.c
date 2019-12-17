@@ -224,6 +224,8 @@ int main_monitor(const char *address, const char *port, int fd_read) {
 
 void *aggregate_data(void *args) {
 
+    ((void) args);
+
     uint8_t *buffer;
     buffer = malloc(MAX_BUFFER_SIZE);
     unsigned int index;

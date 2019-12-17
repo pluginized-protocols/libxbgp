@@ -138,6 +138,6 @@ void reset_bump(bump_t *pool);
  * useless free used for compatibility
  * with existing code
  */
-void bump_free(bump_t *pool, void *ptr);
+#define bump_free(a, b)
 
 #endif //FRR_UBPF_SHARED_MEMORY_H

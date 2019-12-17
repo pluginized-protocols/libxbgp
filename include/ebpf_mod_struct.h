@@ -19,7 +19,7 @@ typedef struct mesg_buffer {
 
 typedef struct plugin_info {
     const char *plugin_str;
-    int plugin_id;
+    unsigned int plugin_id;
 } plugin_info_t;
 
 #define plugin_info_null {.plugin_str = NULL, .plugin_id = 0}

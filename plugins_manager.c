@@ -13,10 +13,10 @@
 #include <stdlib.h>
 #include <json-c/json.h>
 #include <pthread.h>
+#include <errno.h>
 #include "ubpf_manager.h"
 #include "map.h"
 #include "bpf_plugin.h"
-#include "include/plugin_arguments.h"
 #include "ubpf_api.h"
 #include "monitoring_server.h"
 #include "ubpf_context.h"
@@ -26,6 +26,8 @@
 #include <linux/limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #define ADD_TYPE_OWNPTR 1
 #define ADD_TYPE_FILE 2
@@ -34,6 +36,7 @@ static void *plugin_msg_handler(void *args);
 
 typedef struct args_plugin_msg_handler {
     int msqid;
+    int shm_fd;
 } args_plugins_msg_hdlr_t;
 
 struct json_pluglet_args {
@@ -50,14 +53,36 @@ static plugin_info_t *plugins_info; // insertion points for the protocol
 static int max_plugin; // number of insertion points
 pthread_t plugin_listener; // thread receiving pluglets from outside the main process
 unsigned int finished = 0;
+static int msqid_listener = -1;
+static char shm_plugin_name[NAME_MAX];
 
-static int nb_plugins(plugin_info_t *info) {
+static inline int full_write(int fd, const char *buf, size_t len) {
+
+    ssize_t s;
+    size_t total;
+
+    total = 0;
+    while (total < len) {
+        s = write(fd, buf + total, len - total);
+        if (s == 0 || s == -1) return -1;
+        total += s;
+    }
+    return -1;
+}
+
+static unsigned int nb_plugins(plugin_info_t *info) {
 
     int count;
-    int max = -1;
+    short init = 0;
+    unsigned int max = 0;
+
     for (count = 0; info[count].plugin_id != 0 && info[count].plugin_str != NULL; count++)
-        if (info[count].plugin_id > max)
+        if (!init) {
             max = info[count].plugin_id;
+            init = 1;
+        } else if (info[count].plugin_id > max)
+            max = info[count].plugin_id;
+
     return max;
 }
 
@@ -92,18 +117,63 @@ int get_max_plugins() {
     return max_plugin;
 }
 
+int get_msqid() {
+    return msqid_listener;
+}
+
+static inline int write_id(const char *folder, int msg_queue_id, const char *shm_id) {
+    // write the random string AND the message queue ID
+    int fd_shared, fd_msgqueue;
+    char path[PATH_MAX], path2[PATH_MAX], r_path[PATH_MAX];
+    int nb_char;
+    char buf[10];
+
+    memset(path, 0, sizeof(char) * PATH_MAX);
+    memset(path2, 0, sizeof(char) * PATH_MAX);
+
+    snprintf(path, PATH_MAX, "%s/queue.id", folder);
+    snprintf(path2, PATH_MAX, "%s/shared.id", folder);
+    memset(r_path, 0, sizeof(char) * PATH_MAX);
+    realpath(path, r_path);
+    fd_msgqueue = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP);
+
+    if (fd_msgqueue == -1) {
+        perror("Can't create queue.id");
+        return -1;
+    }
+    memset(r_path, 0, sizeof(char) * PATH_MAX);
+    realpath(path2, r_path);
+    fd_shared = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP);
+
+    if (fd_shared == -1) {
+        perror("Can't create shared.id");
+        return -1;
+    }
+
+    memset(buf, 0, 10);
+    nb_char = snprintf(buf, 10, "%d", msg_queue_id);
+
+    if (full_write(fd_msgqueue, buf, nb_char) == -1) return -1;
+    if (full_write(fd_shared, shm_id, NAME_MAX) == -1) return -1;
+
+    close(fd_msgqueue);
+    close(fd_shared);
+    return 0;
+}
+
 /* should be used in the protocol to "pluginize" */
 int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
                     const char *monitoring_address, const char *monitoring_port, int require_monit) {
 
-    int msqid;
+    int msqid, fd_shmem;
     if (already_init) return 0;
     if (!process_vty_dir) return -1;
 
     set_daemon_vty_dir(process_vty_dir, len);
     if (set_plugins_info(plugins_array) != 0) return -1;
     max_plugin = nb_plugins(plugins_array);
+    memset(shm_plugin_name, 0, NAME_MAX);
 
     int i;
     if (plugins_manager) return 0; // already init, exit
@@ -112,7 +182,6 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
     if (init_monitoring(monitoring_address, monitoring_port, require_monit) == -1) {
         return -1;
     }
-
 
     plugins_manager = malloc(sizeof(plugins_t));
     if (!plugins_manager) {
@@ -136,13 +205,13 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
         return -1;
     }
 
-    msqid = init_ubpf_inject_queue_rcv();
-    msg_hdlr_args->msqid = msqid;
+    msqid = init_ubpf_inject_queue();
+    fd_shmem = init_shared_memory(shm_plugin_name);
 
-    if (msqid == -1) {
-        fprintf(stderr, "Unable to start dynamic plugin injection\n");
-        return -1;
-    }
+    if (fd_shmem == -1 || msqid == -1) return -1;
+
+    msg_hdlr_args->msqid = msqid;
+    msg_hdlr_args->shm_fd = fd_shmem;
 
     if (pthread_create(&plugin_listener, NULL, &plugin_msg_handler, msg_hdlr_args) != 0) {
         fprintf(stderr, "Unable to create thread for dynamic plugin injection\n");
@@ -154,10 +223,11 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
         return -1;
     }
 
+    if (write_id(process_vty_dir, msqid, shm_plugin_name) == -1) return -1;
+
     already_init = 1;
     return 0;
 }
-
 
 void ubpf_terminate() {
 
@@ -445,7 +515,7 @@ __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int
             return -1;
     }
 
-    if (type_ptr == ADD_TYPE_FILE) free(bytecode);
+    if (type_ptr == ADD_TYPE_FILE) free((void *) bytecode);
 
     return 0;
 
@@ -632,43 +702,91 @@ int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *re
     return 1;
 }
 
-int init_upbf_inject_queue_snd() {
-    // queue must be created before (and thus the "pluginized proto" must be running) !
-    return init_ubpf_inject_queue(1);
-}
-
-int init_ubpf_inject_queue_rcv() {
-    return init_ubpf_inject_queue(0);
-}
-
-int init_ubpf_inject_queue(int type) {
+int init_ubpf_inject_queue() {
     int msqid;
-    int msgflg;
+    int curr_errno;
+    int r;
     key_t key;
+    struct timespec ts;
 
-    switch (type) {
-        case 0: // rcv must create the queue
-            msgflg = 0600 | IPC_CREAT;
-            break;
-        case 1:
-            msgflg = 0600;
-            break;
-        default:
-            return -1;
-    }
+    if (timespec_get(&ts, TIME_UTC) == 0) return -1;
+    srandom(ts.tv_nsec ^ ts.tv_sec);  /* Seed the PRNG */
 
-    key = ftok(daemon_vty_dir, E_BPF_QUEUE_KEY);
-    if (key == -1) {
-        perror("ftok can't generate key queue");
-        return -1;
-    }
+    do {
+        r = (int) random();
+        key = ftok(daemon_vty_dir, r);
+        msqid = msgget(key, 0600u | IPC_CREAT | IPC_EXCL);
+        curr_errno = errno;
+        if (msqid < 0) {
+            if (curr_errno != EEXIST) {
+                perror("Unable to create the queue");
+                return -1;
+            }
+        }
+    } while (curr_errno != EEXIST);
 
-    if ((msqid = msgget(key, msgflg)) < 0) {
-        perror("msgget");
-        return -1;
-    }
-
+    msqid_listener = msqid;
     return msqid;
+}
+
+static inline int generate_random_string(char *buffer, size_t len_buffer) {
+
+    struct timespec ts;
+    size_t i;
+    char curr_char;
+    long super_random;
+
+    if (timespec_get(&ts, TIME_UTC) == 0) return -1;
+    srandom(ts.tv_nsec ^ ts.tv_sec);  /* Seed the PRNG */
+
+    for (i = 0; i < len_buffer; i++) {
+
+        super_random = random() % 63; // distribution to be weighted to the size of the intervals
+        if (super_random <= 25) {
+            curr_char = (char) ((random() % ('z' - 'a' + 1)) + 'a');
+        } else if (super_random <= 52) {
+            curr_char = (char) ((random() % ('Z' - 'A' + 1)) + 'A');
+        } else {
+            curr_char = (char) ((random() % ('9' - '0' + 1)) + '0');
+        }
+
+        buffer[i] = curr_char;
+    }
+
+    return 0;
+}
+
+int init_shared_memory(char *shared_mem_name) { // shared_mem_name MUST be of size NAME_MAX
+    int oflag, fd;
+    int must_cont;
+    char *rnd_name;
+    char name[NAME_MAX];
+    mode_t mode;
+    *name = '/';
+
+    rnd_name = name + 1;
+    mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP; // rw-rw----
+    oflag = O_RDWR | O_CREAT | O_EXCL;
+
+    do {
+        memset(rnd_name, 0, NAME_MAX - 1);
+        if (generate_random_string(rnd_name, NAME_MAX - 2) != 0) return -1;
+        rnd_name[NAME_MAX - 2] = 0;
+        fd = shm_open(name, oflag, mode);
+        if (fd < 0) {
+            if (errno == EEXIST) must_cont = 1;
+            else return -1;
+        } else must_cont = 0;
+    } while (must_cont);
+
+    //mmap(NULL, MAX_SIZE_PLUGIN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    strncpy(shared_mem_name, name, NAME_MAX);
+    return fd;
+}
+
+int close_shared_memory() {
+    return shm_unlink(shm_plugin_name);
 }
 
 static inline __off_t file_size(const char *path) {
@@ -816,10 +934,10 @@ static void *plugin_msg_handler(void *args) {
 
     int err = 0;
     const char *str_err;
-    int memid;
     uint8_t *data_ptr;
-    key_t key;
+    int fd;
     int plugin_id;
+    int mysqid;
 
     info.mtype = MTYPE_INFO_MSG;
 
@@ -828,25 +946,13 @@ static void *plugin_msg_handler(void *args) {
         exit(EXIT_FAILURE);
     }
 
-    int mysqid = cast_args->msqid;
+    mysqid = cast_args->msqid;
+    fd = cast_args->shm_fd;
     ubpf_queue_msg_t rcvd_msg;
 
-    key = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
-    if (key == -1) {
-        perror("Key generation failed");
-        return NULL;
-    }
-
-    memid = shmget(key, MAX_SIZE_PLUGIN, IPC_CREAT | 0600);
-
-    if (memid == -1) {
-        perror("Shared memory creation failed");
-        return NULL;
-    }
-
-    data_ptr = shmat(memid, NULL, 0);
-    if ((void *) data_ptr == (void *) -1) {
-        shmctl(memid, IPC_RMID, NULL);
+    data_ptr = mmap(NULL, MAX_SIZE_PLUGIN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (data_ptr == (void *) -1) {
+        perror("MMAP initialization failed");
         return NULL;
     }
 
@@ -878,17 +984,18 @@ static void *plugin_msg_handler(void *args) {
         switch (rcvd_msg.plugin_action) {
             case E_BPF_REPLACE:
             case E_BPF_ADD:
+                if (msync(data_ptr, MAX_SIZE_PLUGIN, MS_SYNC) != 0) return NULL;
                 if (__add_pluglet_ptr(data_ptr, plugin_id, rcvd_msg.hook, rcvd_msg.bytecode_length,
                                       rcvd_msg.extra_memory, rcvd_msg.shared_memory, rcvd_msg.seq,
                                       rcvd_msg.jit, &str_err) < 0) {
                     err = 1;
-                    strncpy(info.reason, str_err, strlen(str_err));
+                    strncpy(info.reason, str_err, MAX_REASON - 1);
                 }
                 break;
             case E_BPF_RM:
                 if (rm_plugin(plugin_id, &str_err) == -1) {
                     err = 1;
-                    strncpy(info.reason, str_err, strlen(str_err));
+                    strncpy(info.reason, str_err, MAX_REASON - 1);
                 }
                 break;
             case E_BPF_RM_PLUGLET:
@@ -920,34 +1027,8 @@ static void *plugin_msg_handler(void *args) {
 }
 
 void remove_xsi() {
-
-    int msqid, memid;
-    key_t msqkey, memkey;
-
-    msqkey = ftok(daemon_vty_dir, E_BPF_QUEUE_KEY);
-    if (msqkey == -1) {
-        perror("Can't generate key");
-    }
-    memkey = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
-    if (memkey == -1) {
-        perror("Can't generate key");
-    }
-
-    msqid = msgget(msqkey, 0600);
-
-    if (msqid == -1) {
-        perror("Can't get message queue");
-    }
-
-    memid = shmget(memkey, MAX_SIZE_PLUGIN, 0600);
-
-    if (memid == -1) {
-        perror("Can't get shared memory");
-    }
-
-    shmctl(memid, IPC_RMID, NULL);
-    msgctl(msqid, IPC_RMID, NULL);
+    shmctl(msqid_listener, IPC_RMID, NULL);
+    close_shared_memory();
 
     rm_ipc();
-
 }

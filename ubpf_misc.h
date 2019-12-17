@@ -18,4 +18,6 @@ void set_log_file(const char *path);
 
 void ubpf_log(ubpf_error_t error, uint32_t plugin_id, int type, uint32_t seq, const char *extra);
 
+char *format_time(void);
+
 #endif

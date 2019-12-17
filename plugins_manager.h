@@ -15,11 +15,8 @@
 
 
 #define MAX_PLUGINS 128
-
 #define MAX_REASON 2048
-
 #define E_BPF_SHMEM_KEY 220
-#define E_BPF_QUEUE_KEY 221  // TOTALLY RANDOM IDENTIFIER 8-bits only
 
 
 enum msg_type_id {
@@ -48,7 +45,7 @@ typedef struct ubpf_queue_msg {
     long mtype;
     unsigned int plugin_action;
     short jit;
-    char plugin_name[NAME_MAX];
+    char plugin_name[NAME_MAX + 1];
     size_t bytecode_length;
     int hook;
     uint32_t seq;
@@ -120,11 +117,7 @@ int run_plugin_post(int plugin_id, void *args, size_t args_len, uint64_t *ret_va
 
 int run_plugin_replace(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 
-int init_ubpf_inject_queue(int type);
-
-int init_upbf_inject_queue_snd(void);
-
-int init_ubpf_inject_queue_rcv(void);
+int init_ubpf_inject_queue(void);
 
 int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
                  uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid);
@@ -157,5 +150,15 @@ int rm_pluglet(int plugin_id, int seq, int anchor);
 int send_rm_plugin(int msqid, const char *plugin_name);
 
 int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
+
+int init_shared_memory(char *shared_mem_name);
+
+plugin_info_t *get_plugin_info(void);
+
+int get_max_plugins(void);
+
+int get_msqid(void);
+
+int close_shared_memory(void);
 
 #endif //FRR_THESIS_PLUGINS_MANAGER_H

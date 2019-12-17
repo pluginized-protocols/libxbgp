@@ -39,7 +39,7 @@ static inline void split(header_block_t *a, size_t len) {
         // space for one header_block_t + 1 byte of memory
 
         a->size = len;
-        a->next = (void *) a + len + sizeof(header_block_t);
+        a->next = (void *) ((uint8_t *) a + len + sizeof(header_block_t));
         a->magic = MAGIC;
 
         a->next->available = 1;
@@ -85,14 +85,14 @@ size_t heap_size(heap_t *heap) {
 
 int is_mem_bound(heap_t *heap, void *ptr) {
 
-    return ptr >= get_start_heap(heap) && ptr < get_start_heap(heap) + heap_size(heap);
+    return ptr >= get_start_heap(heap) && (uint8_t *) ptr < (uint8_t *) get_start_heap(heap) + heap_size(heap);
 
 }
 
 int has_enough_space(void *ptr, size_t size) {
     header_block_t *ptr_block;
 
-    ptr_block = ptr - sizeof(header_block_t);
+    ptr_block = (header_block_t *) ((uint8_t *) ptr - sizeof(header_block_t));
 
     if (ptr_block->magic != MAGIC) return 0; // memory corruption
 
@@ -227,7 +227,9 @@ void *ubpf_malloc(heap_t *heap, size_t mem) {
     return alloc_mem(heap, mem, NORMAL);
 }
 
-void ubpf_free(heap_t *heap, void *mem) {
+void ubpf_free(heap_t *heap, void *_mem) {
+
+    uint8_t *mem = _mem;
 
     if (!heap || !heap->heap) return;
     if (!mem) return;
@@ -237,7 +239,7 @@ void ubpf_free(heap_t *heap, void *mem) {
         return;
     }
 
-    header_block_t *h = mem - sizeof(header_block_t);
+    header_block_t *h = (header_block_t *) (mem - sizeof(header_block_t));
 
     if (h < heap->start) return;
     if (h->available) return;
@@ -369,7 +371,7 @@ void *my_malloc(memory_pool_t *mp, unsigned int size) {
         printf("Out of memory!\n");
     }
     *((uint64_t *) ret) = MAGIC_NUMBER;
-    return ret + 8;
+    return (uint8_t *) ret + 8;
 }
 
 void *my_calloc(memory_pool_t *mem_pool, size_t nmemb, size_t size) {
@@ -379,7 +381,10 @@ void *my_calloc(memory_pool_t *mem_pool, size_t nmemb, size_t size) {
     return ptr;
 }
 
-void my_free_in_core(memory_pool_t *mp, void *ptr) {
+void my_free_in_core(memory_pool_t *mp, void *_ptr) {
+
+    uint8_t *ptr = _ptr;
+
     ptr -= 8;
     if (*((uint64_t *) ptr) != MAGIC_NUMBER) {
         printf("MEMORY CORRUPTION: BAD METADATA: 0x%lx, ORIGINAL PTR: %p\n", *((uint64_t *) ptr), ptr + 8);
@@ -560,5 +565,3 @@ void reset_bump(bump_t *pool) {
     pool->available_size = pool->total_mem;
     pool->next_avail = pool->mem_start;
 }
-
-void bump_free(bump_t *pool, void *ptr) {}

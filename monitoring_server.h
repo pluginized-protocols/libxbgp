@@ -99,7 +99,7 @@ void *monitor_loop(void *args);
 
 int open_exporter_connexion(const char *host, const char *port, int force);
 
-void close_exporter_connexion();
+void close_exporter_connexion(void);
 
 int send_to_exporter(uint8_t *buffer, size_t len);
 
@@ -107,10 +107,10 @@ void *aggregate_data(void *args);
 
 int init_monitoring(const char *address, const char *port, int require_monitoring);
 
-int is_monit_required();
+int is_monit_required(void);
 
-int has_monit_fd();
+int has_monit_fd(void);
 
-void turnoff_monitoring();
+void turnoff_monitoring(void);
 
 #endif //FRR_THESIS_MONITORING_SERVER_H

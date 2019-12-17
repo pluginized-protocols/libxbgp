@@ -6,6 +6,11 @@ To use the uBPF Library, some dependencies must be satisfied :
 
 - json-c 0.13.1
 - CUnit 2.1.3 to run tests (available `here <https://sourceforge.net/projects/cunit/>`_)
+- POSIX threads
+- X/Open System Interfaces Extension (message queue and shared memory)
+- A C compiler supporting gnu standard (``-std=gnu11``)
+
+Work fine with GCC 9 and glibc 2.30
 
 Getting the Source
 ------------------

@@ -33,10 +33,8 @@ static pthread_mutex_t *vm_args = NULL;
 static map_args_bpf_t _args_ebpf;
 static map_args_bpf_t *args_ebpf = NULL;
 
-static void *readfile(const char *path, size_t maxlen, size_t *len);
-
 static uint16_t super_ntohs(context_t *ctx, uint16_t value) {
-
+    ((void) (ctx));
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return (((value & 0x00FFu) << 8u) |
             ((value & 0xFF00u) >> 8u));
@@ -49,6 +47,7 @@ static uint16_t super_ntohs(context_t *ctx, uint16_t value) {
 
 
 static uint32_t super_ntohl(context_t *ctx, uint32_t value) {
+    ((void) (ctx));
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return (((value & 0x000000FFu) << 24u) |
             ((value & 0x0000FF00u) << 8u) |
@@ -428,8 +427,4 @@ void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data
     }
     return data;
 
-}
-
-static void *readfile(const char *path, size_t maxlen, size_t *len) {
-    return readfileOwnPtr(path, maxlen, len, NULL);
 }

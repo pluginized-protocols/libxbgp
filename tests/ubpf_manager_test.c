@@ -8,6 +8,7 @@
 #include <CUnit/Util.h>
 #include <limits.h>
 #include <include/tools_ubpf_api.h>
+#include <unistd.h>
 
 
 #include "ubpf_manager_test.h"
@@ -98,6 +99,11 @@ static int teardown(void) {
     return 0;
 }
 
+void test_file_id_exist(void) {
+
+    CU_ASSERT_EQUAL(access("./queue.id", F_OK), 0)
+    CU_ASSERT_EQUAL(access("./shared.id", F_OK), 0)
+}
 
 void test_add_plugin(void) {
 
@@ -236,7 +242,8 @@ int ubpf_manager_tests(const char *plugin_folder) {
         return CU_get_error();
     }
 
-    if ((NULL == CU_add_test(pSuite, "Adding plugin and execute it", test_add_plugin)) ||
+    if ((NULL == CU_add_test(pSuite, "Files ID to communicate with the library", test_file_id_exist)) ||
+        (NULL == CU_add_test(pSuite, "Adding plugin and execute it", test_add_plugin)) ||
         (NULL == CU_add_test(pSuite, "Reading json plugin and execute it", test_read_json_add_plugins)) ||
         (NULL == CU_add_test(pSuite, "\"Pluginize\" function with macro", test_macro_function)) ||
         (NULL == CU_add_test(pSuite, "Setter and void function macro", macro_void_example_with_set))) {

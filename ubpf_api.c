@@ -245,7 +245,7 @@ void *ebpf_memcpy(context_t *vm_ctx, void *dst0, const void *src0, size_t length
          * Copy whole words, then mop up any trailing bytes.
          */
         t = length / wsize;
-        TLOOP(*(word *) dst = *(word *) src;
+        TLOOP(*(word *) dst = *(const word *) src;
                       src += wsize;
                       dst += wsize);
         t = length & wmask;
@@ -270,7 +270,7 @@ void *ebpf_memcpy(context_t *vm_ctx, void *dst0, const void *src0, size_t length
         t = length / wsize;
         TLOOP(src -= wsize;
                       dst -= wsize;
-                      *(word *) dst = *(word *) src);
+                      *(word *) dst = *(const word *) src);
         t = length & wmask;
         TLOOP(*--dst = *--src);
     }
@@ -355,8 +355,8 @@ int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struc
 
     if (su1->sa_family == AF_INET) {
 
-        ipsu1 = ntohl(((struct sockaddr_in *) su1)->sin_addr.s_addr);
-        ipsu2 = ntohl(((struct sockaddr_in *) su2)->sin_addr.s_addr);
+        ipsu1 = ntohl(((const struct sockaddr_in *) su1)->sin_addr.s_addr);
+        ipsu2 = ntohl(((const struct sockaddr_in *) su2)->sin_addr.s_addr);
 
         if (ipsu1 == ipsu2)
             return 0;
@@ -366,7 +366,8 @@ int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struc
             return -1;
     }
     if (su1->sa_family == AF_INET6) {
-        return in6addr_cmp(&((struct sockaddr_in6 *) su1)->sin6_addr, &((struct sockaddr_in6 *) su2)->sin6_addr);
+        return in6addr_cmp(&((const struct sockaddr_in6 *) su1)->sin6_addr,
+                           &((const struct sockaddr_in6 *) su2)->sin6_addr);
     }
     return 0;
 }
