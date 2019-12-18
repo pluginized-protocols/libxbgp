@@ -32,6 +32,9 @@
 #define ADD_TYPE_OWNPTR 1
 #define ADD_TYPE_FILE 2
 
+#define QUEUEID "queue.id"
+#define SHAREDID "shared.id"
+
 static void *plugin_msg_handler(void *args);
 
 typedef struct args_plugin_msg_handler {
@@ -131,8 +134,8 @@ static inline int write_id(const char *folder, int msg_queue_id, const char *shm
     memset(path, 0, sizeof(char) * PATH_MAX);
     memset(path2, 0, sizeof(char) * PATH_MAX);
 
-    snprintf(path, PATH_MAX, "%s/queue.id", folder);
-    snprintf(path2, PATH_MAX, "%s/shared.id", folder);
+    snprintf(path, PATH_MAX, "%s/%s", folder, QUEUEID);
+    snprintf(path2, PATH_MAX, "%s/%s", folder, SHAREDID);
     memset(r_path, 0, sizeof(char) * PATH_MAX);
     realpath(path, r_path);
     fprintf(stderr, "Write queue.id in %s\n", r_path);
@@ -1050,10 +1053,27 @@ static void *plugin_msg_handler(void *args) {
 }
 
 void remove_xsi() {
+
+    size_t i, size;
+    char r_path[PATH_MAX], conc_path[PATH_MAX];
+
     if (msgctl(msqid_listener, IPC_RMID, NULL) == -1) {
         perror("Can't remove message queue");
     }
     close_shared_memory();
 
+    // unlink files
+    const char *t[] = {QUEUEID, SHAREDID};
+    size = sizeof(t) / sizeof(t[0]);
+    for (i = 0; i < size; i++) {
+        memset(r_path, 0, PATH_MAX * sizeof(char));
+        memset(conc_path, 0, PATH_MAX * sizeof(char));
+        snprintf(conc_path, PATH_MAX - 1, "%s/%s", daemon_vty_dir, t[i]);
+        realpath(conc_path, r_path);
+        if (unlink(r_path) != 0) {
+            perror("Unlink failed");
+        }
+    }
+    //
     rm_ipc();
 }
