@@ -67,7 +67,7 @@ static inline int full_write(int fd, const char *buf, size_t len) {
         if (s == 0 || s == -1) return -1;
         total += s;
     }
-    return -1;
+    return 0;
 }
 
 static unsigned int nb_plugins(plugin_info_t *info) {
@@ -135,7 +135,8 @@ static inline int write_id(const char *folder, int msg_queue_id, const char *shm
     snprintf(path2, PATH_MAX, "%s/shared.id", folder);
     memset(r_path, 0, sizeof(char) * PATH_MAX);
     realpath(path, r_path);
-    fd_msgqueue = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP);
+    fprintf(stderr, "Write queue.id in %s\n", r_path);
+    fd_msgqueue = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
 
     if (fd_msgqueue == -1) {
         perror("Can't create queue.id");
@@ -143,7 +144,8 @@ static inline int write_id(const char *folder, int msg_queue_id, const char *shm
     }
     memset(r_path, 0, sizeof(char) * PATH_MAX);
     realpath(path2, r_path);
-    fd_shared = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP);
+    fprintf(stderr, "Write shared.id in %s\n", r_path);
+    fd_shared = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
 
     if (fd_shared == -1) {
         perror("Can't create shared.id");
@@ -153,8 +155,14 @@ static inline int write_id(const char *folder, int msg_queue_id, const char *shm
     memset(buf, 0, 10);
     nb_char = snprintf(buf, 10, "%d", msg_queue_id);
 
-    if (full_write(fd_msgqueue, buf, nb_char) == -1) return -1;
-    if (full_write(fd_shared, shm_id, NAME_MAX) == -1) return -1;
+    if (full_write(fd_msgqueue, buf, nb_char) == -1) {
+        perror("Can't write to queue.id");
+        return -1;
+    }
+    if (full_write(fd_shared, shm_id, NAME_MAX) == -1) {
+        perror("Can't write to shared.id");
+        return -1;
+    }
 
     close(fd_msgqueue);
     close(fd_shared);
@@ -206,9 +214,18 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
     }
 
     msqid = init_ubpf_inject_queue();
+
+    if (msqid == -1) {
+        perror("Unable to create kernel queue");
+        return -1;
+    }
+
     fd_shmem = init_shared_memory(shm_plugin_name);
 
-    if (fd_shmem == -1 || msqid == -1) return -1;
+    if (fd_shmem == -1) {
+        perror("File descriptor (shared memory) initialisation failed");
+        return -1;
+    }
 
     msg_hdlr_args->msqid = msqid;
     msg_hdlr_args->shm_fd = fd_shmem;
@@ -223,7 +240,10 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, siz
         return -1;
     }
 
-    if (write_id(process_vty_dir, msqid, shm_plugin_name) == -1) return -1;
+    if (write_id(process_vty_dir, msqid, shm_plugin_name) == -1) {
+        fprintf(stderr, "Write failed\n");
+        return -1;
+    }
 
     already_init = 1;
     return 0;
@@ -709,7 +729,10 @@ int init_ubpf_inject_queue() {
     key_t key;
     struct timespec ts;
 
-    if (timespec_get(&ts, TIME_UTC) == 0) return -1;
+    if (timespec_get(&ts, TIME_UTC) == 0) {
+        perror("TimeSpec");
+        return -1;
+    }
     srandom(ts.tv_nsec ^ ts.tv_sec);  /* Seed the PRNG */
 
     do {
@@ -723,7 +746,7 @@ int init_ubpf_inject_queue() {
                 return -1;
             }
         }
-    } while (curr_errno != EEXIST);
+    } while (curr_errno == EEXIST && msqid < 0);
 
     msqid_listener = msqid;
     return msqid;
@@ -1027,7 +1050,9 @@ static void *plugin_msg_handler(void *args) {
 }
 
 void remove_xsi() {
-    shmctl(msqid_listener, IPC_RMID, NULL);
+    if (msgctl(msqid_listener, IPC_RMID, NULL) == -1) {
+        perror("Can't remove message queue");
+    }
     close_shared_memory();
 
     rm_ipc();
