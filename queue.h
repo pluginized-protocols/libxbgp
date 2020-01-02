@@ -59,5 +59,6 @@ int enqueue(queue_t *q, void *elem);
  */
 int dequeue(queue_t *q, void *elem);
 
+int q_size(queue_t *q);
 
 #endif //FRR_THESIS_QUEUE_H

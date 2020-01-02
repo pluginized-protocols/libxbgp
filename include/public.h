@@ -44,7 +44,7 @@ extern int rm_plugin(int id_plugin, const char **err);
 extern int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 
 extern int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
-                        uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid);
+                        uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid, int shared_fd);
 
 int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
 

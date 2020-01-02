@@ -113,4 +113,13 @@ int has_monit_fd(void);
 
 void turnoff_monitoring(void);
 
+void wait_monitoring(void);
+
+int flush_buffer(void);
+
+void *data_loop_sender(void *_args);
+
+void *check_curr_buffer(void *_args);
+
+
 #endif //FRR_THESIS_MONITORING_SERVER_H

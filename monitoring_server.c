@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <signal.h>
+#include <stdatomic.h>
 
 // 1MB
 #define MAX_BUFFER_SIZE 1048576
@@ -25,7 +26,20 @@ struct __attribute__((__packed__)) header_aggregate {
     uint32_t nb_tlv;
 };
 
+struct last_send {
+    struct timespec last;
+};
+
+typedef struct buffer {
+    uint8_t buffer[MAX_BUFFER_SIZE]; // require C11 !
+    atomic_int len;
+} buffer_t;
+
 static queue_t *monit_queue;
+static queue_t *ready_data;
+static buffer_t current_buffer;
+
+
 static int server_fd = -1;
 
 /*
@@ -36,11 +50,22 @@ static int require_monit = 0;
 
 pthread_t thread_rec;
 pthread_t thread_send;
+pthread_t thread_aggregate;
+pthread_t thread_check_data;
 pid_t child_pid = -1;
+
+pthread_mutex_t mutex_connexion; // in case of connexion reestablishment, block the sending of data
+pthread_mutex_t mutex_curr_buf; //on time out
+struct last_send last_send;
 
 struct monitor_loop_args {
     queue_t *monitoring_data;
     int fd_read;
+};
+
+struct sender_th_args {
+    uint8_t *buffer;
+    size_t *max_size;
 };
 
 int is_monit_required() {
@@ -49,6 +74,38 @@ int is_monit_required() {
 
 int has_monit_fd() {
     return server_fd == -1 ? 0 : 1;
+}
+
+static inline void timespec_diff(struct timespec *start, struct timespec *stop,
+                                 struct timespec *result) {
+    if ((stop->tv_nsec - start->tv_nsec) < 0) {
+        result->tv_sec = stop->tv_sec - start->tv_sec - 1;
+        result->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
+    } else {
+        result->tv_sec = stop->tv_sec - start->tv_sec;
+        result->tv_nsec = stop->tv_nsec - start->tv_nsec;
+    }
+}
+
+
+static inline int lesser(const struct timespec *lhs, const struct timespec *rhs) {
+    if (lhs->tv_sec == rhs->tv_sec)
+        return lhs->tv_nsec < rhs->tv_nsec;
+    else
+        return lhs->tv_sec < rhs->tv_sec;
+}
+
+static void init_last_send(struct last_send *ls) {
+
+    struct timespec tp;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) != 0) {
+        perror("Error, cannot get system clock");
+        return;
+    }
+
+    memcpy(&ls->last, &tp, sizeof(struct timespec));
+    // memcpy(&ls->previous, &tp, sizeof(struct timespec));
 }
 
 static int establish_connexion(const char *host, const char *port) {
@@ -96,17 +153,23 @@ static int establish_connexion(const char *host, const char *port) {
 int open_exporter_connexion(const char *host, const char *port, int force) {
 
     int sfd;
-    if (server_fd != 1) {
-        if (!force) return 0;
-        else {
-            close(server_fd);
-            server_fd = -1;
+    pthread_mutex_lock(&mutex_connexion);
+    {
+        if (server_fd != 1) {
+            if (!force) return 0;
+            else {
+                close(server_fd);
+                server_fd = -1;
+            }
         }
-    }
-    sfd = establish_connexion(host, port);
 
-    if (sfd == -1) return -1;
-    server_fd = sfd;
+        sfd = establish_connexion(host, port);
+
+        if (sfd == -1) return -1;
+        server_fd = sfd;
+    }
+    pthread_mutex_unlock(&mutex_connexion);
+
     return 0;
 }
 
@@ -124,6 +187,14 @@ int init_monitoring(const char *address, const char *port, int monit) {
     // pipe_fd[0] read
     // pipe_fd[1] write
 
+    monit_queue = init_queue(sizeof(data_t));
+    ready_data = init_queue(sizeof(uint8_t *));
+
+    if (monit_queue == NULL || ready_data == NULL) {
+        return NOT_INIT_ERROR;
+    }
+
+
     if (pipe(pipe_fd) == -1) {
         perror("pipe");
         exit(EXIT_FAILURE);
@@ -132,12 +203,16 @@ int init_monitoring(const char *address, const char *port, int monit) {
     require_monit = monit;
 
     pid = fork();
-    if(pid == -1) {
+    if (pid == -1) {
         perror("Cannot fork");
         return -1;
     } else if (pid == 0) { // child
         // init monitoring
         close(pipe_fd[1]);
+
+        if (pthread_mutex_init(&mutex_connexion, NULL) != 0) exit(EXIT_FAILURE);
+        if (pthread_mutex_init(&mutex_curr_buf, NULL) != 0) exit(EXIT_FAILURE);
+
         status = main_monitor(address, port, pipe_fd[0]);
         child_pid = -1;
         close_exporter_connexion();
@@ -157,6 +232,12 @@ int init_monitoring(const char *address, const char *port, int monit) {
 }
 
 void turnoff_monitoring() {
+
+    fprintf(stderr, "Sending last records... ");
+    fflush(stderr);
+    wait_monitoring(); // wait until every record are sent.
+    fprintf(stderr, "DONE!\n");
+
     if (child_pid == -1) return;
     kill(child_pid, SIGINT);
 }
@@ -181,17 +262,13 @@ int send_to_exporter(uint8_t *buffer, size_t len) {
 
 int main_monitor(const char *address, const char *port, int fd_read) {
 
-    monit_queue = init_queue(sizeof(data_t));
-    struct monitor_loop_args *args;
 
-    if (monit_queue == NULL) {
-        return NOT_INIT_ERROR;
-    }
+    struct monitor_loop_args *args;
+    memset(&current_buffer, 0, sizeof(buffer_t));
 
     if (open_exporter_connexion(address, port, 0) == -1) {
         return CONN_ERROR;
     }
-
 
     args = malloc(sizeof(struct monitor_loop_args));
     if (!args) return MEM_ERROR;
@@ -200,12 +277,22 @@ int main_monitor(const char *address, const char *port, int fd_read) {
     args->monitoring_data = monit_queue;
 
     if (pthread_create(&thread_rec, NULL, &monitor_loop, args) != 0) {
-        perror("Can't create thread (data receiver)");
+        perror("Cannot create thread (data receiver)");
         return THREAD_ERROR;
     }
 
-    if (pthread_create(&thread_send, NULL, &aggregate_data, NULL) != 0) {
-        perror("Can'y create thread (data aggregator)");
+    if (pthread_create(&thread_aggregate, NULL, &aggregate_data, NULL) != 0) {
+        perror("Cannot create thread (data aggregator)");
+        return THREAD_ERROR;
+    }
+
+    if (pthread_create(&thread_send, NULL, &data_loop_sender, NULL) != 0) {
+        perror("Cannot create thread (data send)");
+        return THREAD_ERROR;
+    }
+
+    if (pthread_create(&thread_check_data, NULL, &check_curr_buffer, NULL) != 0) {
+        perror("Cannot create thread (data check)");
         return THREAD_ERROR;
     }
 
@@ -226,40 +313,154 @@ void *aggregate_data(void *args) {
 
     ((void) args);
 
-    uint8_t *buffer;
-    buffer = malloc(MAX_BUFFER_SIZE);
-    unsigned int index;
+    buffer_t *buffer;
     unsigned int curr_len;
     int nb_record;
 
     data_t tlv_record;
 
-    if (!buffer) {
-        perror("Cannot allocate memory");
-    }
-
-    index = sizeof(struct header_aggregate);
+    current_buffer.len = sizeof(struct header_aggregate);
     nb_record = 0;
 
     while (1) {
-
         if (!dequeue(monit_queue, &tlv_record)) continue;
         curr_len = header_tlv_size + tlv_record.length;
 
-        if (index + curr_len >= MAX_BUFFER_SIZE) {
-            // send to exporter, that will send to the collector and then DB...
-            struct header_aggregate *hdr = (struct header_aggregate *) buffer;
-            hdr->nb_tlv = htonl(nb_record);
-            if (send_to_exporter(buffer, index) == -1) return 0;
-            // reset index
-            index = sizeof(struct header_aggregate);
+        if (pthread_mutex_lock(&mutex_curr_buf) != 0) return NULL;
+        {
+            if (current_buffer.len + curr_len >= MAX_BUFFER_SIZE) {
+                buffer = malloc(sizeof(buffer_t));
+                memcpy(buffer, &current_buffer, sizeof(buffer_t));
+
+                struct header_aggregate *hdr = (struct header_aggregate *) buffer->buffer;
+                hdr->nb_tlv = htonl(nb_record);
+                enqueue(ready_data, &buffer);
+                current_buffer.len = sizeof(struct header_aggregate);
+                nb_record = 0;
+            }
+            memcpy(&current_buffer.buffer + current_buffer.len, &tlv_record, curr_len);
+            current_buffer.len += curr_len;
+            nb_record++;
+        }
+        if (pthread_mutex_unlock(&mutex_curr_buf) != 0) return NULL;
+    }
+
+
+    return NULL;
+}
+
+/**
+ * Sends data as long as the queue is not empty
+ * @param _args
+ * @return
+ */
+void *data_loop_sender(void *_args) {
+    buffer_t *data;
+    struct sender_th_args *args = _args;
+    struct timespec tv = {.tv_sec = 60, .tv_nsec = 0}; // todo change magic number
+    struct timespec curr_time;
+
+
+    while (1) {
+        if (nanosleep(&tv, NULL) != 0) {
+            perror("Can't retrieve time");
+            return NULL;
         }
 
-        memcpy(buffer + index, &tlv_record, curr_len);
-        index += curr_len;
-        nb_record++;
+        dequeue(ready_data, &data);
+        if (pthread_mutex_lock(&mutex_curr_buf) != 0) return NULL;
+        {
+            if (send_to_exporter(data->buffer, data->len) == -1) {} // todo
+            clock_gettime(CLOCK_MONOTONIC, &curr_time);
+            last_send.last = curr_time;
+        }
+        if (pthread_mutex_unlock(&mutex_curr_buf) != 0) return NULL;
+        data = NULL;
+
+    }
+
+    return NULL;
+}
+
+/**
+ * If plugins send few monitoring data, checks if there is some data
+ * The check is done periodically in a rate (TODO) given by the user
+ * @param _args
+ * @return
+ */
+void *check_curr_buffer(void *_args) {
+
+    struct timespec curr_time;
+    struct timespec tv = {.tv_sec = 180, .tv_nsec = 0}; // todo remove magic numbers
+
+    while (1) {
+
+        if (nanosleep(&tv, NULL) != 0) {
+            perror("Cannot sleep");
+            return NULL;
+        }
+
+        if (current_buffer.len > 0 && q_size(ready_data) == 0) {
+            // should have 1) sthg to send and 2) no pending data to be sent
+
+            clock_gettime(CLOCK_MONOTONIC, &curr_time);
+
+            if (lesser(&last_send.last, &curr_time)) { // time to send
+                flush_buffer();
+            }
+        }
+
     }
     return NULL;
+}
+
+/**
+ * Force the current buffer to be sent to the exporter.
+ * @return -1 if failed. 0 otherwise
+ */
+int flush_buffer() {
+
+    struct timespec curr_time;
+
+    if (pthread_mutex_lock(&mutex_curr_buf) != 0) return -1;
+    {
+
+        uint8_t *data = malloc(header_tlv_size + current_buffer.len);
+
+        if (!data) {
+            perror("Unable to allocate memory");
+            return -1;
+        }
+
+        if (current_buffer.len <= 0) return 0; // don't send anything
+
+        if (send_to_exporter(current_buffer.buffer, current_buffer.len) == -1) {} // todo
+        if (clock_gettime(CLOCK_MONOTONIC, &curr_time) != 0) {
+            perror("Cannot retrieve time");
+            return -1;
+        }
+        last_send.last = curr_time;
+        memset(&current_buffer, 0, sizeof(buffer_t));
+        current_buffer.len = sizeof(struct header_aggregate);
+    }
+    if (pthread_mutex_unlock(&mutex_curr_buf) != 0) return -1;
+
+    return 0;
+}
+
+
+void wait_monitoring() {
+
+    struct timespec tv = {.tv_sec = 2, .tv_nsec = 0};
+
+    while (q_size(ready_data) > 0) { // busy wait until all records has been sent
+        if (nanosleep(&tv, NULL) != 0) {
+            perror("Unable to sleep");
+        }
+    }
+
+    flush_buffer();
+
 }
 
 void *monitor_loop(void *args) {

@@ -12,6 +12,8 @@
 #include <linux/limits.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 
 static inline void change_id_process(const char *user) {
     struct passwd *pwd;
@@ -63,20 +65,67 @@ int main(int argc, char *const argv[]) {
 
     char path[PATH_MAX];
     char plug_name[NAME_MAX];
+    char shared_mem_str[NAME_MAX];
     char *ptr_path = NULL;
     char *err;
     unsigned int plugin_action = -1;
 
-    int msqid;
+    long _msqid;
+    int msqid = -1;
+    int shared_fd = -1;
     ubpf_queue_info_msg_t msg;
 
 
     memset(path, 0, sizeof(char) * PATH_MAX);
     memset(plug_name, 0, sizeof(char) * NAME_MAX);
 
-    while ((opt = getopt(argc, argv, "h:p:a:e:s:n:ji:")) != -1) {
+    while ((opt = getopt(argc, argv, "h:p:a:e:s:n:ji:m:s:")) != -1) {
 
         switch (opt) {
+            case 'm':
+
+                _msqid = strtol(optarg, &err, 10);
+
+                if (*err != '\0') {
+                    perror("Can't parse messaque queue");
+                    failed_args++;
+                } else if (_msqid >= UINT32_MAX) {
+                    fprintf(stderr, "Found msqid > 2**32. Expected msqid < 2**32\n");
+                    failed_args++;
+                }
+
+                msqid = (int) _msqid;
+
+                break;
+            case 's': {
+
+                size_t total = 0;
+
+                int fd = open(optarg, O_RDONLY);
+                int s, finished = 0;
+                if (fd == -1) {
+                    perror("Can't open file");
+                    failed_args++;
+                }
+
+                while (total < PATH_MAX && !finished) {
+
+                    s = read(fd, shared_mem_str + total, PATH_MAX - total);
+                    if (s == -1) {
+                        perror("Error while reading file");
+                        failed_args++;
+                        finished = 1;
+                    } else total += s;
+
+                }
+
+                shared_fd = shm_open(shared_mem_str, O_RDWR, S_IRUSR | S_IWUSR);
+                if (shared_fd < 0) {
+                    perror("Can't open shared memory");
+                    failed_args++;
+                }
+                break;
+            }
             case 'i':
                 strncpy(plug_name, optarg, NAME_MAX);
                 break;
@@ -95,13 +144,6 @@ int main(int argc, char *const argv[]) {
                 if (*err != 0) {
                     failed_args++;
                     perror("Parsing -e number failed");
-                }
-                break;
-            case 's':
-                shared_mem = strtoll(optarg, &err, 10);
-                if (*err != 0) {
-                    failed_args++;
-                    perror("Parsing -s number failed");
                 }
                 break;
             case 'n':
@@ -151,12 +193,8 @@ int main(int argc, char *const argv[]) {
 
     //change_id_process();
 
-    msqid = init_upbf_inject_queue_snd();
+    if (msqid == -1) return -1;
 
-    if (msqid == -1) {
-        fprintf(stderr, "Check if protocol is running\n");
-        return EXIT_FAILURE;
-    }
 
     // SEND FULL eBPF PROGRAM TO BGP
     switch (plugin_action) { // check if every argument are there
@@ -169,7 +207,7 @@ int main(int argc, char *const argv[]) {
                 if (sequence_number == -1) return EXIT_FAILURE;
 
             if (send_pluglet(ptr_path, plug_name, jit, hook, plugin_action,
-                             extra_mem, shared_mem, sequence_number, msqid) != 0) {
+                             extra_mem, shared_mem, sequence_number, msqid, shared_fd) != 0) {
                 fprintf(stderr, "Unable to send plugin to protocol\n");
                 return EXIT_FAILURE;
             }
@@ -187,6 +225,10 @@ int main(int argc, char *const argv[]) {
             break;
         case E_BPF_RM_PLUGLET:
             send_rm_pluglet(msqid, plug_name, sequence_number, hook);
+            break;
+        case E_BPF_CHANGE_MONITORING:
+
+            break;
         default:
             return EXIT_FAILURE;
     }

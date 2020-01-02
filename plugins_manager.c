@@ -58,6 +58,7 @@ pthread_t plugin_listener; // thread receiving pluglets from outside the main pr
 unsigned int finished = 0;
 static int msqid_listener = -1;
 static char shm_plugin_name[NAME_MAX];
+static uint8_t *mmap_shared_ptr;
 
 static inline int full_write(int fd, const char *buf, size_t len) {
 
@@ -790,6 +791,8 @@ int init_shared_memory(char *shared_mem_name) { // shared_mem_name MUST be of si
     mode_t mode;
     *name = '/';
 
+    uint8_t *data_ptr;
+
     rnd_name = name + 1;
     mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP; // rw-rw----
     oflag = O_RDWR | O_CREAT | O_EXCL;
@@ -805,13 +808,24 @@ int init_shared_memory(char *shared_mem_name) { // shared_mem_name MUST be of si
         } else must_cont = 0;
     } while (must_cont);
 
-    //mmap(NULL, MAX_SIZE_PLUGIN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    data_ptr = mmap(NULL, MAX_SIZE_PLUGIN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (data_ptr == (void *) -1) {
+        perror("MMAP initialization failed");
+        return -1;
+    }
+
+    mmap_shared_ptr = data_ptr;
 
     strncpy(shared_mem_name, name, NAME_MAX);
     return fd;
 }
 
 int close_shared_memory() {
+
+    if (munmap(mmap_shared_ptr, MAX_SIZE_PLUGIN) != 0) {
+        perror("Unable to detach shared memory");
+    }
+
     return shm_unlink(shm_plugin_name);
 }
 
@@ -825,7 +839,7 @@ static inline __off_t file_size(const char *path) {
 }
 
 int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
-                 uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid) {
+                 uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid, int shared_fd) {
 
     ubpf_queue_msg_t msg;
     __off_t size;
@@ -853,7 +867,7 @@ int send_pluglet(const char *path, const char *plugin_name, short jit, int hook,
     size = file_size(path);
     if (size == -1) return -1;
 
-    if ((len = store_plugin((size_t) size, path)) == 0) {
+    if ((len = store_plugin((size_t) size, path, shared_fd)) == 0) {
         return -1;
     }
 
@@ -912,33 +926,15 @@ int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor
 }
 
 
-size_t store_plugin(size_t size, const char *path) {
+size_t store_plugin(size_t size, const char *path, int shared_fd) {
 
-    int memid;
-    key_t key;
     uint8_t *data;
     size_t plugin_length;
 
-    key = ftok(daemon_vty_dir, E_BPF_SHMEM_KEY);
-
-    if (key == -1) {
-        perror("Key allocation failed");
-        return 0;
-    }
-
-    memid = shmget(key, size, 0600);
-
-    if (memid == -1) {
-        perror("Unable to retrieve shared memory");
-        return 0;
-    }
-
-    data = shmat(memid, NULL, 0);
+    data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shared_fd, 0);
 
     if (data == (void *) -1) {
         perror("Can't attach shared memory");
-        shmctl(memid, IPC_RMID, 0);
-        return 0;
     }
 
     memset(data, 0, size);
@@ -948,7 +944,7 @@ size_t store_plugin(size_t size, const char *path) {
         return 0;
     }
 
-    shmdt(data);
+    munmap(data, size);
 
     return plugin_length;
 }
@@ -960,8 +956,6 @@ static void *plugin_msg_handler(void *args) {
 
     int err = 0;
     const char *str_err;
-    uint8_t *data_ptr;
-    int fd;
     int plugin_id;
     int mysqid;
 
@@ -973,14 +967,8 @@ static void *plugin_msg_handler(void *args) {
     }
 
     mysqid = cast_args->msqid;
-    fd = cast_args->shm_fd;
+    // fd = cast_args->shm_fd;
     ubpf_queue_msg_t rcvd_msg;
-
-    data_ptr = mmap(NULL, MAX_SIZE_PLUGIN, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (data_ptr == (void *) -1) {
-        perror("MMAP initialization failed");
-        return NULL;
-    }
 
     free(args);
 
@@ -1010,8 +998,8 @@ static void *plugin_msg_handler(void *args) {
         switch (rcvd_msg.plugin_action) {
             case E_BPF_REPLACE:
             case E_BPF_ADD:
-                if (msync(data_ptr, MAX_SIZE_PLUGIN, MS_SYNC) != 0) return NULL;
-                if (__add_pluglet_ptr(data_ptr, plugin_id, rcvd_msg.hook, rcvd_msg.bytecode_length,
+                if (msync(mmap_shared_ptr, MAX_SIZE_PLUGIN, MS_SYNC) != 0) return NULL;
+                if (__add_pluglet_ptr(mmap_shared_ptr, plugin_id, rcvd_msg.hook, rcvd_msg.bytecode_length,
                                       rcvd_msg.extra_memory, rcvd_msg.shared_memory, rcvd_msg.seq,
                                       rcvd_msg.jit, &str_err) < 0) {
                     err = 1;

@@ -16,14 +16,14 @@
 
 #define MAX_PLUGINS 128
 #define MAX_REASON 2048
-#define E_BPF_SHMEM_KEY 220
 
 
 enum msg_type_id {
     E_BPF_ADD = 1,
     E_BPF_RM,
     E_BPF_RM_PLUGLET,
-    E_BPF_REPLACE
+    E_BPF_REPLACE,
+    E_BPF_CHANGE_MONITORING,
 };
 
 #define MAX_SIZE_PLUGIN 1048576
@@ -120,7 +120,7 @@ int run_plugin_replace(int plugin_id, void *args, size_t args_len, uint64_t *ret
 int init_ubpf_inject_queue(void);
 
 int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
-                 uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid);
+                 uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid, int shared_fd);
 
 int rm_plugin(int id_plugin, const char **err);
 
@@ -139,7 +139,7 @@ int is_volatile_plugin(int plugin_id);
 
 int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir);
 
-size_t store_plugin(size_t size, const char *path);
+size_t store_plugin(size_t size, const char *path, int shared_fd);
 
 void remove_xsi(void);
 

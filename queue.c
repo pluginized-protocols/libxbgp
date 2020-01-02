@@ -45,6 +45,7 @@ queue_t *init_queue(size_t len) {
         sem_destroy(&sem_add);
         sem_destroy(&sem_rm);
         free(new_q);
+        return NULL;
     }
 
     memcpy(&(new_q->q_mutex), &mutex, sizeof(pthread_mutex_t));
@@ -102,3 +103,7 @@ int dequeue(queue_t *q, void *elem) {
     return err == 0 ? 1 : 0;
 }
 
+
+int q_size(queue_t *q) {
+    return size(q->list);
+}
