@@ -139,7 +139,6 @@ static inline int write_id(const char *folder, int msg_queue_id, const char *shm
     snprintf(path2, PATH_MAX, "%s/%s", folder, SHAREDID);
     memset(r_path, 0, sizeof(char) * PATH_MAX);
     realpath(path, r_path);
-    fprintf(stderr, "Write queue.id in %s\n", r_path);
     fd_msgqueue = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
 
     if (fd_msgqueue == -1) {
@@ -148,7 +147,6 @@ static inline int write_id(const char *folder, int msg_queue_id, const char *shm
     }
     memset(r_path, 0, sizeof(char) * PATH_MAX);
     realpath(path2, r_path);
-    fprintf(stderr, "Write shared.id in %s\n", r_path);
     fd_shared = open(r_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
 
     if (fd_shared == -1) {
@@ -260,6 +258,8 @@ void ubpf_terminate() {
     finished = 1;
     remove_xsi();
     free(plugins_manager);
+    plugins_manager = NULL;
+    already_init = 0;
     destroy_context();
 
 }

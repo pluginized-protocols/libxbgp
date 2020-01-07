@@ -59,7 +59,7 @@ int add_two(context_t *ctx, int a) {
     return a + 2;
 }
 
-int set_int_example(api_args, int new_int_val) {
+static int set_int_example(api_args, int new_int_val) {
 
     int *int_from_args = auto_get(INT_EXAMPLE, int *);
     if (!int_from_args) return -1;
@@ -68,19 +68,19 @@ int set_int_example(api_args, int new_int_val) {
     return 0;
 }
 
-void post_function_call(context_t *ctx) {
+static void post_function_call(context_t *ctx) {
     plugin_set_post = ctx->p->plugin_id;
 }
 
 
-proto_ext_fun_t funcs[] = {
+static proto_ext_fun_t funcs[] = {
         {.name = "add_two", .fn = add_two},
         {.name = "set_int_example", .fn = set_int_example},
         {.name = "post_function_call", .fn = post_function_call},
         {NULL}
 };
 
-plugin_info_t plugins[] = {
+static plugin_info_t plugins[] = {
         {.plugin_str = "add_two_insert", .plugin_id = 1},
         {.plugin_str = "full_plugin", .plugin_id = 2},
         {.plugin_str = "macro_test", .plugin_id = 3},

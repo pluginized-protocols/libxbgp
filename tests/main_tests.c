@@ -14,6 +14,7 @@
 
 #include "tree_test.h"
 #include "ubpf_manager_test.h"
+#include "monitoring_tests.h"
 
 int main(int argc, char *argv[]) {
 
@@ -59,7 +60,8 @@ int main(int argc, char *argv[]) {
         return CU_get_error();
 
     if ((tree_tests() != CUE_SUCCESS) ||
-        (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS)) {
+        (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
+        (ubpf_monitoring_tests(plugin_folder_path) != CUE_SUCCESS)) {
 
         fprintf(stderr, "%s\n", CU_get_error_msg());
         CU_cleanup_registry();

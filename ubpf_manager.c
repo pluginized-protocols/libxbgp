@@ -142,6 +142,8 @@ int init_ubpf_manager(proto_ext_fun_t *fn) {
 int destroy_ubpf_manager() {
     if (vm_args) {
         pthread_mutex_destroy(vm_args);
+        memset(&_vm_args, 0, sizeof(pthread_mutex_t));
+        vm_args = NULL;
     }
 
     proto_ext_fn = NULL;

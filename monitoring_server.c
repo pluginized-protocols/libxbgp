@@ -31,8 +31,8 @@ struct last_send {
 };
 
 typedef struct buffer {
-    uint8_t buffer[MAX_BUFFER_SIZE]; // require C11 !
-    atomic_int len;
+    uint8_t buffer[MAX_BUFFER_SIZE];
+    atomic_int len; // require C11 !
 } buffer_t;
 
 static queue_t *monit_queue;
@@ -144,7 +144,10 @@ static int establish_connexion(const char *host, const char *port) {
         return -1;
     }
 
-    if (!res) return -1;
+    if (!res) {
+        fprintf(stderr, "the error :'(\n");
+        return -1;
+    }
     status = connect(sfd, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(servinfo);
     return status == -1 ? -1 : sfd;
@@ -155,9 +158,10 @@ int open_exporter_connexion(const char *host, const char *port, int force) {
     int sfd;
     pthread_mutex_lock(&mutex_connexion);
     {
-        if (server_fd != 1) {
-            if (!force) return 0;
-            else {
+        if (server_fd != -1) {
+            if (!force) {
+                return 0;
+            } else {
                 close(server_fd);
                 server_fd = -1;
             }
@@ -210,12 +214,17 @@ int init_monitoring(const char *address, const char *port, int monit) {
         // init monitoring
         close(pipe_fd[1]);
 
-        if (pthread_mutex_init(&mutex_connexion, NULL) != 0) exit(EXIT_FAILURE);
-        if (pthread_mutex_init(&mutex_curr_buf, NULL) != 0) exit(EXIT_FAILURE);
+        if (pthread_mutex_init(&mutex_connexion, NULL) != 0) {
+            perror("Mutex init error");
+            exit(EXIT_FAILURE);
+        }
+        if (pthread_mutex_init(&mutex_curr_buf, NULL) != 0) {
+            perror("Mutex init error");
+            exit(EXIT_FAILURE);
+        }
 
         status = main_monitor(address, port, pipe_fd[0]);
         child_pid = -1;
-        close_exporter_connexion();
 
         if (status == CONN_ERROR && monit) {
             exit(EXIT_SUCCESS);
@@ -240,6 +249,10 @@ void turnoff_monitoring() {
 
     if (child_pid == -1) return;
     kill(child_pid, SIGINT);
+    pthread_mutex_destroy(&mutex_curr_buf);
+    pthread_mutex_destroy(&mutex_connexion);
+    memset(&mutex_curr_buf, 0, sizeof(pthread_mutex_t));
+    memset(&mutex_connexion, 0, sizeof(pthread_mutex_t));
 }
 
 int send_to_exporter(uint8_t *buffer, size_t len) {
@@ -338,7 +351,7 @@ void *aggregate_data(void *args) {
                 current_buffer.len = sizeof(struct header_aggregate);
                 nb_record = 0;
             }
-            memcpy(&current_buffer.buffer + current_buffer.len, &tlv_record, curr_len);
+            memcpy(current_buffer.buffer + current_buffer.len, &tlv_record, curr_len);
             current_buffer.len += curr_len;
             nb_record++;
         }
@@ -422,10 +435,13 @@ int flush_buffer() {
 
     struct timespec curr_time;
 
+    fprintf(stderr, "The flusher\n");
+
     if (pthread_mutex_lock(&mutex_curr_buf) != 0) return -1;
     {
+        fprintf(stderr, "The flusher locked\n");
 
-        uint8_t *data = malloc(header_tlv_size + current_buffer.len);
+        uint8_t *data = malloc(sizeof(struct header_aggregate) + current_buffer.len);
 
         if (!data) {
             perror("Unable to allocate memory");
@@ -442,8 +458,11 @@ int flush_buffer() {
         last_send.last = curr_time;
         memset(&current_buffer, 0, sizeof(buffer_t));
         current_buffer.len = sizeof(struct header_aggregate);
+        fprintf(stderr, "ICI GAMIN\n");
     }
     if (pthread_mutex_unlock(&mutex_curr_buf) != 0) return -1;
+
+    fprintf(stderr, "The deflusher\n");
 
     return 0;
 }
