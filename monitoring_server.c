@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <wait.h>
 
 // 1MB
 #define MAX_BUFFER_SIZE 1048576
@@ -33,6 +34,7 @@ struct last_send {
 typedef struct buffer {
     uint8_t buffer[MAX_BUFFER_SIZE];
     atomic_int len; // require C11 !
+    uint32_t nb_record;
 } buffer_t;
 
 static queue_t *monit_queue;
@@ -68,12 +70,21 @@ struct sender_th_args {
     size_t *max_size;
 };
 
+
 int is_monit_required() {
     return require_monit;
 }
 
 int has_monit_fd() {
     return server_fd == -1 ? 0 : 1;
+}
+
+static void sig_handler(int signo) {
+    if (signo != SIGINT) return;
+
+    wait_monitoring();
+
+    exit(EXIT_SUCCESS);
 }
 
 static inline void timespec_diff(struct timespec *start, struct timespec *stop,
@@ -214,6 +225,10 @@ int init_monitoring(const char *address, const char *port, int monit) {
         // init monitoring
         close(pipe_fd[1]);
 
+        if (signal(SIGINT, sig_handler) == SIG_ERR) {
+            perror("Cannot overwrite SIGINT signal handler");
+        };
+
         if (pthread_mutex_init(&mutex_connexion, NULL) != 0) {
             perror("Mutex init error");
             exit(EXIT_FAILURE);
@@ -242,13 +257,19 @@ int init_monitoring(const char *address, const char *port, int monit) {
 
 void turnoff_monitoring() {
 
-    fprintf(stderr, "Sending last records... ");
-    fflush(stderr);
-    wait_monitoring(); // wait until every record are sent.
-    fprintf(stderr, "DONE!\n");
+    int status;
 
     if (child_pid == -1) return;
     kill(child_pid, SIGINT);
+    if (waitpid(child_pid, &status, 0) == -1) {
+        perror("Can't wait process termination");
+    }
+
+    if (!WIFEXITED(status)) {
+        fprintf(stderr, "[Warning] Monitoring process not gracefully exited!\n");
+        kill(child_pid, SIGKILL);
+    }
+
     pthread_mutex_destroy(&mutex_curr_buf);
     pthread_mutex_destroy(&mutex_connexion);
     memset(&mutex_curr_buf, 0, sizeof(pthread_mutex_t));
@@ -328,16 +349,17 @@ void *aggregate_data(void *args) {
 
     buffer_t *buffer;
     unsigned int curr_len;
-    int nb_record;
 
     data_t tlv_record;
 
     current_buffer.len = sizeof(struct header_aggregate);
-    nb_record = 0;
 
     while (1) {
-        if (!dequeue(monit_queue, &tlv_record)) continue;
-        curr_len = header_tlv_size + tlv_record.length;
+        if (!dequeue(monit_queue, &tlv_record)) {
+            fprintf(stderr, "Can't dequeue\n");
+            continue;
+        }
+        curr_len = header_tlv_size + ntohl(tlv_record.length);
 
         if (pthread_mutex_lock(&mutex_curr_buf) != 0) return NULL;
         {
@@ -346,14 +368,21 @@ void *aggregate_data(void *args) {
                 memcpy(buffer, &current_buffer, sizeof(buffer_t));
 
                 struct header_aggregate *hdr = (struct header_aggregate *) buffer->buffer;
-                hdr->nb_tlv = htonl(nb_record);
+                hdr->nb_tlv = htonl(current_buffer.nb_record);
                 enqueue(ready_data, &buffer);
                 current_buffer.len = sizeof(struct header_aggregate);
-                nb_record = 0;
+                current_buffer.nb_record = 0;
             }
-            memcpy(current_buffer.buffer + current_buffer.len, &tlv_record, curr_len);
-            current_buffer.len += curr_len;
-            nb_record++;
+
+            memcpy(current_buffer.buffer + current_buffer.len, &tlv_record.type, sizeof(uint32_t));
+            current_buffer.len += sizeof(uint32_t);
+            memcpy(current_buffer.buffer + current_buffer.len, &tlv_record.length, sizeof(uint32_t));
+            current_buffer.len += sizeof(uint32_t);
+            memcpy(current_buffer.buffer + current_buffer.len, tlv_record.value, ntohl(tlv_record.length));
+            current_buffer.len += ntohl(tlv_record.length);
+            current_buffer.nb_record++;
+            free(tlv_record.value);
+            tlv_record.value = NULL;
         }
         if (pthread_mutex_unlock(&mutex_curr_buf) != 0) return NULL;
     }
@@ -429,28 +458,26 @@ void *check_curr_buffer(void *_args) {
 
 /**
  * Force the current buffer to be sent to the exporter.
+ * To be used in the current process only !
  * @return -1 if failed. 0 otherwise
  */
 int flush_buffer() {
 
     struct timespec curr_time;
 
-    fprintf(stderr, "The flusher\n");
-
     if (pthread_mutex_lock(&mutex_curr_buf) != 0) return -1;
     {
-        fprintf(stderr, "The flusher locked\n");
+        struct header_aggregate *hdr = (struct header_aggregate *) current_buffer.buffer;
+        hdr->nb_tlv = htonl(current_buffer.nb_record);
 
-        uint8_t *data = malloc(sizeof(struct header_aggregate) + current_buffer.len);
-
-        if (!data) {
-            perror("Unable to allocate memory");
-            return -1;
+        if (current_buffer.len <= 0) {
+            fprintf(stderr, "No data to send\n");
+            return 0; // don't send anything
         }
 
-        if (current_buffer.len <= 0) return 0; // don't send anything
-
-        if (send_to_exporter(current_buffer.buffer, current_buffer.len) == -1) {} // todo
+        if (send_to_exporter(current_buffer.buffer, current_buffer.len) == -1) {
+            fprintf(stderr, "Unable to send records\n");
+        } // todo
         if (clock_gettime(CLOCK_MONOTONIC, &curr_time) != 0) {
             perror("Cannot retrieve time");
             return -1;
@@ -458,11 +485,9 @@ int flush_buffer() {
         last_send.last = curr_time;
         memset(&current_buffer, 0, sizeof(buffer_t));
         current_buffer.len = sizeof(struct header_aggregate);
-        fprintf(stderr, "ICI GAMIN\n");
+        current_buffer.nb_record = 0;
     }
     if (pthread_mutex_unlock(&mutex_curr_buf) != 0) return -1;
-
-    fprintf(stderr, "The deflusher\n");
 
     return 0;
 }
@@ -479,11 +504,9 @@ void wait_monitoring() {
     }
 
     flush_buffer();
-
 }
 
 void *monitor_loop(void *args) {
-
 
     struct monitor_loop_args *cast_args = args;
 
@@ -503,7 +526,7 @@ void *monitor_loop(void *args) {
         memset(&record, 0, sizeof(record));
         cumulative_length = 0;
 
-        len = read(fd_read, &record.length, sizeof(size_t)); // receive the first part of the packet: length
+        len = read(fd_read, &record.length, sizeof(uint32_t)); // receive the first part of the packet: length
 
         if (len <= 0) {
             perror("error read pipe");
@@ -530,6 +553,11 @@ void *monitor_loop(void *args) {
             }
             cumulative_length += len;
         }
+
+        // change to network order before enqueuing
+        record.type = htonl(record.type);
+        record.length = htonl(record.length);
+        record.value = recv_buf;
 
         enqueue(monitoring_queue, &record);
     }

@@ -48,8 +48,6 @@ extern int send_pluglet(const char *path, const char *plugin_name, short jit, in
 
 int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
 
-extern int flush_buffer(void);
-
 
 #define RETURN_VM_VOID(ret_val, ...) \
 {\

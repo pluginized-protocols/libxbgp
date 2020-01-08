@@ -98,7 +98,12 @@ static int packet_send(const void *data, size_t len, unsigned int type, int sock
 
     uint32_t _type = (uint32_t) type;
 
-    if (send_all(sock_fd, &len, sizeof(size_t)) < 0)
+    if (len > UINT32_MAX) {
+        fprintf(stderr, "len failed\n");
+        return -1;
+    }
+
+    if (send_all(sock_fd, &len, sizeof(uint32_t)) < 0)
         return 0;
     if (send_all(sock_fd, &_type, sizeof(uint32_t)) < 0)
         return 0;

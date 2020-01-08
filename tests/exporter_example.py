@@ -10,21 +10,21 @@ class Record(object):
         self.type = _type
 
         if _type == 1:
-            self.value = int.from_bytes(value[0:4], byteorder=NETWORK_ORDER)
+            self.value = int.from_bytes(value[0:4], byteorder='little')  # this is just for tests
         else:
             self.value = val
 
     def __str__(self) -> str:
-        return "Record(type: %d, value : %s)" % (self.type, self.value)
+        return "Record(type: %d, value: %s)" % (self.type, self.value)
 
+
+server = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind(('', 6789))
+server.listen(1)
 
 while True:
-    server = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(('', 6789))
-    server.listen(1)
     conn, addr = server.accept()
-
     print("Connected to [%s]:%d" % (addr[0], addr[1]))
 
     while True:
@@ -34,6 +34,7 @@ while True:
             break
 
         nb_records = int.from_bytes(data, byteorder=NETWORK_ORDER)
+        print("%d received" % nb_records)
 
         for _ in range(nb_records):
             hdr = conn.recv(8)
