@@ -65,11 +65,11 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) 
         return NULL;
     }
     p->plugin_id = plugid;
+    p->new_transaction = NULL;
     return p;
 }
 
-void destroy_plugin(plugin_t *p) {
-
+static inline void _destroy_plugin(plugin_t *p, int free_p) {
     int i;
     struct tree_iterator *it, _it;
     vm_container_t **curr_vm;
@@ -91,7 +91,11 @@ void destroy_plugin(plugin_t *p) {
 
     destroy_memory_management(&p->mem.shared_heap.smp);
     free(p->mem.block);
-    free(p);
+    if (free_p) free(p);
+}
+
+void destroy_plugin(plugin_t *p) {
+    _destroy_plugin(p, 1);
 }
 
 static int init_ebpf_code(plugin_t *p, vm_container_t **new_vm, uint32_t seq,
@@ -176,6 +180,52 @@ int add_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t
 int add_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit) {
     if (!p) return -1;
     return generic_add_function(p, bytecode, len, seq, BPF_REPLACE, jit);
+}
+
+int transaction_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit) {
+    if (!p) return -1;
+    if (!p->new_transaction) return -1;
+    return generic_add_function(p->new_transaction, bytecode, len, seq, BPF_PRE, jit);
+}
+
+int transaction_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit) {
+    if (!p) return -1;
+    if (!p->new_transaction) return -1;
+    return generic_add_function(p->new_transaction, bytecode, len, seq, BPF_PRE, jit);
+}
+
+int transaction_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit) {
+    if (!p) return -1;
+    if (!p->new_transaction) return -1;
+    return generic_add_function(p->new_transaction, bytecode, len, seq, BPF_PRE, jit);
+}
+
+int init_plugin_transaction(plugin_t *p) {
+
+    plugin_t *new_p;
+    if (p->new_transaction) return -1;
+
+    new_p = init_plugin(p->mem.heap.mp.total_mem, p->mem.shared_heap.smp.heap_len, p->plugin_id);
+
+    if (!new_p) return -1;
+    return 0;
+}
+
+int commit_transaction(plugin_t *p) {
+
+    plugin_t *p_tran;
+
+    if (!p) return -1;
+    if (!p->new_transaction) return -1;
+
+    p_tran = p->new_transaction;
+    _destroy_plugin(p, 0);
+
+    memcpy(p, p_tran, sizeof(plugin_t));
+    p->new_transaction = NULL;
+
+    // free memcpy
+    return 0;
 }
 
 static inline int generic_rm_function(plugin_t *p, uint32_t seq, int anchor) {

@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <json-c/json.h>
+
+static int msqid = -1;
+static int shared_fd = -1;
 
 static inline void change_id_process(const char *user) {
     struct passwd *pwd;
@@ -53,6 +57,30 @@ static inline int usage(const char *argv) {
     return EXIT_FAILURE;
 }
 
+
+int send_pluglet_transaction(const char *name_plugin, const char *path, size_t extra_mem, size_t shared_mem,
+                             int plugin_id, int pluglet_type, uint32_t seq, uint8_t jit) {
+
+    if (msqid == -1 || shared_fd == -1) {
+        fprintf(stderr, "Can't send plugin to the remote program (msqid, shmem_fd not INIT)\n");
+        return -1;
+    }
+
+    send_pluglet(path, name_plugin, jit, pluglet_type, E_BPF_TRANSACTION_ADD,
+                 extra_mem, shared_mem, seq, msqid, shared_fd);
+
+    return 0;
+}
+
+int send_transaction(const char *path) {
+
+    if (send_begin_transaction(msqid) != 0) return -1;
+    if (load_plugin_from_json_fn(path, NULL, 0, send_pluglet_transaction) != 0) return -1;
+    if (send_finish_transaction(msqid) != 0) return -1;
+
+    return 0;
+}
+
 int main(int argc, char *const argv[]) {
 
     int opt;
@@ -66,13 +94,13 @@ int main(int argc, char *const argv[]) {
     char path[PATH_MAX];
     char plug_name[NAME_MAX];
     char shared_mem_str[NAME_MAX];
+    char path_json[PATH_MAX];
     char *ptr_path = NULL;
     char *err;
     unsigned int plugin_action = -1;
 
     long _msqid;
-    int msqid = -1;
-    int shared_fd = -1;
+    int is_transaction = 0;
     ubpf_queue_info_msg_t msg;
 
 
@@ -82,12 +110,23 @@ int main(int argc, char *const argv[]) {
     while ((opt = getopt(argc, argv, "h:p:a:e:s:n:ji:m:s:")) != -1) {
 
         switch (opt) {
-            case 'm':
+            case 't': { /* transaction path to the JSON instruction file*/
+
+                memset(path_json, 0, PATH_MAX * sizeof(char));
+                strncpy(path_json, optarg, PATH_MAX);
+
+                if (access(path_json, R_OK) != 0) {
+                    perror("Can't read JSON path");
+                    return EXIT_FAILURE;
+                }
+                is_transaction += 1;
+            }
+            case 'm': /* message queue ID to send message to the protocol */
 
                 _msqid = strtol(optarg, &err, 10);
 
                 if (*err != '\0') {
-                    perror("Can't parse messaque queue");
+                    perror("Can't parse message queue");
                     failed_args++;
                 } else if (_msqid >= UINT32_MAX) {
                     fprintf(stderr, "Found msqid > 2**32. Expected msqid < 2**32\n");
@@ -97,7 +136,7 @@ int main(int argc, char *const argv[]) {
                 msqid = (int) _msqid;
 
                 break;
-            case 's': {
+            case 's': { /* name shared memory region */
 
                 size_t total = 0;
 
@@ -126,10 +165,10 @@ int main(int argc, char *const argv[]) {
                 }
                 break;
             }
-            case 'i':
+            case 'i': /* plugin name */
                 strncpy(plug_name, optarg, NAME_MAX);
                 break;
-            case 'h':
+            case 'h': /* hook type */
                 hook = strncmp("pre", optarg, 3) == 0 ? BPF_PRE :
                        strncmp("replace", optarg, 7) == 0 ? BPF_REPLACE :
                        strncmp("post", optarg, 4) == 0 ? BPF_POST : -1;
@@ -139,24 +178,24 @@ int main(int argc, char *const argv[]) {
                     failed_args++;
                 }
                 break;
-            case 'e':
+            case 'e': /* if new pluglet, specify the size of the extra memory */
                 extra_mem = strtoll(optarg, &err, 10);
                 if (*err != 0) {
                     failed_args++;
                     perror("Parsing -e number failed");
                 }
                 break;
-            case 'n':
+            case 'n': /* sequence number for pre or post anchor */
                 sequence_number = strtoll(optarg, &err, 10);
                 if (*err != 0) {
                     failed_args++;
                     perror("Parsing -n number failed");
                 }
                 break;
-            case 'j':
+            case 'j': /* enable jit compilation */
                 jit = 1;
                 break;
-            case 'p':
+            case 'p': /* path to the eBPF ELF bytecode */
                 if (!realpath(optarg, path)) {
                     failed_args++;
                     perror("Unable to resolve the path (-p argument)");
@@ -164,11 +203,13 @@ int main(int argc, char *const argv[]) {
                     ptr_path = path;
                 }
                 break;
-            case 'a':
+            case 'a': /* action for this pluglet */
                 plugin_action = strncmp(optarg, "add", 3) == 0 ? E_BPF_ADD :
                                 strncmp(optarg, "rm", 2) == 0 ? E_BPF_RM :
                                 strncmp(optarg, "replace", 7) == 0 ? E_BPF_REPLACE :
-                                strncmp(optarg, "rm_pluglet", 10) == 0 ? E_BPF_RM_PLUGLET : -1;
+                                strncmp(optarg, "rm_pluglet", 10) == 0 ? E_BPF_RM_PLUGLET :
+                                strncmp(optarg, "transaction", 10) == 0 ? E_BPF_TRANSACTION :
+                                strncmp(optarg, "monitoring", 10) == 0 ? E_BPF_CHANGE_MONITORING : -1;
 
                 if (plugin_action == -1) {
                     fprintf(stderr, "Unrecognised action : (-a argument)\n");
@@ -196,7 +237,7 @@ int main(int argc, char *const argv[]) {
     if (msqid == -1) return -1;
 
 
-    // SEND FULL eBPF PROGRAM TO BGP
+    // SEND FULL eBPF PROGRAM TO THE PROTOCOL
     switch (plugin_action) { // check if every argument are there
         case E_BPF_REPLACE:
         case E_BPF_ADD:
@@ -212,14 +253,6 @@ int main(int argc, char *const argv[]) {
                 return EXIT_FAILURE;
             }
 
-            if (msgrcv(msqid, &msg, sizeof(ubpf_queue_info_msg_t), MTYPE_INFO_MSG, 0) == -1) {
-                perror("Error while waiting protocol response");
-                return EXIT_FAILURE;
-            }
-
-            fprintf(stdout, "%s\n", msg.reason);
-
-            return msg.status == -1 ? EXIT_FAILURE : EXIT_SUCCESS;
         case E_BPF_RM:
             send_rm_plugin(msqid, plug_name);
             break;
@@ -227,11 +260,28 @@ int main(int argc, char *const argv[]) {
             send_rm_pluglet(msqid, plug_name, sequence_number, hook);
             break;
         case E_BPF_CHANGE_MONITORING:
-
+            fprintf(stderr, "Monitoring change not implemented yet !\n");
             break;
+        case E_BPF_TRANSACTION:
+            if (is_transaction > 0) {
+                if (is_transaction > 1) {
+                    fprintf(stderr, "We only support one transaction file for now\n");
+                    return EXIT_FAILURE;
+                }
+
+                if (send_transaction(path_json) != 0) return EXIT_FAILURE;
+                return EXIT_SUCCESS;
+            }
+
         default:
             return EXIT_FAILURE;
     }
 
+    if (msgrcv(msqid, &msg, sizeof(ubpf_queue_info_msg_t), MTYPE_INFO_MSG, 0) == -1) {
+        perror("Error while waiting protocol response");
+        return EXIT_FAILURE;
+    }
 
+    return msg.status != STATUS_MSG_OK ?
+           printf("KO...\n") && EXIT_FAILURE : printf("OK!\n") && EXIT_SUCCESS;
 }

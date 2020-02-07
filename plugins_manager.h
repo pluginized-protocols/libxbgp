@@ -15,8 +15,9 @@
 
 
 #define MAX_PLUGINS 128
-#define MAX_REASON 2048
-
+#define MAX_SIZE_PLUGIN 1048576
+#define MTYPE_EBPF_ACTION 1
+#define MTYPE_INFO_MSG 2
 
 enum msg_type_id {
     E_BPF_ADD = 1,
@@ -24,21 +25,33 @@ enum msg_type_id {
     E_BPF_RM_PLUGLET,
     E_BPF_REPLACE,
     E_BPF_CHANGE_MONITORING,
+    E_BPF_TRANSACTION,
+    E_BPF_TRANSACTION_BEGIN,
+    E_BPF_TRANSACTION_ADD,
+    E_BPF_TRANSACTION_END,
 };
 
-#define MAX_SIZE_PLUGIN 1048576
+typedef enum status_message_passing {
 
-#define PLUGIN_ALREADY_LOADED_ERROR \
-    "A plugin is already loaded for this location\n" \
-    "Please remove it before loading a new one"
+    STATUS_MSG_OK,
+    STATUS_MSG_TRANSACTION_FAIL,
+    STATUS_MSG_TRANSACTION_NOT_BEGIN,
+    STATUS_MSG_TRANSACTION_IN_PROGRESS,
+    STATUS_MSG_NO_TRANSACTION,
+    STATUS_MSG_PLUGLET_INSERT_FAIL,
+    STATUS_MSG_PLUGLET_RM_FAIL,
+    STATUS_MSG_PLUGLET_ANCHOR_NOT_RECOGNISED,
+    STATUS_MSG_PLUGIN_RM_FAIL,
 
-#define PLUGIN_RM_ERROR_ID_NEG "id plugin must be strictly greater than 0"
-#define PLUGIN_RM_ERROR_404 "No plugin attached to this ID (location)"
+    STATUS_MSG_INTERNAL_ERROR,
+    STATUS_MSG_PLUGIN_ID_IS_NEGATIVE,
+    STATUS_MSG_MEMALLOC_ERR,
 
-#define PLUGIN_OK "SUCCESS"
+    STATUS_MSG_RM_ERROR_ID_NEGATIVE,
+    STATUS_MSG_RM_ERROR_NOT_FOUND,
 
-#define MTYPE_EBPF_ACTION 1
-#define MTYPE_INFO_MSG 2
+} status_t;
+
 
 typedef struct ubpf_queue_msg {
 
@@ -57,12 +70,16 @@ typedef struct ubpf_queue_msg {
 typedef struct ubpf_queue_info_msg {
 
     long mtype;
-    int status; // failed or not
-    char reason[MAX_REASON];
+    status_t status; // failed or not
 
 } ubpf_queue_info_msg_t;
 
 typedef map_t(plugin_t *) vm_container_map_t;
+
+typedef int (*new_plug)(const char *name_plugin, const char *path_plugin,
+                        size_t extra_memory, size_t shared_memory,
+                        int plugin_id, int pluglet_type,
+                        uint32_t sequence, uint8_t jit);
 
 
 typedef struct plugins {
@@ -122,22 +139,24 @@ int init_ubpf_inject_queue(void);
 int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
                  uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid, int shared_fd);
 
-int rm_plugin(int id_plugin, const char **err);
+int rm_plugin(int id_plugin, int *err);
 
 int rm_plugin_str(const char *str, const char **err);
 
 int __add_pluglet_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
                       size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
-                      const char **err);
+                      int *err);
 
 int __add_pluglet(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
-                  uint32_t seq, uint8_t jit, const char **err);
+                  uint32_t seq, uint8_t jit, int *err);
 
 int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 
 int is_volatile_plugin(int plugin_id);
 
 int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir);
+
+int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir, new_plug fn);
 
 size_t store_plugin(size_t size, const char *path, int shared_fd);
 
@@ -150,6 +169,10 @@ int rm_pluglet(int plugin_id, int seq, int anchor);
 int send_rm_plugin(int msqid, const char *plugin_name);
 
 int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
+
+int send_begin_transaction(int msqid);
+
+int send_finish_transaction(int msqid);
 
 int init_shared_memory(char *shared_mem_name);
 

@@ -30,16 +30,13 @@ extern bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs,
 
 extern int unset_args(bpf_full_args_t *args);
 
-extern bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs, bpf_full_args_t *fargs);
-
 extern int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugglet,
                        uint32_t seq, uint8_t jit);
 
-extern int rm_plugin(int id_plugin, const char **err);
+extern int rm_plugin(int id_plugin, int *err);
 
 extern void ubpf_terminate(void);
 
-extern int rm_plugin(int id_plugin, const char **err);
 
 extern int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
 

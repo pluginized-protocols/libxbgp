@@ -52,7 +52,7 @@ int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, uint32_t se
 /**
  * Start the uBPF machine by allocating the freshly
  * created vm_container_t structure (made by the caller).
- * @param vmc, a structure which memory is already allocated but vm is not started yet
+ * @param vmc a structure which memory is already allocated but vm is not started yet
  * @return 1 if uBPF machine is correctly started
  *         0 if something wrong happened
  */
@@ -61,12 +61,12 @@ int start_vm(vm_container_t *vmc);
 /**
  * Destroy an uBPF machine. Memory related to the structure is not freed.
  * The caller must explicitly free the memory after using the wrapper
- * @param vmc, structure containing a valid running instance of VM
+ * @param vmc structure containing a valid running instance of VM
  * @return void
  */
 void shutdown_vm(vm_container_t *vmc);
 
-/**
+/*
  * Load the code located in path_code into the vm
  * @param vmc an uBPF machine already started (i.e. start_vm must
  *            must be called before this function)
@@ -75,8 +75,6 @@ void shutdown_vm(vm_container_t *vmc);
  * @return 1 if the injection has been successfully done
  *         0 otherwise
  */
-int inject_code(vm_container_t *vmc, const char *path_code);
-
 int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len);
 
 /**

@@ -60,6 +60,11 @@ static int msqid_listener = -1;
 static char shm_plugin_name[NAME_MAX];
 static uint8_t *mmap_shared_ptr;
 
+static int
+lambda_add_pluglet(const char *name_plugin, const char *path_plugin,
+                   size_t extra_mem, size_t sh_mem, int plugin_id,
+                   int pluglet_type, uint32_t seq, uint8_t jit);
+
 static inline int full_write(int fd, const char *buf, size_t len) {
 
     ssize_t s;
@@ -333,8 +338,10 @@ static int json_pluglet_parse(json_object *pluglet, struct json_pluglet_args *in
     return 0;
 }
 
-
-int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir) {
+/*
+ * If syconfdir is NULL, the path must be filled in the JSON file
+ */
+int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir, new_plug fn) {
     int plugin_id;
     int len;
     int pluglet_type;
@@ -370,6 +377,7 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
     }
 
     if (!json_object_object_get_ex(main_obj, "dir", &override_location)) {
+        if (sysconfdir == NULL) return -1;
         strncpy(plug_dir, sysconfdir, len_arg_sysconfdir);
         master_sysconfdir = plug_dir;
         ptr_plug_dir = master_sysconfdir + len_arg_sysconfdir;
@@ -430,7 +438,7 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
 
                     jit = info.jit == -1 ? jit_master : info.jit;
 
-                    if (add_pluglet(master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, 0, jit) == -1) {
+                    if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, 0, jit) == -1) {
                         ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, 0, "Startup");
                     }
                 } else {
@@ -446,7 +454,7 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
 
                         jit = info.jit == -1 ? jit_master : info.jit;
 
-                        if (add_pluglet(master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) ==
+                        if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) ==
                             -1) {
                             ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, seq, "Startup");
                         }
@@ -461,6 +469,10 @@ int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_ar
     return 0;
 }
 
+int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir) {
+    return load_plugin_from_json_fn(file_path, sysconfdir, len_arg_sysconfdir, lambda_add_pluglet);
+}
+
 int is_volatile_plugin(int plug_ID) {
 
     return plug_ID >= max_plugin;
@@ -469,7 +481,7 @@ int is_volatile_plugin(int plug_ID) {
 static int
 __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int type_ptr,
                       size_t len, size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
-                      const char **err) {
+                      int *err) {
 
     plugin_t *plugin_ptr;
     plugin_t *plugin;
@@ -482,7 +494,7 @@ __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int
     }
 
     if (id_plugin <= 0 || id_plugin >= MAX_PLUGINS) {
-        *err = "id plugin must be strictly greater than 0";
+        *err = STATUS_MSG_PLUGIN_ID_IS_NEGATIVE;
         return -1;
     }
 
@@ -501,7 +513,7 @@ __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int
         case ADD_TYPE_FILE:
             bytecode = readfileOwnPtr(generic_ptr, MAX_SIZE_PLUGIN, &bytecode_len, NULL);
             if (!bytecode) {
-                *err = "Cannot allocate memory for bytecode plugin";
+                *err = STATUS_MSG_MEMALLOC_ERR;
                 return -1;
             }
             break;
@@ -510,7 +522,7 @@ __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int
             bytecode_len = len;
             break;
         default:
-            *err = "Pointer passed to add_plugin not recognized";
+            *err = STATUS_MSG_INTERNAL_ERROR;
             return -1;
     }
 
@@ -518,24 +530,24 @@ __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int
     switch (type_plug) {
         case BPF_PRE:
             if (add_pre_function(plugin, bytecode, bytecode_len, seq, jit) != 0) {
-                *err = "Bytecode insertion failed";
+                *err = STATUS_MSG_PLUGLET_INSERT_FAIL;
                 return -1;
             }
             break;
         case BPF_POST:
             if (add_post_function(plugin, bytecode, bytecode_len, seq, jit) != 0) {
-                *err = "Bytecode insertion failed";
+                *err = STATUS_MSG_PLUGLET_INSERT_FAIL;
                 return -1;
             }
             break;
         case BPF_REPLACE:
             if (add_replace_function(plugin, bytecode, bytecode_len, seq, jit) != 0) {
-                *err = "Bytecode insertion failed";
+                *err = STATUS_MSG_PLUGLET_INSERT_FAIL;
                 return -1;
             }
             break;
         default:
-            *err = "Cannot recognise the type of plugin";
+            *err = STATUS_MSG_PLUGLET_ANCHOR_NOT_RECOGNISED;
             return -1;
     }
 
@@ -547,27 +559,39 @@ __add_pluglet_generic(const void *generic_ptr, int id_plugin, int type_plug, int
 
 int __add_pluglet_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
                       size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
-                      const char **err) {
+                      int *err) {
     return __add_pluglet_generic(bytecode, id_plugin, type_plugin, ADD_TYPE_OWNPTR, len, add_mem_len, shared_mem,
                                  seq, jit, err);
 }
 
 int __add_pluglet(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
-                  uint32_t seq, uint8_t jit, const char **err) {
+                  uint32_t seq, uint8_t jit, int *err) {
     return __add_pluglet_generic(path_code, id_plugin, type_plugin, ADD_TYPE_FILE, 0, add_mem_len, shared_mem,
                                  seq, jit, err);
 }
 
-int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugglet,
+int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_pluglet,
                 uint32_t seq, uint8_t jit) {
-    const char *err;
-    if (__add_pluglet(path_code, id_plugin, type_plugglet, add_mem_len, shared_mem, seq, jit, &err) == -1) {
-        fprintf(stderr, "%s\n", err);
+    int err = -1;
+    if (__add_pluglet(path_code, id_plugin, type_pluglet, add_mem_len, shared_mem, seq, jit, &err) == -1) {
+        fprintf(stderr, "Error -> %d\n", err);
         return -1;
     }
     return 0;
 }
 
+static int
+lambda_add_pluglet(const char *name_plugin, const char *path_plugin,
+                   size_t extra_mem, size_t sh_mem, int plugin_id,
+                   int pluglet_type, uint32_t seq, uint8_t jit) {
+    ((void) name_plugin);
+    int err = -1;
+    if (__add_pluglet(path_plugin, plugin_id, pluglet_type, extra_mem, sh_mem,
+                      seq, jit, &err) == -1) {
+        return err;
+    };
+    return STATUS_MSG_OK;
+}
 
 int rm_pluglet(int plugin_id, int seq, int anchor) {
 
@@ -594,42 +618,31 @@ int rm_pluglet(int plugin_id, int seq, int anchor) {
     return status == 0 ? 0 : -1;
 }
 
-int rm_plugin_str(const char *str, const char **err) {
-
-    int plug_id;
-    plug_id = str_plugin_to_int(str);
-
-    if (plug_id == -1) return -1;
-
-    return rm_plugin(plug_id, err);
-}
-
-
-int rm_plugin(int id_plugin, const char **err) {
+int rm_plugin(int id_plugin, int *err) {
 
     plugin_t *ptr_plugin;
 
     if (id_plugin <= 0 || id_plugin > MAX_PLUGINS) {
-        if (err) *err = PLUGIN_RM_ERROR_ID_NEG;
+        if (err) *err = STATUS_MSG_RM_ERROR_ID_NEGATIVE;
         return -1;
     }
 
     if (!is_id_in_use(id_plugin)) {
-        if (err) *err = PLUGIN_RM_ERROR_404;
+        if (err) *err = STATUS_MSG_RM_ERROR_NOT_FOUND;
         return -1;
     }
 
     ptr_plugin = plugins_manager->ubpf_machines[id_plugin];
 
     if (ptr_plugin == NULL) {
-        if (err) *err = PLUGIN_RM_ERROR_404;
+        if (err) *err = STATUS_MSG_RM_ERROR_NOT_FOUND;
         return -1;
     }
     destroy_plugin(ptr_plugin);
     plugins_manager->ubpf_machines[id_plugin] = NULL;
 
     plugins_manager->size--;
-    if (err) *err = NULL;
+    if (err) *err = STATUS_MSG_OK;
 
     return 0;
 
@@ -859,7 +872,7 @@ int send_pluglet(const char *path, const char *plugin_name, short jit, int hook,
             return -1; // Can't read ubpf file
         }
     } else if (action != E_BPF_ADD && action != E_BPF_REPLACE &&
-               action != E_BPF_RM) { // check if action is not add or replace
+               action != E_BPF_RM && action != E_BPF_TRANSACTION_ADD) { // check if action is not add or replace
         fprintf(stderr, "Bad action\n");
         return -1;
     }
@@ -925,6 +938,49 @@ int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor
     return 0;
 }
 
+int send_begin_transaction(int msqid) {
+    ubpf_queue_msg_t msg;
+    ubpf_queue_info_msg_t from_ebpf;
+    memset(&msg, 0, sizeof(msg));
+
+    msg.mtype = MTYPE_EBPF_ACTION;
+    msg.plugin_action = E_BPF_TRANSACTION_BEGIN;
+
+    if (msgsnd(msqid, &msg, sizeof(ubpf_queue_msg_t), 0) == -1) {
+        perror("Error while sending message");
+        return -1;
+    }
+
+    if (msgrcv(msqid, &from_ebpf, sizeof(ubpf_queue_info_msg_t), MTYPE_EBPF_ACTION, 0) == -1) {
+        perror("Unable to get a response from");
+    }
+
+    if (from_ebpf.status != STATUS_MSG_OK) return -1;
+
+    return 0;
+}
+
+int send_finish_transaction(int msqid) {
+    ubpf_queue_msg_t msg;
+    ubpf_queue_info_msg_t from_ebpf;
+    memset(&msg, 0, sizeof(msg));
+
+    msg.mtype = MTYPE_EBPF_ACTION;
+    msg.plugin_action = E_BPF_TRANSACTION_END;
+
+    if (msgsnd(msqid, &msg, sizeof(ubpf_queue_msg_t), 0) == -1) {
+        perror("Error while sending message");
+        return -1;
+    }
+
+    if (msgrcv(msqid, &from_ebpf, sizeof(ubpf_queue_info_msg_t), MTYPE_EBPF_ACTION, 0) == -1) {
+        perror("Unable to get a response from");
+    }
+
+    if (from_ebpf.status != STATUS_MSG_OK) return -1;
+    return 0;
+}
+
 
 size_t store_plugin(size_t size, const char *path, int shared_fd) {
 
@@ -955,9 +1011,11 @@ static void *plugin_msg_handler(void *args) {
     args_plugins_msg_hdlr_t *cast_args = args;
 
     int err = 0;
-    const char *str_err;
+    int internal_err = 0;
     int plugin_id;
     int mysqid;
+
+    int transaction_begin = 0;
 
     info.mtype = MTYPE_INFO_MSG;
 
@@ -973,13 +1031,14 @@ static void *plugin_msg_handler(void *args) {
     free(args);
 
     while (!finished) {
-        err = 0;
+        err = internal_err = 0;
         memset(&rcvd_msg, 0, sizeof(ubpf_queue_msg_t));
-        memset(info.reason, 0, sizeof(char) * MAX_REASON);
 
         if (msgrcv(mysqid, &rcvd_msg, sizeof(ubpf_queue_msg_t), MTYPE_EBPF_ACTION, 0) == -1) {
             continue;
         }
+
+        if (msync(mmap_shared_ptr, MAX_SIZE_PLUGIN, MS_SYNC) != 0) return NULL;
 
         switch (rcvd_msg.hook) {
             case BPF_PRE:
@@ -998,25 +1057,55 @@ static void *plugin_msg_handler(void *args) {
         switch (rcvd_msg.plugin_action) {
             case E_BPF_REPLACE:
             case E_BPF_ADD:
-                if (msync(mmap_shared_ptr, MAX_SIZE_PLUGIN, MS_SYNC) != 0) return NULL;
                 if (__add_pluglet_ptr(mmap_shared_ptr, plugin_id, rcvd_msg.hook, rcvd_msg.bytecode_length,
                                       rcvd_msg.extra_memory, rcvd_msg.shared_memory, rcvd_msg.seq,
-                                      rcvd_msg.jit, &str_err) < 0) {
+                                      rcvd_msg.jit, &internal_err) < 0) {
                     err = 1;
-                    strncpy(info.reason, str_err, MAX_REASON - 1);
+                    info.status = internal_err;
                 }
                 break;
             case E_BPF_RM:
-                if (rm_plugin(plugin_id, &str_err) == -1) {
+                if (rm_plugin(plugin_id, &internal_err) == -1) {
                     err = 1;
-                    strncpy(info.reason, str_err, MAX_REASON - 1);
+                    info.status = internal_err;
                 }
                 break;
             case E_BPF_RM_PLUGLET:
                 if (rm_pluglet(plugin_id, rcvd_msg.seq, rcvd_msg.hook)) {
                     err = 1;
-                    strncpy(info.reason, "Pluglet removal failed", 23);
+                    info.status = STATUS_MSG_PLUGLET_RM_FAIL;
                 }
+                break;
+            case E_BPF_TRANSACTION_BEGIN:
+                if (transaction_begin > 0) {
+                    err = 1;
+                    info.status = STATUS_MSG_TRANSACTION_IN_PROGRESS;
+                } else {
+                    transaction_begin = 1;
+                }
+                break;
+            case E_BPF_TRANSACTION_ADD:
+                if (transaction_begin == 0) {
+                    err = 1;
+                    info.status = STATUS_MSG_TRANSACTION_NOT_BEGIN;
+                } else if (__add_pluglet_ptr(mmap_shared_ptr, plugin_id, rcvd_msg.hook, rcvd_msg.bytecode_length,
+                                             rcvd_msg.extra_memory, rcvd_msg.shared_memory,
+                                             rcvd_msg.seq, rcvd_msg.jit, &internal_err) < 0) {
+                    err = 1;
+                    info.status = internal_err;
+                } else {
+                    // OK !
+                }
+                break;
+            case E_BPF_TRANSACTION_END:
+                if (transaction_begin == 0) {
+                    err = 1;
+                    info.status = STATUS_MSG_NO_TRANSACTION;
+                } else if (commit_transaction(plugins_manager->ubpf_machines[plugin_id]) != 0) {
+                    err = 1;
+                    info.status = STATUS_MSG_TRANSACTION_FAIL;
+                }
+                transaction_begin = 0;
                 break;
             default:
                 fprintf(stderr, "Unrecognised msg type (%s)\n", __func__);
@@ -1025,15 +1114,12 @@ static void *plugin_msg_handler(void *args) {
 
         end:
 
-        if (err) {
-            info.status = -1;
-        } else {
-            info.status = 0;
-            strncpy(info.reason, PLUGIN_OK, strlen(PLUGIN_OK) + 1);
+        if (!err) {
+            info.status = STATUS_MSG_OK;
         }
 
         if (msgsnd(mysqid, &info, sizeof(ubpf_queue_info_msg_t), 0) != 0) {
-            perror("Can't send confirmation to extern process");
+            perror("Can't send confirmation message to the ");
         }
 
     }

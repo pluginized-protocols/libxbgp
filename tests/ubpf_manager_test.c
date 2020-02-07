@@ -10,8 +10,15 @@
 #include <include/tools_ubpf_api.h>
 #include <unistd.h>
 
-
 #include "ubpf_manager_test.h"
+
+#define STRING_MAX 2048
+
+#define XCU_ASSERT_EQUAL(actual, expected) \
+  { char expl[STRING_MAX]; memset(expl, 0, STRING_MAX * sizeof(char));\
+  snprintf(expl, STRING_MAX, "CU_ASSERT_EQUAL(actual %lu, expected %s)", (actual), #expected);\
+  CU_assertImplementation(((actual) == (expected)), __LINE__, (expl), __FILE__, "", CU_FALSE); }
+
 
 enum custom_user_type {
     INT_EXAMPLE,
@@ -137,7 +144,7 @@ void test_add_plugin(void) {
 void test_read_json_add_plugins(void) {
 
     int super_arg = 12;
-    uint64_t ret_val;
+    uint64_t ret_val = 0;
 
     bpf_args_t args[1] = {
             {.arg = &super_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0}
@@ -155,16 +162,16 @@ void test_read_json_add_plugins(void) {
     new_argument(args, 2, 1, &fargs_0);
 
     run_plugin_replace(1, &fargs_0, sizeof(bpf_full_args_t *), &ret_val);
-    CU_ASSERT_EQUAL(ret_val, 14);
+    XCU_ASSERT_EQUAL(ret_val, 14)
     unset_args(&fargs_0);
 
 
     run_plugin_pre(2, &fargs, sizeof(bpf_full_args_t *), &ret_val);
-    CU_ASSERT_EQUAL(ret_val, 22)
+    XCU_ASSERT_EQUAL(ret_val, 22)
     run_plugin_replace(2, &fargs, sizeof(bpf_full_args_t *), &ret_val);
-    CU_ASSERT_EQUAL(ret_val, 32)
+    XCU_ASSERT_EQUAL(ret_val, 32)
     run_plugin_post(2, &fargs, sizeof(bpf_full_args_t *), &ret_val);
-    CU_ASSERT_EQUAL(ret_val, 42)
+    XCU_ASSERT_EQUAL(ret_val, 42)
 
     unset_args(&fargs);
 

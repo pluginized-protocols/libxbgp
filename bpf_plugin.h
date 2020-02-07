@@ -49,9 +49,15 @@ typedef struct plugin {
     tree_t post_functions;
     vm_container_t *replace_function;
 
+    struct plugin *new_transaction;
+
 } plugin_t;
 
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid);
+
+int init_plugin_transaction(plugin_t *p);
+
+int commit_transaction(plugin_t *p);
 
 void destroy_plugin(plugin_t *p);
 
@@ -60,6 +66,13 @@ int add_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t 
 int add_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
 
 int add_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
+
+
+int transaction_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
+
+int transaction_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
+
+int transaction_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
 
 int run_pre_functions(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret);
 

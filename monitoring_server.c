@@ -128,12 +128,17 @@ static int establish_connexion(const char *host, const char *port) {
     struct addrinfo *res, *p;
     int sfd = -1;
 
+    if (host == NULL) {
+        // fprintf(stderr, "No host name specified\n");
+        return -1;
+    }
+
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
     hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 
     if ((status = getaddrinfo(host, port, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+        fprintf(stderr, "getaddrinfo error: %s (host %s, port %s)\n", gai_strerror(status), host, port);
         return -1;
     }
 
@@ -160,6 +165,9 @@ static int establish_connexion(const char *host, const char *port) {
         return -1;
     }
     status = connect(sfd, res->ai_addr, res->ai_addrlen);
+    if (status == -1) {
+        perror("Connection with host failed");
+    }
     freeaddrinfo(servinfo);
     return status == -1 ? -1 : sfd;
 }
@@ -241,12 +249,16 @@ int init_monitoring(const char *address, const char *port, int monit) {
         status = main_monitor(address, port, pipe_fd[0]);
         child_pid = -1;
 
-        if (status == CONN_ERROR && monit) {
-            exit(EXIT_SUCCESS);
-        } else {
-            fprintf(stderr, "Unable to launch monitoring server\n");
-            exit(EXIT_FAILURE); // shouldn't be reached
+        if (CONN_ERROR == status) {
+            if (monit) {
+                fprintf(stderr, "Unable to launch monitoring server\n");
+                exit(EXIT_FAILURE);
+            } else {
+                exit(EXIT_SUCCESS);
+            }
         }
+
+        exit(EXIT_FAILURE);
     } else { // parent
         child_pid = pid;
         close(pipe_fd[0]);
