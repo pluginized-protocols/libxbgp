@@ -91,13 +91,13 @@ VM_CALL_GEN(plug_id, plug_args, nargs, VOID, __VA_ARGS__)
     unsigned int ___PLUGIN_ID = plug_id;\
     bpf_full_args_t __fargs, *_____fargs;\
     _____fargs = new_argument(plug_args, ___PLUGIN_ID, nargs, &__fargs);\
-    switch(run_plugin_pre(___PLUGIN_ID, plug_args, sizeof(_____fargs), NULL)) {\
-        case BPF_SUCCESS:\
+    switch(run_plugin_pre(___PLUGIN_ID, _____fargs, sizeof(_____fargs), NULL)) {\
+        case 1:\
             RETURN_VM_ ## macro_def (__ret_val__);\
         default:\
             break;\
     }\
-    if(!run_plugin_replace(___PLUGIN_ID, plug_args, sizeof(_____fargs), &__ret_val__)) { \
+    if(!run_plugin_replace(___PLUGIN_ID, _____fargs, sizeof(_____fargs), &__ret_val__)) { \
         {__VA_ARGS__} \
     } else {\
         RETURN_VM_ ## macro_def (__ret_val__);\
@@ -110,5 +110,17 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VOID, __VA_ARGS__)
 #define VM_CALL_CHECK(plug_id, plug_args, nargs, ...)\
 VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
 
+#define CALL_REPLACE_ONLY(plug_id, plug_args, nargs, ...) \
+{\
+    uint64_t ___ret_call___ = 0; \
+    bpf_full_args_t ___fargs, *______fargs; \
+    ______fargs = new_argument(plug_args, ___PLUGIN_ID, nargs, &___fargs); \
+    if(run_plugin_replace(plug_id, ______fargs, sizeof(______fargs), &___ret_call___)){\
+        unset_args(______fargs);\
+    } else { \
+        {__VA_ARGS__}\
+    }\
+    unset_args(______fargs);\
+}
 
 #endif //FRR_UBPF_PUBLIC_H
