@@ -13,7 +13,7 @@
 
 
 /**
- * Send data pointed to the first argument to the monitoring thread.
+ * Send data pointed by the first argument to the monitoring thread.
  * @param data pointer related to the data the uBPF wants to send to the monitor thread
  * @param len total length of the data
  * @param type which kind of monitoring data the uBPF plugin sends

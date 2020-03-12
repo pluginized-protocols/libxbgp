@@ -11,6 +11,7 @@
 #include "plugin_arguments.h"
 #include "ebpf_mod_struct.h"
 #include "context_hdr.h"
+#include "ubpf_mempool_hdr.h"
 
 
 extern void set_write_fd(int fd);
