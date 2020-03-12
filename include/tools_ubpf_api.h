@@ -5,13 +5,29 @@
 #ifndef FRR_UBPF_TOOLS_UBPF_API_H
 #define FRR_UBPF_TOOLS_UBPF_API_H
 
-#include "include/plugin_arguments.h"
-#include "ubpf_context.h"
+#include "plugin_arguments.h"
+#include <stdint.h>
+
+//#include "ubpf_context.h"
 
 struct prefix {
     uint8_t family;
     uint16_t prefixlen;
     uint8_t u[20];
+};
+
+
+struct path_attribute {
+
+    uint8_t flags;
+    uint8_t code;
+    uint16_t len;
+    uint8_t *data;
+};
+
+struct bgp_route {
+    // todo ip addr
+    struct path_attribute attr;
 };
 
 /**
@@ -27,7 +43,11 @@ enum RESERVED_RETURN_VAL {
     BPF_SUCCESS, // the uBPF code has successfully terminated. On PRE and POST, tells to the manager to return (other mode are skipped)
 };
 
-#define UNUSED(arg) ((void) arg)
+extern bpf_full_args_t *valid_args(bpf_full_args_t *args);
+
+#ifndef UNUSED
+#define UNUSED __attribute__((unused))
+#endif
 
 #define safe_args(args, position, type_arg) \
 (valid_args(args) && (args)->nargs > position && (args)->args[position].type == type_arg)

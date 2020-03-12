@@ -73,6 +73,48 @@ static uint64_t super_ntohll(context_t *ctx, uint64_t value) {
 #endif
 }
 
+static uint16_t super_htons(context_t *ctx __attribute__((unused)), uint16_t val) {
+#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+
+    return (
+            (((unsigned short) (val) & 0x00FFu)) << 8u |
+            (((unsigned short) (val) & 0xFF00u) >> 8u)
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return val;
+#else
+#error unsupported endianness
+#endif
+}
+
+static uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val) {
+#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+    return (
+            ((((unsigned long) (val) & 0x000000FFu)) << 24u) |
+            ((((unsigned long) (val) & 0x0000FF00u)) << 8u) |
+            ((((unsigned long) (val) & 0x00FF0000u)) >> 8u) |
+            ((((unsigned long) (val) & 0xFF000000u)) >> 24u)
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return val;
+#else
+#error unsupported endianness
+#endif
+}
+
+static uint64_t super_htonll(context_t *ctx, uint64_t val) {
+#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+    return (
+            ((((uint64_t) super_htonl(ctx, val)) << 32u) + super_htonl(ctx, (val) >> 32u))
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return val;
+#else
+#error unsupported endianness
+#endif
+}
+
+
 int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn) {
 
     if (vmc->num_ext_fun >= 128) {
@@ -113,6 +155,9 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "ebpf_ntohs", super_ntohs)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_ntohl", super_ntohl)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_ntohll", super_ntohll)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_htons", super_htons)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_htonl", super_htonl)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_htonll", super_htonll)) return 0;
     if (!safe_ubpf_register(vmc, "sockunion_cmp", bpf_sockunion_cmp)) return 0;
 
     /* custom msg send */
@@ -120,6 +165,9 @@ static inline int base_register(vm_container_t *vmc) {
 
     /* args related */
     if (!safe_ubpf_register(vmc, "bpf_get_args", bpf_get_args)) return 0;
+
+    /* maths */
+    if (!safe_ubpf_register(vmc, "ebpf_sqrt", ebpf_sqrt)) return 0;
 
     return 1;
 }

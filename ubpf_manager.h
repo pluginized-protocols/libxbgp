@@ -10,7 +10,10 @@
 #include <include/public.h>
 #include "include/plugin_arguments.h"
 #include "map.h"
+#include "hashmap.h"
 
+
+typedef hashmap_t(bpf_full_args_t *) map_args_bpf_t;
 
 typedef struct bytecode_context context_t;
 

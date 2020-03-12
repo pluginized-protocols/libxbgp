@@ -7,32 +7,10 @@
 
 
 #include "bpf_plugin.h"
-#include "hashmap.h"
+#include "context_hdr.h"
 
-typedef struct bytecode_context context_t;
+
 typedef hashmap_t(short) map_allowed_ctx_t;
-
-/**
- * This structure is passed to every plugins
- * as one of their arguments. The structure
- * is accessible through it. However, every pointers
- * contained in this structure is not accessible by the
- * plugin and every attempt to dereference (during run-time)
- * any of these will result in a crash of the plugin.
- * (i.e. the VM stops its execution)
- */
-struct bytecode_context {
-    // contains internal information needed to run every plugins
-    // You should add here every needed thing to correctly run
-    // a given plugin
-    int type; // PRE REPLACE or POST
-    plugin_t *p;
-    void *args;    // pointer to the argument of the plugin used to
-#define LENGTH_CONTEXT_ERROR 50
-    char error[LENGTH_CONTEXT_ERROR]; // string with small indication of the error;
-    int error_status;
-};
-
 
 context_t *new_context(plugin_t *p);
 

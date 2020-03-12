@@ -80,7 +80,7 @@ void *ctx_shmget(context_t *vm_ctx, key_t key);
 
 void ctx_shmrm(context_t *vm_ctx, key_t key);
 
-void membound_fail(uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr);
+void membound_fail(context_t *ctx, uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr);
 
 void rm_ipc(void);
 
@@ -91,5 +91,7 @@ int init_queue_ext_send(const char *working_dir);
 void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args);
 
 int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2);
+
+uint64_t ebpf_sqrt(context_t *ctx, uint64_t a, unsigned int precision);
 
 #endif //FRR_THESIS_UBPF_API_H

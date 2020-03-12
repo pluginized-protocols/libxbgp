@@ -5,10 +5,12 @@
 #ifndef FRR_UBPF_PLUGIN_ARGUMENTS_H
 #define FRR_UBPF_PLUGIN_ARGUMENTS_H
 
-#include "../hashmap.h"
+#include <stddef.h>
 
-#define kind_ptr 0
-#define kind_primitive 1
+#define kind_null 0
+#define kind_ptr 1
+#define kind_primitive 2
+#define kind_hidden 3
 
 typedef struct {
     void *arg;
@@ -22,7 +24,5 @@ typedef struct {
     int nargs;
     int plugin_type;
 } bpf_full_args_t;
-
-typedef hashmap_t(bpf_full_args_t *) map_args_bpf_t;
 
 #endif //FRR_UBPF_PLUGIN_ARGUMENTS_H

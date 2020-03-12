@@ -56,6 +56,7 @@ check: lib_tests
 $(LIBUBPF_A): $(OBJ)
 	@echo AR $@
 	@$(AR) rcs $@ $^
+	@ranlib $@
 
 lib_tests: $(LIBUBPF_A) $(OBJ_TESTS)
 	@echo ~~~ Compiling eBPF bytecode...

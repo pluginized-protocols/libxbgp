@@ -69,6 +69,10 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) 
     return p;
 }
 
+inline unsigned int get_plugin_id(plugin_t *plugin) {
+    return plugin ? plugin->plugin_id : -1;
+}
+
 static inline void _destroy_plugin(plugin_t *p, int free_p) {
     int i;
     struct tree_iterator *it, _it;

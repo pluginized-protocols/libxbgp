@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 int new_hashmap(hashmap_t *hashmap, unsigned int size) {
 
@@ -51,6 +52,10 @@ static inline int _ptr_put(hashmap_t *hashmap, uint64_t key, void *value, size_t
 
     unsigned int i;
     void *new_val;
+
+    if (!value) {
+        return -1;
+    }
 
     if (hashmap->n >= hashmap->m / 2) resize(hashmap, hashmap->m * 2);
 
@@ -108,8 +113,10 @@ int resize(hashmap_t *hashmap, unsigned int cap) {
     if (new_hashmap(&new_hm, cap) != 0) return -1;
 
     for (i = 0; i < hashmap->m; i++) {
-        ret_val = _ptr_put(&new_hm, hashmap->keys[i].val, hashmap->values[i], hashmap->size_val, 1);
-        if (ret_val != 0) return -1; // should never happen since memory is already allocated
+        if (hashmap->keys[i].in_use) {
+            ret_val = _ptr_put(&new_hm, hashmap->keys[i].val, hashmap->values[i], hashmap->size_val, 1);
+            if (ret_val != 0) return -1; // should never happen since memory is already allocated
+        }
     }
 
     hashmap->keys = new_hm.keys;

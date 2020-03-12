@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include "plugin_arguments.h"
 #include "ebpf_mod_struct.h"
+#include "context_hdr.h"
 
 
 extern void set_write_fd(int fd);
@@ -44,6 +45,10 @@ extern int send_pluglet(const char *path, const char *plugin_name, short jit, in
                         uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid, int shared_fd);
 
 int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
+
+
+/* manipulating memory of plugins in helper functions */
+extern void *ctx_malloc(context_t *vm_ctx, size_t size);
 
 
 #define RETURN_VM_VOID(ret_val, ...) \
@@ -110,17 +115,24 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VOID, __VA_ARGS__)
 #define VM_CALL_CHECK(plug_id, plug_args, nargs, ...)\
 VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
 
-#define CALL_REPLACE_ONLY(plug_id, plug_args, nargs, ...) \
+#define VM_RETURN_VALUE ___ret_call___
+
+#define CALL_REPLACE_ONLY(plug_id, plug_args, nargs, arg_vm_check, on_err, ...) \
 {\
-    uint64_t ___ret_call___ = 0; \
+    uint64_t VM_RETURN_VALUE = 0; \
+    int ___ubpf_status___ = 0; \
+    int ___ubpf_the_err___ = 0; \
     bpf_full_args_t ___fargs, *______fargs; \
-    ______fargs = new_argument(plug_args, ___PLUGIN_ID, nargs, &___fargs); \
-    if(run_plugin_replace(plug_id, ______fargs, sizeof(______fargs), &___ret_call___)){\
-        unset_args(______fargs);\
-    } else { \
-        {__VA_ARGS__}\
-    }\
+    ______fargs = new_argument(plug_args, plug_id, nargs, &___fargs); \
+    ___ubpf_status___ = run_plugin_replace(plug_id, ______fargs, sizeof(______fargs), &VM_RETURN_VALUE);\
+    if(!___ubpf_status___) ___ubpf_the_err___ = 1;\
+    else if (!arg_vm_check(VM_RETURN_VALUE)) ___ubpf_the_err___ = 1;\
     unset_args(______fargs);\
+    if (___ubpf_the_err___) {\
+        {on_err} \
+    } else {\
+       {__VA_ARGS__} \
+    }\
 }
 
 #endif //FRR_UBPF_PUBLIC_H

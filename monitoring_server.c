@@ -106,7 +106,8 @@ static inline int lesser(const struct timespec *lhs, const struct timespec *rhs)
         return lhs->tv_sec < rhs->tv_sec;
 }
 
-static void init_last_send(struct last_send *ls) {
+//// WTF ?
+static __attribute__((unused)) void init_last_send(struct last_send *ls) {
 
     struct timespec tp;
 
@@ -408,9 +409,9 @@ void *aggregate_data(void *args) {
  * @param _args
  * @return
  */
-void *data_loop_sender(void *_args) {
+void *data_loop_sender(void *_args __attribute__((unused))) {
     buffer_t *data;
-    struct sender_th_args *args = _args;
+    //struct sender_th_args *args = _args;
     struct timespec tv = {.tv_sec = 60, .tv_nsec = 0}; // todo change magic number
     struct timespec curr_time;
 
@@ -442,7 +443,7 @@ void *data_loop_sender(void *_args) {
  * @param _args
  * @return
  */
-void *check_curr_buffer(void *_args) {
+void *check_curr_buffer(void *_args __attribute__((unused))) {
 
     struct timespec curr_time;
     struct timespec tv = {.tv_sec = 180, .tv_nsec = 0}; // todo remove magic numbers

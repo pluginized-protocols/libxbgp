@@ -22,6 +22,8 @@
 #include "stdarg.h"
 
 #include <netinet/in.h>
+#include <float.h>
+#include <math.h>
 
 
 static int write_fd = -1; // fd to talk to monitoring manager of this library
@@ -57,9 +59,7 @@ void rm_ipc() {
 
 }
 
-int send_ipc_msg(context_t *ctx, ebpf_message_t *msg) {
-
-    UNUSED(ctx);
+int send_ipc_msg(UNUSED context_t *ctx, ebpf_message_t *msg) {
 
     if (ebpf_msgid == -1) {
         fprintf(stderr, "MSGID ERROR not init at main\n");
@@ -113,11 +113,9 @@ static int packet_send(const void *data, size_t len, unsigned int type, int sock
     return 1;
 }
 
-int send_to_monitor(context_t *vm_ctx, const void *data, size_t len, unsigned int type) {
+int send_to_monitor(UNUSED context_t *vm_ctx, const void *data, size_t len, unsigned int type) {
 
-    UNUSED(vm_ctx);
-
-    if(type == 0) return 0;
+    if (type == 0) return 0;
 
     if (write_fd == -1) return 0;
     if (!packet_send(data, len, type, write_fd))
@@ -134,14 +132,11 @@ void *ctx_calloc(context_t *vm_ctx, size_t nmemb, size_t size) {
     return bump_calloc(&vm_ctx->p->mem.heap.mp, nmemb, size);
 }
 
-void *ctx_realloc(context_t *vm_ctx, void *ptr, size_t size) {
-    UNUSED(vm_ctx); UNUSED(ptr); UNUSED(size);
+void *ctx_realloc(UNUSED context_t *vm_ctx, UNUSED void *ptr, UNUSED size_t size) {
     return NULL; // we don't do that here
 }
 
-void ctx_free(context_t *vm_ctx, void *ptr) {
-    UNUSED(vm_ctx);
-    UNUSED(ptr);
+void ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
     // bump alloc is a stack like alloc --> everything is removed after
     // the plugin call
     // my_free(&vm_ctx->p->heap.mp, ptr);
@@ -162,8 +157,7 @@ void ctx_shmrm(context_t *vm_ctx, key_t key) {
     ubpf_shmrm(&vm_ctx->p->mem.shared_heap.smp, key);
 }
 
-int get_time(context_t *vm_ctx, uint64_t *time) {
-    UNUSED(vm_ctx);
+int get_time(UNUSED context_t *vm_ctx, uint64_t *time) {
     struct timespec spec;
     uint64_t curr_ntp;
     /* assuming CLOCK_REALTIME returns UTC (UNIX EPOCH
@@ -180,15 +174,12 @@ int get_time(context_t *vm_ctx, uint64_t *time) {
     return 0;
 }
 
-clock_t bpf_clock(context_t *vm_ctx) {
-    UNUSED(vm_ctx);
+clock_t bpf_clock(UNUSED context_t *vm_ctx) {
     return clock();
 }
 
 
-void ebpf_print(context_t *vm_ctx, const char *format, ...) {
-
-    UNUSED(vm_ctx);
+void ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
 
     va_list vars;
     va_start(vars, format);
@@ -214,8 +205,7 @@ typedef int word;        /* "word" used for optimal copy speed */
  * This is the routine that actually implements
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
-void *ebpf_memcpy(context_t *vm_ctx, void *dst0, const void *src0, size_t length) {
-    UNUSED(vm_ctx);
+void *ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size_t length) {
     char *dst = dst0;
     const char *src = src0;
     size_t t;
@@ -346,8 +336,7 @@ static int in6addr_cmp(const struct in6_addr *addr1,
 }
 
 
-int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2) {
-    UNUSED(vm_ctx);
+int bpf_sockunion_cmp(UNUSED context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2) {
     uint32_t ipsu1;
     uint32_t ipsu2;
 
@@ -377,7 +366,23 @@ int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struc
     return 0;
 }
 
-void membound_fail(uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr) {
+void membound_fail(context_t *ctx __attribute__((unused)), uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr) {
     fprintf(stderr, "Out of bound access with val 0x%lx, start of mem is 0x%lx, top of stack is 0x%lx\n", val, mem_ptr,
             stack_ptr);
+}
+
+
+uint64_t ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned int precision) {
+
+    double s_half;
+    double s;
+    uint64_t res;
+
+    if (a >= DBL_MAX) return 0;
+
+    s = a;
+    s_half = sqrt(s);
+    res = s_half * pow(10, precision);
+
+    return res;
 }

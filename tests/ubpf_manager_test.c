@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "ubpf_manager_test.h"
+#include "ubpf_context.h"
 
 #define STRING_MAX 2048
 
@@ -76,7 +77,7 @@ static int set_int_example(api_args, int new_int_val) {
 }
 
 static void post_function_call(context_t *ctx) {
-    plugin_set_post = ctx->p->plugin_id;
+    plugin_set_post = get_plugin_id(ctx->p);
 }
 
 

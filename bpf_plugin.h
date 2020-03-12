@@ -53,6 +53,8 @@ typedef struct plugin {
 
 } plugin_t;
 
+unsigned int get_plugin_id(plugin_t *plugin);
+
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid);
 
 int init_plugin_transaction(plugin_t *p);

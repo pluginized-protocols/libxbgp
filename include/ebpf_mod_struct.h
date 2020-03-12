@@ -23,6 +23,7 @@ typedef struct plugin_info {
 } plugin_info_t;
 
 #define plugin_info_null {.plugin_str = NULL, .plugin_id = 0}
+#define proto_ext_func_null {.name = NULL, .fn = NULL}
 
 
 #endif //FRR_UBPF_EBPF_MOD_STRUCT_H

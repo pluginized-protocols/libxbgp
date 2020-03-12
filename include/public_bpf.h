@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include "tools_ubpf_api.h"
+#include "ebpf_mod_struct.h"
 
 
 /**
@@ -47,17 +48,25 @@ extern void *ctx_shmget(key_t key);
 
 extern void ctx_shmrm(key_t key);
 
-extern uint32_t ebpf_ntohs(uint16_t value);
+extern uint16_t ebpf_ntohs(uint16_t value);
 
 extern uint32_t ebpf_ntohl(uint32_t value);
 
-extern uint32_t ebpf_ntohll(uint64_t value);
+extern uint64_t ebpf_ntohll(uint64_t value);
+
+extern uint16_t ebpf_htons(uint16_t value);
+
+extern uint32_t ebpf_htonl(uint32_t value);
+
+extern uint64_t ebpf_htonll(uint64_t value);
 
 extern int send_ipc_msg(ebpf_message_t *msg);
 
 extern void *bpf_get_args(unsigned int arg_nb, bpf_full_args_t *args);
 
 extern int bpf_sockunion_cmp(const struct sockaddr *su1, const struct sockaddr *su2);
+
+extern uint64_t ebpf_sqrt(uint64_t a, unsigned int precision);
 
 
 #endif //FRR_UBPF_PUBLIC_BPF_H
