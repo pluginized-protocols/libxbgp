@@ -6,13 +6,20 @@
 #define UBPF_TOOLS_UBPF_MEMORY_POOL_H
 
 #include "hashmap.h"
+#include "list.h"
+
 
 struct mem_node {
     uint32_t type;
     uint32_t length;
+    int is_lst;
+
+    void (*clean)(void *);
+
     union {
         uint64_t val;
         uint8_t *ptr;
+        list_t *lst;
     } value;
 };
 
@@ -21,11 +28,24 @@ typedef hashmap_t(struct mem_node) _mem_pool;
 
 struct mem_pool {
     _mem_pool mp;
+    // int list_node; // set to 1 if mem_mode->value is a list
 };
 
-int init_mempool(struct mem_pool *mp);
+struct mempool_iterator {
+    struct mem_node *mn;
+    struct list_iterator lst_it;
+};
 
-int add_mempool(struct mem_pool *mp, uint32_t type, uint32_t length, void *val);
+struct mem_pool *new_mempool(void);
+
+int add_lst_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), uint32_t length, void *val);
+
+int add_single_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), uint32_t length, void *val);
+
+int add_raw_ptr_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), void *val);
+
+int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
+                uint32_t length, void *val, int is_lst);
 
 void remove_mempool(struct mem_pool *mp, uint32_t type);
 
@@ -34,5 +54,27 @@ uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type);
 void *get_mempool_ptr(struct mem_pool *mp, uint32_t type);
 
 void delete_mempool(struct mem_pool *mp);
+
+struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type);
+
+void *get_mempool_iterator(struct mempool_iterator *it);
+
+void *next_mempool_iterator(struct mempool_iterator *it);
+
+int end_mempool_iterator(struct mempool_iterator *it);
+
+/**
+ * Remove the current element in the list.
+ * Do not mix up with destroy_mempool which
+ * deallocate the iterator and not an element
+ * contained inside the memory pool.
+ */
+int remove_mempool_iterator(struct mempool_iterator *it);
+
+/**
+ * Deallocate memory used by the iterator
+ * @param it
+ */
+void destroy_mempool_iterator(struct mempool_iterator *it);
 
 #endif //UBPF_TOOLS_UBPF_MEMORY_POOL_H

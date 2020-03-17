@@ -9,17 +9,38 @@
 
 typedef struct mem_pool mem_pool;
 
-extern int init_mempool(mem_pool *mp);
+typedef struct mempool_iterator mempool_iterator;
 
-extern int add_mempool(mem_pool *mp, uint32_t type, uint32_t length, void *val);
 
-extern void remove_mempool(mem_pool *mp, uint32_t type);
+extern struct mem_pool *new_mempool(void);
 
-extern uint64_t get_mempool_u64(mem_pool *mp, uint32_t type);
+extern int add_lst_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), uint32_t length, void *val);
 
-extern void *get_mempool_ptr(mem_pool *mp, uint32_t type);
+extern int add_single_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), uint32_t length, void *val);
 
-extern void delete_mempool(mem_pool *mp);
+extern int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
+                       uint32_t length, void *val, int is_lst);
 
+extern void remove_mempool(struct mem_pool *mp, uint32_t type);
+
+extern uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type);
+
+extern void *get_mempool_ptr(struct mem_pool *mp, uint32_t type);
+
+extern void delete_mempool(struct mem_pool *mp);
+
+extern struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type);
+
+extern void *get_mempool_iterator(struct mempool_iterator *it);
+
+extern void *next_mempool_iterator(struct mempool_iterator *it);
+
+extern int end_mempool_iterator(struct mempool_iterator *it);
+
+extern int remove_mempool_iterator(struct mempool_iterator *it);
+
+extern void destroy_mempool_iterator(struct mempool_iterator *it);
+
+extern int add_raw_ptr_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), void *val);
 
 #endif //UBPF_TOOLS_UBPF_MEMPOOL_HDR_H

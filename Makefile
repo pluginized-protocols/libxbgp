@@ -1,6 +1,6 @@
 CC = gcc
 AR = ar
-CFLAGS += -O2
+CFLAGS += -O0 -g3
 CFLAGS += -std=gnu11
 CFLAGS += -Wall
 CFLAGS += -Wshadow
@@ -52,7 +52,7 @@ check: lib_tests
 
 %.o: %.c %.h
 	@echo CC $@
-	@$(CC) -g $(CFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(LIBUBPF_A): $(OBJ)
 	@echo AR $@

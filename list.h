@@ -8,13 +8,15 @@
 #include <stddef.h>
 
 #define iterator_next(iterator) \
-    (iterator)->next((iterator))
+    ((iterator)->next((iterator)))
 
 #define iterator_get(iterator) \
     (iterator)->get((iterator))
 
 #define iterator_end(iterator) \
     (iterator)->end((iterator))
+
+#define iterator_remove(iterator) (iterator)->remove((iterator))
 
 
 struct node {
@@ -31,14 +33,17 @@ typedef struct linked_list_node {
 } list_t;
 
 typedef struct list_iterator {
+    list_t *from_lst;
     struct node *curr;
-    int fresh_new;
+    struct node *fwd;
 
     void *(*get)(struct list_iterator *self);
 
     void *(*next)(struct list_iterator *self);
 
     int (*end)(struct list_iterator *self);
+
+    int (*remove)(struct list_iterator *self);
 
 } list_iterator_t;
 

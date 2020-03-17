@@ -15,6 +15,8 @@ int new_hashmap(hashmap_t *hashmap, unsigned int size) {
     hashmap->keys = calloc(size, sizeof(struct key));
     if (!hashmap->keys) return -1;
 
+    // hashmap->values is an array of pointers.
+    // The real value is stored outside the array
     hashmap->values = calloc(size, sizeof(void *));
     if (!hashmap->values) {
         free(hashmap->keys);
@@ -40,6 +42,25 @@ void free_hashmap(hashmap_t *hashmap) {
 
     free(hashmap->keys);
     free(hashmap->values);
+}
+
+void free_hashmap_fun(hashmap_t *h_map, void (*func)(void *)) {
+
+    unsigned int i;
+    if (!h_map) return;
+
+    for (i = 0; i < h_map->m; i++) {
+        if (h_map->values[i] != NULL) {
+            if (func) {
+                func(h_map->values[i]);
+            }
+            free(h_map->values[i]);
+        }
+    }
+
+    free(h_map->keys);
+    free(h_map->values);
+
 }
 
 inline uint64_t hash(hashmap_t *hashmap, uint64_t key) {
@@ -126,7 +147,7 @@ int resize(hashmap_t *hashmap, unsigned int cap) {
     return 0;
 }
 
-int delete(hashmap_t *hashmap, uint64_t key) {
+int delete(hashmap_t *hashmap, uint64_t key, void (*cleanup)(void *)) {
 
     unsigned int i, j, k, first, ret_val;
 
@@ -140,6 +161,9 @@ int delete(hashmap_t *hashmap, uint64_t key) {
         if (first) first = 0;
         if (hashmap->keys[i].val == key) {
             hashmap->keys[i].in_use = AVAIL;
+            if (cleanup != NULL) {
+                cleanup(hashmap->values[i]);
+            }
             free(hashmap->values[i]);
             hashmap->values[i] = NULL;
 

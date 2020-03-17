@@ -39,6 +39,8 @@ new_hashmap(&((m)->base), size)
 #define hashmap_destroy(m)\
 free_hashmap(&((m)->base))
 
+#define hashmap_destroy_free(m, fun) free_hashmap_fun(&((m)->base), fun)
+
 #define hashmap_get(m, key)\
 ((m)->ref = get(&(m)->base, key))
 
@@ -47,12 +49,16 @@ free_hashmap(&((m)->base))
 put(&(m)->base, key, &(m)->tmp, sizeof((m)->tmp)) )
 
 #define hashmap_delete(m, key)\
-delete(&(m)->base, key)
+delete(&(m)->base, key, NULL)
+
+#define hashmap_delete_fun(m, key, fn)  delete(&(m)->base, key, fn);
 
 
 int new_hashmap(hashmap_t *hashmap, unsigned int size);
 
 void free_hashmap(hashmap_t *hashmap);
+
+void free_hashmap_fun(hashmap_t *h_map, void (*func)(void *));
 
 uint64_t hash(hashmap_t *hashmap, uint64_t key);
 
@@ -62,6 +68,6 @@ int put(hashmap_t *hashmap, uint64_t key, void *value, size_t size);
 
 void *get(hashmap_t *hashmap, uint64_t key);
 
-int delete(hashmap_t *hashmap, uint64_t key);
+int delete(hashmap_t *hashmap, uint64_t key, void (*cleanup)(void *));
 
 #endif //FRR_UBPF_HASHMAP_H
