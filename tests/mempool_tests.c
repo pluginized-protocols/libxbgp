@@ -130,12 +130,12 @@ static void test_list_value(void) {
         add_lst_mempool(mp, TYPE_INT, NULL, sizeof(int), &i);
 
     i = 10;
-    for (it = new_iterator_mempool(mp, TYPE_INT); !end_mempool_iterator(it); i--) {
-        current_value = get_mempool_iterator(it);
-        CU_ASSERT_PTR_NOT_NULL_FATAL(current_value);
-
-        CU_ASSERT_EQUAL(*current_value, i);
+    for (it = new_iterator_mempool(mp, TYPE_INT); (current_value = next_mempool_iterator(it)) != NULL; i--) {
+        CU_ASSERT_PTR_NOT_NULL_FATAL(current_value)
+        CU_ASSERT_EQUAL(*current_value, i)
     }
+
+    CU_ASSERT_EQUAL(i, 0);
 
     destroy_mempool_iterator(it);
     delete_mempool(mp);

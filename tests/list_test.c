@@ -74,7 +74,7 @@ static void test_ititerator_list(void) {
 int list_tests(void) {
     CU_pSuite pSuite = NULL;
 
-    pSuite = CU_add_suite("ubpf_monitoring_tests_suite", setup, teardown);
+    pSuite = CU_add_suite("list_tests_suite", setup, teardown);
     if (NULL == pSuite) {
         CU_cleanup_registry();
         return CU_get_error();

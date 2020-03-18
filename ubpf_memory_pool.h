@@ -12,7 +12,7 @@
 struct mem_node {
     uint32_t type;
     uint32_t length;
-    int is_lst;
+    int val_type;
 
     void (*clean)(void *);
 
@@ -60,6 +60,8 @@ struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type
 void *get_mempool_iterator(struct mempool_iterator *it);
 
 void *next_mempool_iterator(struct mempool_iterator *it);
+
+int hasnext_mempool_iterator(struct mempool_iterator *it);
 
 int end_mempool_iterator(struct mempool_iterator *it);
 

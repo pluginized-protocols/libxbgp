@@ -205,7 +205,7 @@ static int __end(list_iterator_t *it) {
 static void *__get(list_iterator_t *it) {
     if (!it) return NULL;
     if (__end(it)) return NULL;
-    return it->curr->data;
+    return it->curr ? it->curr->data : NULL;
 }
 
 static int __remove(list_iterator_t *it) {

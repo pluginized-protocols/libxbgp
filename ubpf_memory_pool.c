@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 enum {
     MEMPOOL_TYPE_U64,
@@ -20,17 +21,32 @@ static inline void delete_mem_node(void *_mn) {
     list_iterator_t lst_it;
     struct mem_node *mn = _mn;
 
-    if (mn->is_lst) {
-        if (mn->clean) {
-            list_iterator(mn->value.lst, &lst_it);
-            while (iterator_end(&lst_it)) { // free resources allocated inside the pointer
-                mn->clean(iterator_get(&lst_it));
+    if (!mn) {
+        fprintf(stderr, "[BUG] at %s, _mn is null\n", __FUNCTION__);
+        return;
+    }
+
+    switch (mn->val_type) {
+        case MEMPOOL_TYPE_RAW_PTR:
+            if (mn->clean) mn->clean(mn->value.ptr);
+            break;
+        case MEMPOOL_TYPE_PTR:
+            if (mn->clean) mn->clean(mn->value.ptr);
+            free(mn->value.ptr);
+            break;
+        case MEMPOOL_TYPE_LST:
+            if (mn->clean) {
+                list_iterator(mn->value.lst, &lst_it);
+                while (iterator_end(&lst_it)) { // free resources allocated inside the pointer
+                    mn->clean(iterator_get(&lst_it));
+                }
             }
-        }
-        destroy_list(mn->value.lst);
-    } else if (mn->length > 8) {
-        if (mn->clean) mn->clean(mn->value.ptr);
-        free(mn->value.ptr);
+            destroy_list(mn->value.lst);
+            break;
+        case MEMPOOL_TYPE_U64:
+        default:
+            return;
+
     }
 }
 
@@ -80,6 +96,7 @@ inline int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void 
     new_mem.type = type;
     new_mem.length = length;
     new_mem.clean = cleanup;
+    new_mem.val_type = type_mem;
     current_mem_node = hashmap_get(&mp->mp, type);
 
     switch (type_mem) {
@@ -134,7 +151,8 @@ void *get_mempool_ptr(struct mem_pool *mp, uint32_t type) {
     if (!node) return NULL;
 
     // if the size don't match with the one of a pointer OR it is a list --> return NULL
-    return node->length < sizeof(uintptr_t) || node->is_lst ? NULL : node->value.ptr;
+    return node->val_type != MEMPOOL_TYPE_RAW_PTR &&
+           node->val_type != MEMPOOL_TYPE_PTR ? NULL : node->value.ptr;
 }
 
 uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type) {
@@ -144,15 +162,13 @@ uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type) {
     node = hashmap_get(&mp->mp, type);
     if (!node) return 0;
 
-    return node->length <= 8 && !node->is_lst ? node->value.val : 0;
+    return node->val_type == MEMPOOL_TYPE_U64 ? node->value.val : 0;
 }
 
 void remove_mempool(struct mem_pool *mp, uint32_t type) { // TODO del fun
     struct mem_node *pool;
     pool = hashmap_get(&mp->mp, type);
     if (!pool) return;
-    if (pool->length > 8) free(pool->value.ptr);
-
     delete_mem_node(pool);
     hashmap_delete(&mp->mp, type);
 }
@@ -170,7 +186,7 @@ struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type
 
     node = hashmap_get(&mp->mp, type);
     if (!node) return NULL;
-    if (!node->is_lst) return NULL;
+    if (MEMPOOL_TYPE_LST != node->val_type) return NULL;
 
     it = malloc(sizeof(*it));
     if (!it) return NULL;
@@ -192,6 +208,11 @@ void *next_mempool_iterator(struct mempool_iterator *it) {
     if (!it) return NULL;
 
     return iterator_next(&it->lst_it);
+}
+
+int hasnext_mempool_iterator(struct mempool_iterator *it) {
+    if (!it) return 0;
+    return !iterator_end(&it->lst_it);
 }
 
 int end_mempool_iterator(struct mempool_iterator *it) {

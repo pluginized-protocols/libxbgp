@@ -35,6 +35,8 @@ extern void *get_mempool_iterator(struct mempool_iterator *it);
 
 extern void *next_mempool_iterator(struct mempool_iterator *it);
 
+extern int hasnext_mempool_iterator(struct mempool_iterator *it);
+
 extern int end_mempool_iterator(struct mempool_iterator *it);
 
 extern int remove_mempool_iterator(struct mempool_iterator *it);
