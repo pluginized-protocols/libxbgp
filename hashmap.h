@@ -26,9 +26,24 @@ typedef struct hashmap {
     size_t size_val;
 } hashmap_t;
 
+typedef struct hashmap_iterator {
+
+    int finished;
+    unsigned int next_element;
+    hashmap_t *hm;
+
+} hashmap_iterator_t;
+
 #define hashmap_t(T) \
 struct {\
     hashmap_t base;\
+    T tmp;\
+    T *ref;\
+}
+
+#define hashmap_iterator(T)\
+struct {\
+    struct hashmap_iterator myit;\
     T tmp;\
     T *ref;\
 }
@@ -53,6 +68,14 @@ delete(&(m)->base, key, NULL)
 
 #define hashmap_delete_fun(m, key, fn)  delete(&(m)->base, key, fn);
 
+#define hashmap_iterator_new(it, m)\
+new_hashmap_iterator(&((it)->myit), &((m)->base))
+
+#define hashmap_iterator_next(it)\
+((it)->ref = next_hashmap_iterator(&(it)->myit))
+
+#define hashmap_iterator_hasnext(it)\
+(hasnext_hashmap_iterator(&(it)->myit))
 
 int new_hashmap(hashmap_t *hashmap, unsigned int size);
 
@@ -69,5 +92,11 @@ int put(hashmap_t *hashmap, uint64_t key, void *value, size_t size);
 void *get(hashmap_t *hashmap, uint64_t key);
 
 int delete(hashmap_t *hashmap, uint64_t key, void (*cleanup)(void *));
+
+int new_hashmap_iterator(struct hashmap_iterator *it, struct hashmap *hashmap);
+
+void *next_hashmap_iterator(struct hashmap_iterator *it);
+
+int hasnext_hashmap_iterator(struct hashmap_iterator *it);
 
 #endif //FRR_UBPF_HASHMAP_H

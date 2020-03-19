@@ -120,7 +120,7 @@ static void test_list_value(void) {
     int i, *current_value;
 
     mem_pool *mp;
-    mempool_iterator *it;
+    lst_mempool_iterator *it;
     mp = new_mempool();
 
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
@@ -130,14 +130,14 @@ static void test_list_value(void) {
         add_lst_mempool(mp, TYPE_INT, NULL, sizeof(int), &i);
 
     i = 10;
-    for (it = new_iterator_mempool(mp, TYPE_INT); (current_value = next_mempool_iterator(it)) != NULL; i--) {
+    for (it = new_lst_iterator_mempool(mp, TYPE_INT); (current_value = next_lst_mempool_iterator(it)) != NULL; i--) {
         CU_ASSERT_PTR_NOT_NULL_FATAL(current_value)
         CU_ASSERT_EQUAL(*current_value, i)
     }
 
     CU_ASSERT_EQUAL(i, 0);
 
-    destroy_mempool_iterator(it);
+    destroy_lst_mempool_iterator(it);
     delete_mempool(mp);
 }
 
@@ -159,6 +159,41 @@ static void test_raw_pointer(void) {
     delete_mempool(mp);
 }
 
+static void test_iterator_whole_mempool(void) {
+    mem_pool *mp;
+    mempool_iterator *it;
+    int i, *j;
+
+    char seen[10];
+    memset(seen, 0, sizeof(char) * 10);
+
+    mp = new_mempool();
+    CU_ASSERT_PTR_NOT_NULL_FATAL(mp)
+
+    for (i = 1; i <= 10; i++) {
+        add_single_mempool(mp, i, NULL, sizeof(int), &i);
+    }
+
+    it = new_mempool_iterator(mp);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(it)
+
+    while (hasnext_mempool_iterator(it)) {
+        j = next_mempool_iterator(it);
+        CU_ASSERT_PTR_NOT_NULL_FATAL(j);
+        CU_ASSERT_FALSE(seen[(*j) - 1])
+        seen[(*j) - 1] = 1;
+    }
+
+    delete_mempool_iterator(it);
+
+    for (i = 0; i < 10; i++) {
+        CU_ASSERT_TRUE(seen[i]);
+    }
+
+    delete_mempool(mp);
+
+}
+
 
 int mem_pool_tests(void) {
 
@@ -174,7 +209,8 @@ int mem_pool_tests(void) {
         (NULL == CU_add_test(pSuite, "Test mempool single value uint 16 bits", test_single_value_u16)) ||
         (NULL == CU_add_test(pSuite, "Memory pool pointer value", test_ptr_value)) ||
         (NULL == CU_add_test(pSuite, "Adding/Deleting raw pointers", test_raw_pointer)) ||
-        (NULL == CU_add_test(pSuite, "Delete ptr Memory Pool", test_ptr_with_memory_to_free))) {
+        (NULL == CU_add_test(pSuite, "Delete ptr Memory Pool", test_ptr_with_memory_to_free)) ||
+        (NULL == CU_add_test(pSuite, "Iterator whole mempool", test_iterator_whole_mempool))) {
         CU_cleanup_registry();
         return CU_get_error();
     }

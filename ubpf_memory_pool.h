@@ -31,9 +31,14 @@ struct mem_pool {
     // int list_node; // set to 1 if mem_mode->value is a list
 };
 
-struct mempool_iterator {
+struct lst_mempool_iterator {
     struct mem_node *mn;
     struct list_iterator lst_it;
+};
+
+struct mempool_iterator {
+    struct mem_pool *mp;
+    struct hashmap_iterator it;
 };
 
 struct mem_pool *new_mempool(void);
@@ -55,15 +60,15 @@ void *get_mempool_ptr(struct mem_pool *mp, uint32_t type);
 
 void delete_mempool(struct mem_pool *mp);
 
-struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type);
+struct lst_mempool_iterator *new_lst_iterator_mempool(struct mem_pool *mp, uint32_t type);
 
-void *get_mempool_iterator(struct mempool_iterator *it);
+void *get_lst_mempool_iterator(struct lst_mempool_iterator *it);
 
-void *next_mempool_iterator(struct mempool_iterator *it);
+void *next_lst_mempool_iterator(struct lst_mempool_iterator *it);
 
-int hasnext_mempool_iterator(struct mempool_iterator *it);
+int hasnext_lst_mempool_iterator(struct lst_mempool_iterator *it);
 
-int end_mempool_iterator(struct mempool_iterator *it);
+int end_lst_mempool_iterator(struct lst_mempool_iterator *it);
 
 /**
  * Remove the current element in the list.
@@ -71,12 +76,20 @@ int end_mempool_iterator(struct mempool_iterator *it);
  * deallocate the iterator and not an element
  * contained inside the memory pool.
  */
-int remove_mempool_iterator(struct mempool_iterator *it);
+int remove_lst_mempool_iterator(struct lst_mempool_iterator *it);
 
 /**
  * Deallocate memory used by the iterator
  * @param it
  */
-void destroy_mempool_iterator(struct mempool_iterator *it);
+void destroy_lst_mempool_iterator(struct lst_mempool_iterator *it);
+
+struct mempool_iterator *new_mempool_iterator(struct mem_pool *mp);
+
+void delete_mempool_iterator(struct mempool_iterator *it);
+
+void *next_mempool_iterator(struct mempool_iterator *it);
+
+int hasnext_mempool_iterator(struct mempool_iterator *it);
 
 #endif //UBPF_TOOLS_UBPF_MEMORY_POOL_H

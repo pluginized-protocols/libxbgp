@@ -185,3 +185,63 @@ int delete(hashmap_t *hashmap, uint64_t key, void (*cleanup)(void *)) {
 
     return -1;
 }
+
+// from included
+static inline unsigned int find_next_in_use(struct hashmap *h, unsigned int from, int *err) {
+    unsigned int i;
+    if (!h) {
+        goto err;
+    }
+
+    for (i = from; i < h->m; i++) {
+        if (h->keys[i].in_use == IN_USE) {
+            *err = 0;
+            return i;
+        }
+    }
+
+    err:
+    *err = 1;
+    return from;
+}
+
+int new_hashmap_iterator(struct hashmap_iterator *it, struct hashmap *hashmap) {
+    unsigned int i;
+    int err;
+
+    if (!hashmap || !it) return -1;
+
+    i = find_next_in_use(hashmap, 0, &err);
+    if (err) return -1;
+
+    it->finished = 0;
+    it->next_element = i;
+    it->hm = hashmap;
+    return 0;
+}
+
+void *next_hashmap_iterator(struct hashmap_iterator *it) {
+
+    int err;
+    void *ret;
+    unsigned int i;
+
+    if (it->finished) return NULL;
+    ret = it->hm->values[it->next_element];
+
+    i = find_next_in_use(it->hm, it->next_element + 1, &err);
+    if (err) {
+        it->finished = 1;
+    } else {
+        it->next_element = i;
+    }
+
+    return ret;
+}
+
+int hasnext_hashmap_iterator(struct hashmap_iterator *it) {
+    if (!it) return 0;
+    if (it->finished) return 0;
+
+    return 1;
+}

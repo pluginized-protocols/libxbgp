@@ -17,6 +17,7 @@
 #include "monitoring_tests.h"
 #include "list_test.h"
 #include "mempool_tests.h"
+#include "hashmap_tests.h"
 
 int main(int argc, char *argv[]) {
 
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
 
     if ((tree_tests() != CUE_SUCCESS) ||
         (list_tests() != CUE_SUCCESS) ||
+        (hashmap_tests() != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (ubpf_monitoring_tests(plugin_folder_path) != CUE_SUCCESS)) {

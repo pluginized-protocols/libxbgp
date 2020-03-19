@@ -178,9 +178,9 @@ void delete_mempool(struct mem_pool *mp) {
     hashmap_destroy_free(&mp->mp, delete_mem_node);
 }
 
-struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type) {
+struct lst_mempool_iterator *new_lst_iterator_mempool(struct mem_pool *mp, uint32_t type) {
 
-    struct mempool_iterator *it;
+    struct lst_mempool_iterator *it;
     struct mem_node *node;
     if (!mp) return NULL;
 
@@ -198,37 +198,67 @@ struct mempool_iterator *new_iterator_mempool(struct mem_pool *mp, uint32_t type
     return it;
 }
 
-void *get_mempool_iterator(struct mempool_iterator *it) {
+void *get_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     if (!it) return NULL;
 
     return iterator_get(&it->lst_it);
 }
 
-void *next_mempool_iterator(struct mempool_iterator *it) {
+void *next_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     if (!it) return NULL;
 
     return iterator_next(&it->lst_it);
 }
 
-int hasnext_mempool_iterator(struct mempool_iterator *it) {
+int hasnext_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     if (!it) return 0;
     return !iterator_end(&it->lst_it);
 }
 
-int end_mempool_iterator(struct mempool_iterator *it) {
+int end_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     if (!it) return 1;
 
     return iterator_end(&it->lst_it);
 }
 
-int remove_mempool_iterator(struct mempool_iterator *it) {
+int remove_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     if (!it) return 0;
 
     return iterator_remove(&it->lst_it);
 }
 
-
-void destroy_mempool_iterator(struct mempool_iterator *it) {
+void destroy_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     if (!it) return;
     free(it);
+}
+
+struct mempool_iterator *new_mempool_iterator(struct mem_pool *mp) {
+
+    struct mempool_iterator *it;
+    if (!mp) return NULL;
+
+    it = malloc(sizeof(*it));
+    if (!it) return NULL;
+
+    it->mp = mp;
+    if (new_hashmap_iterator(&it->it, &it->mp->mp.base) != 0) {
+        free(it);
+        return NULL;
+    }
+
+    return it;
+}
+
+void delete_mempool_iterator(struct mempool_iterator *it) {
+    free(it);
+}
+
+void *next_mempool_iterator(struct mempool_iterator *it) {
+    if (!it) return NULL;
+    return next_hashmap_iterator(&it->it);
+}
+
+int hasnext_mempool_iterator(struct mempool_iterator *it) {
+    if (!it) return 0;
+    return hasnext_hashmap_iterator(&it->it);
 }
