@@ -10,7 +10,7 @@
 
 //#include "ubpf_context.h"
 
-struct prefix {
+struct ubpf_prefix {
     uint8_t family;
     uint16_t prefixlen;
     uint8_t u[20];

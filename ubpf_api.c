@@ -24,6 +24,7 @@
 #include <netinet/in.h>
 #include <float.h>
 #include <math.h>
+#include <errno.h>
 
 
 static int write_fd = -1; // fd to talk to monitoring manager of this library
@@ -187,6 +188,384 @@ void ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
     va_end(vars);
 
 }
+
+
+/* The following piece of code is taken and adapted from bird routing project */
+/* ~~~ BEGIN BIRD CODE ~~~*/
+
+#define ZEROPAD    1u        /* pad with zero */
+#define SIGN    2u        /* unsigned/signed long */
+#define PLUS    4u        /* show plus */
+#define SPACE    8u        /* space if plus */
+#define LEFT    16u        /* left justified */
+#define SPECIAL    32u        /* 0x */
+#define LARGE    64u        /* use 'ABCDEF' instead of 'abcdef' */
+
+#define S_    * (uint64_t) 1000000
+#define MS_    * (uint64_t) 1000
+#define US_    * (uint64_t) 1
+#define TO_S    /1000000
+#define TO_MS    /1000
+#define TO_US    /1
+
+#define S    S_
+#define MS    MS_
+#define US    US_
+#define NS    /1000
+
+#define is_digit(c)    ((c) >= '0' && (c) <= '9')
+
+static inline int skip_atoi(const char **s) {
+    int i = 0;
+
+    while (is_digit(**s))
+        i = i * 10 + *((*s)++) - '0';
+    return i;
+}
+
+static inline char *
+number(char *str, uint64_t num, uint base, int size, int precision, int type, int remains) {
+    char c, sign, tmp[66];
+    const char *digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+    int i;
+
+    if (size >= 0 && (remains -= size) < 0)
+        return NULL;
+    if (type & LARGE)
+        digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    if (type & LEFT)
+        type &= ~ZEROPAD;
+    if (base < 2 || base > 36)
+        return 0;
+    c = (type & ZEROPAD) ? '0' : ' ';
+    sign = 0;
+    if (type & SIGN) {
+        if (num > (uint64_t) INT64_MAX) {
+            sign = '-';
+            num = -num;
+            size--;
+        } else if (type & PLUS) {
+            sign = '+';
+            size--;
+        } else if (type & SPACE) {
+            sign = ' ';
+            size--;
+        }
+    }
+    if (type & SPECIAL) {
+        if (base == 16)
+            size -= 2;
+        else if (base == 8)
+            size--;
+    }
+    i = 0;
+    if (num == 0)
+        tmp[i++] = '0';
+    else
+        while (num != 0) {
+            uint res = num % base;
+            num = num / base;
+            tmp[i++] = digits[res];
+        }
+    if (i > precision)
+        precision = i;
+    size -= precision;
+    if (size < 0 && -size > remains)
+        return NULL;
+    if (!(type & (ZEROPAD + LEFT)))
+        while (size-- > 0)
+            *str++ = ' ';
+    if (sign)
+        *str++ = sign;
+    if (type & SPECIAL) {
+        if (base == 8)
+            *str++ = '0';
+        else if (base == 16) {
+            *str++ = '0';
+            *str++ = digits[33];
+        }
+    }
+    if (!(type & LEFT))
+        while (size-- > 0)
+            *str++ = c;
+    while (i < precision--)
+        *str++ = '0';
+    while (i-- > 0)
+        *str++ = tmp[i];
+    while (size-- > 0)
+        *str++ = ' ';
+    return str;
+}
+
+int bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
+    int nb_args, curr_args;
+    int len, i;
+    uint64_t num;
+    uint base;
+    int64_t t;
+    int64_t t1, t2;
+    char *str, *start;
+    const char *s;
+
+    int flags;        /* flags to number() */
+
+    int field_width;    /* width of output field */
+    int precision;        /* min. # of digits for integers; max
+				   number of chars for from string */
+    int qualifier;        /* 'h' or 'l' for integer fields */
+
+    nb_args = args[0];
+    curr_args = 1; // 0 is the number of args
+
+    for (start = str = buf; *fmt; ++fmt, size -= (str - start), start = str) {
+        if (*fmt != '%') {
+            if (!size)
+                return -1;
+            *str++ = *fmt;
+            continue;
+        }
+
+        /* process flags */
+        flags = 0;
+        repeat:
+        ++fmt;        /* this also skips first '%' */
+        switch (*fmt) {
+            case '-':
+                flags |= LEFT;
+                goto repeat;
+            case '+':
+                flags |= PLUS;
+                goto repeat;
+            case ' ':
+                flags |= SPACE;
+                goto repeat;
+            case '#':
+                flags |= SPECIAL;
+                goto repeat;
+            case '0':
+                flags |= ZEROPAD;
+                goto repeat;
+        }
+
+        /* get field width */
+        field_width = -1;
+        if (is_digit(*fmt))
+            field_width = skip_atoi(&fmt);
+        else if (*fmt == '*') {
+            ++fmt;
+            /* it's the next argument */
+            field_width = (int) args[curr_args++];//va_arg(args, int);
+            if (field_width < 0) {
+                field_width = -field_width;
+                flags |= LEFT;
+            }
+        }
+
+        /* get the precision */
+        precision = -1;
+        if (*fmt == '.') {
+            ++fmt;
+            if (is_digit(*fmt))
+                precision = skip_atoi(&fmt);
+            else if (*fmt == '*') {
+                ++fmt;
+                /* it's the next argument */
+                precision = (int) args[curr_args++];
+            }
+            if (precision < 0)
+                precision = 0;
+        }
+
+        /* get the conversion qualifier */
+        qualifier = -1;
+        if (*fmt == 'h' || *fmt == 'l' || *fmt == 'L') {
+            qualifier = *fmt;
+            ++fmt;
+        }
+
+        /* default base */
+        base = 10;
+
+        if (field_width > size)
+            return -1;
+        switch (*fmt) {
+            case 'c':
+                if (!(flags & LEFT))
+                    while (--field_width > 0)
+                        *str++ = ' ';
+                *str++ = (uint8_t) args[curr_args++];
+                while (--field_width > 0)
+                    *str++ = ' ';
+                continue;
+
+            case 'm':
+                if (flags & SPECIAL) {
+                    if (!errno)
+                        continue;
+                    if (size < 2)
+                        return -1;
+                    *str++ = ':';
+                    *str++ = ' ';
+                    start += 2;
+                    size -= 2;
+                }
+                s = strerror(errno);
+                goto str;
+            case 's':
+                s = (char *) args[curr_args++];
+                if (!s)
+                    s = "<NULL>";
+
+            str:
+                len = strlen(s);
+                if (precision >= 0 && len > precision)
+                    len = precision;
+                if (len > size)
+                    return -1;
+
+                if (!(flags & LEFT))
+                    while (len < field_width--)
+                        *str++ = ' ';
+                for (i = 0; i < len; ++i)
+                    *str++ = *s++;
+                while (len < field_width--)
+                    *str++ = ' ';
+                continue;
+
+                /*case 'V': { // put this case in standby ! (not really a good feature I guess)
+                    const char *vfmt = (const char *) args[curr_args++];
+                    va_list *vargs = va_arg(args, va_list *);
+                    int res = bvsnprintf(str, size, vfmt, *vargs);
+                    if (res < 0)
+                        return -1;
+                    str += res;
+                    size -= res;
+                    continue;
+                }*/
+
+            case 'p':
+                if (field_width == -1) {
+                    field_width = 2 * sizeof(void *);
+                    flags |= ZEROPAD;
+                }
+                str = number(str, args[curr_args++], 16,
+                             field_width, precision, flags, size);
+                if (!str)
+                    return -1;
+                continue;
+
+            case 'n':
+                if (qualifier == 'l') {
+                    int64_t *ip = (int64_t *) args[curr_args++];
+                    *ip = (str - buf);
+                } else {
+                    int *ip = (int *) args[curr_args++];
+                    *ip = (str - buf);
+                }
+                continue;
+
+
+            case 't':
+                t = (uint64_t) args[curr_args++];
+                t1 = t TO_S;
+                t2 = t - t1 S;
+
+                if (precision < 0)
+                    precision = 3;
+
+                if (precision > 6)
+                    precision = 6;
+
+                /* Compute field_width for second part */
+                if ((precision > 0) && (field_width > 0))
+                    field_width -= (1 + precision);
+
+                if (field_width < 0)
+                    field_width = 0;
+
+                /* Print seconds */
+                flags |= SIGN;
+                str = number(str, (uint64_t) t1, 10, field_width, 0, flags, size);
+                if (!str)
+                    return -1;
+
+                if (precision > 0) {
+                    size -= (str - start);
+                    start = str;
+
+                    if ((1 + precision) > size)
+                        return -1;
+
+                    /* Convert microseconds to requested precision */
+                    for (i = precision; i < 6; i++)
+                        t2 /= 10;
+
+                    /* Print sub-seconds */
+                    *str++ = '.';
+                    str = number(str, (uint64_t) t2, 10, precision, 0, ZEROPAD, size - 1);
+                    if (!str)
+                        return -1;
+                }
+                goto done;
+
+                /* integer number formats - set up the flags and "break" */
+            case 'o':
+                base = 8;
+                break;
+
+            case 'X':
+                flags |= LARGE;
+                /* fallthrough */
+            case 'x':
+                base = 16;
+                break;
+
+            case 'd':
+            case 'i':
+                flags |= SIGN;
+            case 'u':
+                break;
+
+            default:
+                if (size < 2)
+                    return -1;
+                if (*fmt != '%')
+                    *str++ = '%';
+                if (*fmt)
+                    *str++ = *fmt;
+                else
+                    --fmt;
+                continue;
+        }
+        if (flags & SIGN) {
+            /* Conversions valid per ISO C99 6.3.1.3 (2) */
+            if (qualifier == 'l')
+                num = (uint64_t) args[curr_args++];
+            else if (qualifier == 'h')
+                num = (uint64_t) (
+                        short) args[curr_args++];
+            else
+                num = (uint64_t) args[curr_args++];
+        } else {
+            if (qualifier == 'l')
+                num = (uint64_t) args[curr_args++];
+            else if (qualifier == 'h')
+                num = (unsigned short) args[curr_args++];
+            else
+                num = (uint) args[curr_args++];
+        }
+        str = number(str, num, base, field_width, precision, flags, size);
+        if (!str)
+            return -1;
+        done:;
+    }
+    if (!size)
+        return -1;
+    *str = '\0';
+    return str - buf;
+}
+
+/* ~~~ END BIRD CODE ~~~*/
 
 /// memcpy IS TAKEN FROM
 /// http://www.ethernut.de/api/memcpy_8c_source.html

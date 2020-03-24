@@ -18,6 +18,7 @@
 #include "list_test.h"
 #include "mempool_tests.h"
 #include "hashmap_tests.h"
+#include "internal_tests.h"
 
 int main(int argc, char *argv[]) {
 
@@ -62,7 +63,8 @@ int main(int argc, char *argv[]) {
     if (CUE_SUCCESS != CU_initialize_registry())
         return CU_get_error();
 
-    if ((tree_tests() != CUE_SUCCESS) ||
+    if ((internal_tests() != CUE_SUCCESS) ||
+        (tree_tests() != CUE_SUCCESS) ||
         (list_tests() != CUE_SUCCESS) ||
         (hashmap_tests() != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||

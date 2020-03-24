@@ -12,6 +12,12 @@
 #include "ebpf_mod_struct.h"
 
 
+#define __NUMARGS(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
+
+#define ubpf_sprintf(str, size, format, ...)\
+bvsnprintf(str, size, format, (uintptr_t[]){__NUMARGS(__VA_ARGS__) __VA_OPT__(,) __VA_ARGS__})
+
+
 /**
  * Send data pointed by the first argument to the monitoring thread.
  * @param data pointer related to the data the uBPF wants to send to the monitor thread
@@ -67,6 +73,8 @@ extern void *bpf_get_args(unsigned int arg_nb, bpf_full_args_t *args);
 extern int bpf_sockunion_cmp(const struct sockaddr *su1, const struct sockaddr *su2);
 
 extern uint64_t ebpf_sqrt(uint64_t a, unsigned int precision);
+
+extern int bvsnprintf(char *buf, int size, const char *fmt, uintptr_t *args);
 
 
 #endif //FRR_UBPF_PUBLIC_BPF_H

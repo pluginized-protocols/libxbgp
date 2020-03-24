@@ -68,15 +68,15 @@ int data_handling(data_t *data) {
             memset(prefix, 0, sizeof(prefix));
             prefix2str(&withdraw->p, prefix, sizeof(prefix));
 
-            new_withdraw.prefix.len = strlen(prefix) * sizeof(char);
-            new_withdraw.prefix.buf = malloc(new_withdraw.prefix.len + 1);
-            if (!new_withdraw.prefix.buf) {
+            new_withdraw.ubpf_prefix.len = strlen(prefix) * sizeof(char);
+            new_withdraw.ubpf_prefix.buf = malloc(new_withdraw.ubpf_prefix.len + 1);
+            if (!new_withdraw.ubpf_prefix.buf) {
                 fprintf(stderr, "No enough memory\n");
             }
-            memcpy(new_withdraw.prefix.buf, prefix, new_withdraw.prefix.len);
-            new_withdraw.prefix.buf[new_withdraw.prefix.len] = 0;
+            memcpy(new_withdraw.ubpf_prefix.buf, prefix, new_withdraw.ubpf_prefix.len);
+            new_withdraw.ubpf_prefix.buf[new_withdraw.ubpf_prefix.len] = 0;
 
-            push(message->fbVarFieldBuffers, &new_withdraw.prefix.buf);
+            push(message->fbVarFieldBuffers, &new_withdraw.ubpf_prefix.buf);
 
 
             push(message->prefix_withdraw, &new_withdraw);
@@ -125,7 +125,7 @@ int data_handling(data_t *data) {
             message->total_route_adj_rib_in = prefix_update->adj_rib_in;
             current_state->local_state.total_routes_loc_rib = prefix_update->loc_rib;
 
-            //fprintf(stderr, "[MONITOR] Update received for prefix %s\n", prefix);
+            //fprintf(stderr, "[MONITOR] Update received for ubpf_prefix %s\n", ubpf_prefix);
 
             free(prefix_update->as_path);
             free(prefix_update);
@@ -204,7 +204,7 @@ int data_handling(data_t *data) {
 
             while (avro_value_read(reader, &reader_value) == 0) {
                 avro_value_t  field;
-                struct prefix p;
+                struct ubpf_prefix p;
                 int32_t  peer_as, local_id, remote_id;
                 uint64_t loc_rib, adj_rib_in, adj_rib_out;
                 const char *as_path = calloc(sizeof(const char), 1024);
