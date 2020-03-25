@@ -69,6 +69,47 @@ static void test_my_snprintf_mix(void) {
 
 }
 
+static void test_my_snprintf_overflow(void) {
+
+    int bytes_written = 0;
+    char buf[30];
+    const char *expected_output = "Hello World! This is a long st";
+    const char *string = "This is a long string";
+    memset(buf, 0, sizeof(char) * 30);
+
+    bytes_written = ubpf_sprintf(buf, 30, "Hello World! %s", string);
+
+    CU_ASSERT_EQUAL(bytes_written, -1);
+    CU_ASSERT_NSTRING_EQUAL(buf, expected_output, 30);
+
+}
+
+static inline char *skip_trailing_zeroes(char *str) {
+
+    while(*str == '0') str++;
+    while(*str == 'x') str++;
+
+    return str;
+}
+
+static void test_my_snprintf_ptr(void) {
+
+    int bytes_written = 0;
+    int expected_bytes_written = 0;
+    char buf[30];
+    char expected_buf[30];
+    int test_ptr = 42;
+
+    memset(buf, 0, sizeof(char) * 30);
+    memset(expected_buf, 0, sizeof(char) * 30);
+
+    expected_bytes_written = snprintf(expected_buf, 30, "%p", &test_ptr);
+    bytes_written = ubpf_sprintf(buf, 30, "%p", &test_ptr);
+
+    CU_ASSERT_NSTRING_EQUAL(skip_trailing_zeroes(buf), skip_trailing_zeroes(expected_buf), expected_bytes_written);
+
+}
+
 int internal_tests(void) {
     CU_pSuite pSuite = NULL;
 
@@ -79,6 +120,8 @@ int internal_tests(void) {
     }
 
     if ((NULL == CU_add_test(pSuite, "Custom snprintf", test_my_snprintf)) ||
+        (NULL == CU_add_test(pSuite, "Custom snprintf overflow", test_my_snprintf_overflow)) ||
+        (NULL == CU_add_test(pSuite, "Custom snprintf ptr", test_my_snprintf_ptr)) ||
         (NULL == CU_add_test(pSuite, "Custom snprintf mix", test_my_snprintf_mix)) ||
         (NULL == CU_add_test(pSuite, "Custom snprintf string", test_my_snprintf_string))) {
         CU_cleanup_registry();

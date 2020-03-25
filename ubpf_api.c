@@ -417,7 +417,7 @@ int bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uint
                     s = "<NULL>";
 
             str:
-                len = strlen(s);
+                len = strnlen(s, size); // prevent buffer overflow when wrong announced format
                 if (precision >= 0 && len > precision)
                     len = precision;
                 if (len > size)
