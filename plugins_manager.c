@@ -328,7 +328,7 @@ static int json_pluglet_parse(json_object *pluglet, struct json_pluglet_args *in
     bytecode_name = json_object_get_string(location);
     len = json_object_get_string_len(location);
 
-    if (!json_object_object_get_ex(pluglet, "jit", &jit_obj)) jit = json_object_get_boolean(jit_obj);
+    if (json_object_object_get_ex(pluglet, "jit", &jit_obj)) jit = json_object_get_boolean(jit_obj);
     else jit = -1;
 
     info->jit = jit;
@@ -370,10 +370,17 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
     json_object *shared_mem_obj;
     json_object *extra_mem_obj;
 
-    if (main_obj == NULL) return -1;
+    if (main_obj == NULL) {
+        return -1;
+    }
 
     if (!json_object_object_get_ex(main_obj, "plugins", &plugins)) {
         return -1; // malformed json
+    }
+
+    if (json_object_object_length(plugins) == 0) {
+        // there is maybe a problem
+        fprintf(stderr, "[WARNING] no announced plugins\n");
     }
 
     if (!json_object_object_get_ex(main_obj, "dir", &override_location)) {
@@ -408,12 +415,35 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
     if (json_object_object_get_ex(main_obj, "jit_all", &jit_obj)) jit_master = json_object_get_boolean(jit_obj);
     else jit_master = 0;
 
+    // refactor (foreach macro doesn't seem to work on FRRouting.................)
+    struct json_object_iterator it_plugins;
+    struct json_object_iterator it_plugins_end;
 
-    json_object_object_foreach(plugins, plugin_str, curr_plugin) {
+    it_plugins = json_object_iter_begin(plugins);
+    it_plugins_end = json_object_iter_end(plugins);
+
+    while (!json_object_iter_equal(&it_plugins, &it_plugins_end)) {
+
+        const char *plugin_str = json_object_iter_peek_name(&it_plugins);
+        struct json_object *curr_plugin = json_object_iter_peek_value(&it_plugins);
+
         plugin_id = str_plugin_to_int(plugin_str);
-        if (plugin_id == -1) continue;
+        if (plugin_id == -1) {
+            json_object_iter_next(&it_plugins);
+            continue;
+        };
 
-        json_object_object_foreach(curr_plugin, hook, pluglets) {
+        struct json_object_iterator it_curr_plugin;
+        struct json_object_iterator it_curr_plugin_end;
+
+        it_curr_plugin = json_object_iter_begin(curr_plugin);
+        it_curr_plugin_end = json_object_iter_end(curr_plugin);
+
+        while (!json_object_iter_equal(&it_curr_plugin, &it_curr_plugin_end)) {
+
+            const char *hook = json_object_iter_peek_name(&it_curr_plugin);
+            struct json_object *pluglets = json_object_iter_peek_value(&it_curr_plugin);
+
             pluglet_type = strncmp(hook, "pre", 3) == 0 ? BPF_PRE :
                            strncmp(hook, "post", 4) == 0 ? BPF_POST :
                            strncmp(hook, "replace", 6) == 0 ? BPF_REPLACE : -1;
@@ -432,36 +462,58 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
                 if (BPF_REPLACE == pluglet_type) {
 
                     memset(&info, 0, sizeof(info));
-                    if (json_pluglet_parse(pluglets, &info) != 0) continue;
+                    if (json_pluglet_parse(pluglets, &info) != 0) {
+                        json_object_iter_next(&it_curr_plugin);
+                        continue;
+                    }
                     strncpy(ptr_plug_dir, info.name, info.str_len);
                     ptr_plug_dir[info.str_len] = 0;
 
                     jit = info.jit == -1 ? jit_master : info.jit;
 
-                    if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, 0, jit) == -1) {
+                    if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, 0, jit) != 0) {
                         ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, 0, "Startup");
                     }
                 } else {
-                    json_object_object_foreach(pluglets, seq_str, pluglet) {
+                    struct json_object_iterator it_curr_pluglet;
+                    struct json_object_iterator it_curr_pluglet_end;
+
+                    it_curr_pluglet = json_object_iter_begin(pluglets);
+                    it_curr_pluglet_end = json_object_iter_end(pluglets);
+
+                    while (!json_object_iter_equal(&it_curr_pluglet, &it_curr_pluglet_end)) {
+
+                        const char *seq_str = json_object_iter_peek_name(&it_curr_pluglet);
+                        struct json_object *pluglet = json_object_iter_peek_value(&it_curr_pluglet);
 
                         seq = strtoul(seq_str, &end_ptr, 10);
-                        if (*end_ptr != 0) continue;
+                        if (*end_ptr != 0) {
+                            json_object_iter_next(&it_curr_pluglet);
+                            continue;
+                        }
 
                         memset(&info, 0, sizeof(info));
-                        if (json_pluglet_parse(pluglet, &info) != 0) continue;
+                        if (json_pluglet_parse(pluglet, &info) != 0) {
+                            json_object_iter_next(&it_curr_pluglet);
+                            continue;
+                        }
                         strncpy(ptr_plug_dir, info.name, info.str_len);
                         ptr_plug_dir[info.str_len] = 0;
 
                         jit = info.jit == -1 ? jit_master : info.jit;
 
-                        if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) ==
-                            -1) {
+                        if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) !=
+                            0) {
                             ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, seq, "Startup");
                         }
+
+                        json_object_iter_next(&it_curr_pluglet);
                     }
                 }
             }
+            json_object_iter_next(&it_curr_plugin);
         }
+        json_object_iter_next(&it_plugins);
     }
 
     json_object_put(main_obj);

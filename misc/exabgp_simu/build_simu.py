@@ -4,6 +4,7 @@ import os
 import random
 import sys
 from shutil import copy2
+import json
 from time import sleep
 
 from mako.template import Template
@@ -20,7 +21,8 @@ myconf = {
             "local-address": "192.168.56.3",
             "router-id": "192.168.56.3",
             "peer-address": "192.168.56.2",
-            "local-as": 65003
+            "local-as": 65003,
+            "name-process": "rte_65003_to_65002",
         },
         {
             "remote-as": 65002,
@@ -28,7 +30,8 @@ myconf = {
             "local-address": "192.168.56.4",
             "router-id": "192.168.56.4",
             "peer-address": "192.168.56.2",
-            "local-as": 65004
+            "local-as": 65004,
+            "name-process": "rte_65004_to_65002",
         }
     ]
 }
@@ -51,6 +54,11 @@ if __name__ == '__main__':
     sample_ipnet = random.sample(ipnet,
                                  myconf['route_to_announce'] if len(ipnet) >= myconf['route_to_announce']
                                  else len(ipnet))
+
+    for neighbor in myconf['neighbors']:
+        output_args_announce = os.path.join(args.dir, "%s.json" % neighbor['name-process'])
+        with open(output_args_announce, 'w') as j:
+            json.dump(neighbor, j)
 
     routes = build_bgp_route(sample_ipnet)
     sampled_output = os.path.join(args.dir, "sampled_routes")

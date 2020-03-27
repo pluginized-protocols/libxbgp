@@ -188,6 +188,7 @@ static void test_macro_function(void) {
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
     snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "replace_fun_macro.o");
 
+    // should not execute any plugins
     return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
     CU_ASSERT_EQUAL(return_value, 30);
 
