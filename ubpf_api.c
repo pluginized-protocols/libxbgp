@@ -676,18 +676,22 @@ void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args
         fprintf(stderr, "Error in arguments (%s)\n", id_plugin_to_str(vm_ctx->p->plugin_id));
         return NULL;
     }
-    if (arg_nb >= check_args->len) {
+    if (arg_nb >= args->nargs) {
+        return NULL;
+    }
+
+    if (check_args[arg_nb].kind == kind_hidden) {
         return NULL;
     }
 
     if (check_args[arg_nb].kind == kind_ptr) {
-        if(check_args[arg_nb].arg == NULL) {
+        if (check_args[arg_nb].arg == NULL) {
             return NULL;
         }
     }
 
     uint8_t *ret_arg = bump_alloc(&vm_ctx->p->mem.heap.mp, args->args[arg_nb].len);
-    if (ret_arg == NULL){
+    if (ret_arg == NULL) {
         return NULL;
     }
     memcpy(ret_arg, args->args[arg_nb].arg, args->args[arg_nb].len);
