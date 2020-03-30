@@ -257,7 +257,7 @@ void *next_mempool_iterator(struct mem_pool_it *it) {
     mn = hashmap_iterator_next(&it->it);
     if (!mn) return NULL;
 
-    switch (mn->type) {
+    switch (mn->val_type) {
         case MEMPOOL_TYPE_U64:
             return &mn->value.val;
         case MEMPOOL_TYPE_RAW_PTR:
