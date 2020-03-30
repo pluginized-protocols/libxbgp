@@ -297,8 +297,8 @@ number(char *str, uint64_t num, uint base, int size, int precision, int type, in
     return str;
 }
 
-int bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
-    int nb_args, curr_args;
+int ebpf_bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
+    int curr_args;
     int len, i;
     uint64_t num;
     uint base;
@@ -314,7 +314,7 @@ int bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uint
 				   number of chars for from string */
     int qualifier;        /* 'h' or 'l' for integer fields */
 
-    nb_args = args[0];
+    // nb_args = args[0];
     curr_args = 1; // 0 is the number of args
 
     for (start = str = buf; *fmt; ++fmt, size -= (str - start), start = str) {
