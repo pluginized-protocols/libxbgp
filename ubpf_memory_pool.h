@@ -26,10 +26,19 @@ struct mem_node {
 
 typedef hashmap_t(struct mem_node) _mem_pool;
 
+typedef hashmap_iterator(struct mem_node) _mem_pool_it;
+
+// encapsulation for public header
+// (hashmap macros should not be visible externally)
 struct mem_pool {
     _mem_pool mp;
     // int list_node; // set to 1 if mem_mode->value is a list
 };
+
+struct mem_pool_it {
+    _mem_pool_it it;
+};
+// end encapsulation
 
 struct lst_mempool_iterator {
     struct mem_node *mn;
@@ -84,12 +93,12 @@ int remove_lst_mempool_iterator(struct lst_mempool_iterator *it);
  */
 void destroy_lst_mempool_iterator(struct lst_mempool_iterator *it);
 
-struct mempool_iterator *new_mempool_iterator(struct mem_pool *mp);
+struct mem_pool_it *new_mempool_iterator(struct mem_pool *mp);
 
-void delete_mempool_iterator(struct mempool_iterator *it);
+void delete_mempool_iterator(struct mem_pool_it *it);
 
-void *next_mempool_iterator(struct mempool_iterator *it);
+void *next_mempool_iterator(struct mem_pool_it *it);
 
-int hasnext_mempool_iterator(struct mempool_iterator *it);
+int hasnext_mempool_iterator(struct mem_pool_it *it);
 
 #endif //UBPF_TOOLS_UBPF_MEMORY_POOL_H

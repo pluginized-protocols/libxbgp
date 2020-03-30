@@ -11,7 +11,7 @@ typedef struct mem_pool mem_pool;
 
 typedef struct lst_mempool_iterator lst_mempool_iterator;
 
-typedef struct mempool_iterator mempool_iterator;
+typedef struct mem_pool_it mempool_iterator;
 
 
 extern struct mem_pool *new_mempool(void);

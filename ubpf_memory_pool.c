@@ -232,33 +232,47 @@ void destroy_lst_mempool_iterator(struct lst_mempool_iterator *it) {
     free(it);
 }
 
-struct mempool_iterator *new_mempool_iterator(struct mem_pool *mp) {
+struct mem_pool_it *new_mempool_iterator(struct mem_pool *mp) {
 
-    struct mempool_iterator *it;
+    struct mem_pool_it *it;
     if (!mp) return NULL;
 
     it = malloc(sizeof(*it));
     if (!it) return NULL;
 
-    it->mp = mp;
-    if (new_hashmap_iterator(&it->it, &it->mp->mp.base) != 0) {
-        free(it);
-        return NULL;
-    }
+    if (hashmap_iterator_new(&it->it, &mp->mp) != 0) return NULL;
 
     return it;
 }
 
-void delete_mempool_iterator(struct mempool_iterator *it) {
+void delete_mempool_iterator(struct mem_pool_it *it) {
     free(it);
 }
 
-void *next_mempool_iterator(struct mempool_iterator *it) {
+void *next_mempool_iterator(struct mem_pool_it *it) {
+
+    struct mem_node *mn;
+
     if (!it) return NULL;
-    return next_hashmap_iterator(&it->it);
+    mn = hashmap_iterator_next(&it->it);
+    if (!mn) return NULL;
+
+    switch (mn->type) {
+        case MEMPOOL_TYPE_U64:
+            return &mn->value.val;
+        case MEMPOOL_TYPE_RAW_PTR:
+        case MEMPOOL_TYPE_PTR:
+            return mn->value.ptr;
+        case MEMPOOL_TYPE_LST:
+            fprintf(stderr, "Trying to access next element of a list in iterator... Not implemented yet\n");
+            /* fallthrough */
+        default:
+            return NULL;
+    }
+
 }
 
-int hasnext_mempool_iterator(struct mempool_iterator *it) {
+int hasnext_mempool_iterator(struct mem_pool_it *it) {
     if (!it) return 0;
-    return hasnext_hashmap_iterator(&it->it);
+    return hashmap_iterator_hasnext(&it->it);
 }

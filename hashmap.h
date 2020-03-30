@@ -41,7 +41,7 @@ struct {\
     T *ref;\
 }
 
-#define hashmap_iterator(T)\
+#define hashmap_iterator(T) \
 struct {\
     struct hashmap_iterator myit;\
     T tmp;\
