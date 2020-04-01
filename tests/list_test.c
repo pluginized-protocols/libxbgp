@@ -23,7 +23,7 @@ static void test_list(void) {
     uint64_t i;
     uint64_t element;
 
-    list = init_list(sizeof(uint64_t));
+    list = ebpf_init_list(sizeof(uint64_t));
     CU_ASSERT_PTR_NOT_NULL_FATAL(list)
 
     for (i = 1; i <= 10; i++) {
@@ -46,7 +46,7 @@ static void test_ititerator_list(void) {
     int i, *curr_element;
 
     it = &_it;
-    list = init_list(sizeof(int));
+    list = ebpf_init_list(sizeof(int));
     CU_ASSERT_PTR_NOT_NULL_FATAL(list);
 
     for (i = 1; i <= 10; i++) {

@@ -228,7 +228,7 @@ struct tree_iterator *new_tree_iterator(tree_t *tree, struct tree_iterator *it) 
     struct tree_node *walker;
 
     it->tree = tree;
-    it->queue = init_list(sizeof(struct tree_node *));
+    it->queue = ebpf_init_list(sizeof(struct tree_node *));
     if (!it->queue) return NULL;
 
     walker = tree->root;

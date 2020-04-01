@@ -49,7 +49,7 @@ typedef struct list_iterator {
 
 typedef int (*comp_list)(void *list_elem);
 
-list_t *init_list(size_t len);
+list_t *ebpf_init_list(size_t len);
 
 int push(list_t *stack, void *data);
 

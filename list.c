@@ -8,7 +8,7 @@
 #include <string.h>
 #include "list.h"
 
-list_t *init_list(size_t len) {
+list_t *ebpf_init_list(size_t len) {
 
     list_t *new = malloc(sizeof(list_t));
 

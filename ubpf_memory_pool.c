@@ -67,7 +67,7 @@ static int init_memnode_list(struct mem_node *node, uint32_t type, uint32_t leng
     node->type = type;
     // if it is a list, the length value correspond to the value type inserted in the list
     node->length = length;
-    node->value.lst = init_list(length);
+    node->value.lst = ebpf_init_list(length);
 
     if (!node->value.lst) return -1;
     return 0;

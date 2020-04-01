@@ -141,7 +141,7 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "ebpf_print", ebpf_print)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_memcpy", ebpf_memcpy)) return 0;
     if (!safe_ubpf_register(vmc, "set_error", set_error)) return 0;
-    if (!safe_ubpf_register(vmc, "bvsnprintf", bvsnprintf)) return 0;
+    if (!safe_ubpf_register(vmc, "bvsnprintf", ebpf_bvsnprintf)) return 0;
 
     /* memory related*/
     if (!safe_ubpf_register(vmc, "ctx_malloc", ctx_malloc)) return 0;

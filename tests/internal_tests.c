@@ -13,7 +13,7 @@
 #define __NUMARGS(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
 
 #define ubpf_sprintf(str, size, format, ...)\
-bvsnprintf(NULL, str, size, format, (uintptr_t[]) {__NUMARGS(__VA_ARGS__), ##__VA_ARGS__ })
+ebpf_bvsnprintf(NULL, str, size, format, (uintptr_t[]) {__NUMARGS(__VA_ARGS__), ##__VA_ARGS__ })
 
 
 static int setup(void) {

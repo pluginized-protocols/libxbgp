@@ -38,7 +38,7 @@ queue_t *init_queue(size_t len) {
         return NULL;
     }
 
-    new_stack = init_list(len);
+    new_stack = ebpf_init_list(len);
 
     if (!new_stack) {
         pthread_mutex_destroy(&mutex);
