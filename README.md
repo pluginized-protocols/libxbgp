@@ -39,8 +39,9 @@ libubpf.a inside a protocol implementation :
 The compilation has been successful with GCC9 and
 glibc 2.30.
 
-The below command are currently supported:
+The below commands are currently supported:
 ```bash
+$ cd ubpf_tools
 $ make # build libubpf.a
 
 ### run tests ###
@@ -49,4 +50,4 @@ $ make check && ./lib_tests --plugin-folder=./tests/plugins
 
 Documentation
 -------------
-Everything are on the `docs` folder
+Everything is on the `docs` folder.
