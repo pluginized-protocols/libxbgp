@@ -50,4 +50,30 @@ $ make check && ./lib_tests --plugin-folder=./tests/plugins
 
 Documentation
 -------------
-Everything is on the `docs` folder.
+Everything is on the `docs` folder. The documentation is
+written with `sphinx` and `sphinx_rtd_theme`. Hence, to
+be able to build the documentation, it is needed to first
+install `python-sphinx` either via your package manager
+or via pip.
+
+When sphinx has been successfully installed, install the
+theme according your Python version. Again, it can be
+done via pip, by executing `pip install sphinx-rtd-theme`
+or via your package manager (`python-sphinx_rtd_theme`).
+
+When the requirements are satisfied, the below commands
+build the documentation yo be accessed via a WebBrowser :
+
+```bash
+$ cd docs
+$ make html
+``` 
+
+The output are stored at `./ubpf_tools/docs/build/html`.
+The file `index.html` is the root html document.
+
+If you want to build the documentation in another format
+like pdf, you just have to change the output target when
+building with `make` (e.g. `make latexpdf`). However,
+the html version of the doc is the only one supported
+and tested as of writing.
