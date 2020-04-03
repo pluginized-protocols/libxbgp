@@ -62,7 +62,7 @@ done via pip, by executing `pip install sphinx-rtd-theme`
 or via your package manager (`python-sphinx_rtd_theme`).
 
 When the requirements are satisfied, the below commands
-build the documentation yo be accessed via a WebBrowser :
+build the documentation to be accessed via a web browser:
 
 ```bash
 $ cd docs
@@ -73,7 +73,7 @@ The output are stored at `./ubpf_tools/docs/build/html`.
 The file `index.html` is the root html document.
 
 If you want to build the documentation in another format
-like pdf, you just have to change the output target when
+such as pdf, simply change the output target when
 building with `make` (e.g. `make latexpdf`). However,
 the html version of the doc is the only one supported
-and tested as of writing.
+and tested at the time of writing.
