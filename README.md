@@ -7,7 +7,13 @@ About
 -----
 
 Library containing a set of helpers to
-pluginize a protocol implementation.
+primarily pluginize a network protocol 
+implementation written in C.
+
+`libubpf.a` is not meant to only work with network
+protocols, but with any other program written
+in C (e.g. Apache, SSHFS, etc.). In fact, all C
+programs can be concerned. 
 
 Building
 --------
@@ -77,3 +83,22 @@ such as pdf, simply change the output target when
 building with `make` (e.g. `make latexpdf`). However,
 the html version of the doc is the only one supported
 and tested at the time of writing.
+
+Linking
+-------
+
+This library is meant to be linked into the program to
+be pluginized. The building steps will create a static
+library (`libubpf.a`). Public headers that manipulate
+functions of this library are stored in
+`./ubpf_tools/include`. Therefore, to "pluginize"
+your program, you need, during compilation time, to
+link both headers and the library.
+
+Example can be found on [pluginized_frr](https://bitbucket.org/twirtgen/pluginized_frr/src)
+or [pluginized_bird](https://bitbucket.org/twirtgen/pluginized_bird).
+It is showed, on those two implementations, the 
+pluginization of the BGP protocol.
+
+More information about the linkage can be found on
+the documentation.
