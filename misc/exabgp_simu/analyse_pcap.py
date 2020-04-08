@@ -2,70 +2,74 @@
 
 import sys
 
-from pcapng.scanner import FileScanner
-from pcapng.blocks import EnhancedPacket
+from scapy.contrib.bgp import BGP, BGPUpdate
+import pcapkit
 
-from scapy.layers.l2 import Ether
-from scapy.layers.inet import IP, TCP
-from scapy.contrib.bgp import BGP, BGPUpdate, BGPPathAttr, BGPHeader
+extraction = pcapkit.extract(fin=sys.argv[1], store=False, nofile=True, tcp=True, strict=True)
 
-with open(sys.argv[1], 'rb') as fp:
-    scanner = FileScanner(fp)
-    dict_attr_42 = dict()
-    routes = set()
-    count = 0
+updates = dict()
 
-    time_first = -1
 
-    for block in scanner:
-        if isinstance(block, EnhancedPacket):
-            if block.interface.link_type != 1:
-                print("Not internet frame skip")
-                continue
-            if time_first == -1:
-                time_first = block.timestamp
+def get_packet_layer(packet):
+    counter = 0
+    while True:
+        layer = packet.getlayer(counter)
+        if layer is None:
+            break
+        yield layer
+        counter += 1
 
-            eth = Ether(block.packet_data)
-            ip_packet = eth.payload
 
-            if not isinstance(ip_packet, IP):
-                continue
+for packet in extraction.reassembly.tcp:
 
-            ip_src = str(ip_packet.src)
-            ip_dst = str(ip_packet.dst)
+    tupl = (str(packet.id.src[0]), packet.id.src[1], str(packet.id.dst[0]), packet.id.dst[1])
 
-            tcp_packet = ip_packet.payload
+    for reassembly in packet.packets:
+        tcp_payload = BGP(reassembly.info.packet)
 
-            if not isinstance(tcp_packet, TCP):
-                continue
+        for bgp in get_packet_layer(tcp_payload):
+            if isinstance(bgp, BGPUpdate):
 
-            tcp_payload = tcp_packet.payload
+                if tupl[0] not in updates:
+                    updates[tupl[0]] = dict()
 
-            for layer in tcp_payload.layers():
-                if layer == BGPHeader:
-                    bgp_update: BGPHeader = tcp_payload.payload
+                if tupl[2] not in updates[tupl[0]]:
+                    updates[tupl[0]][tupl[2]] = list()
 
-                    if 'nlri' in bgp_update.fields:
-                        for prefix in bgp_update.nlri:
+                for attr in bgp.path_attr:
+                    if attr.type_code == 42:
 
-                            routes.add(prefix.prefix)
+                        for route in bgp.nlri:
+                            conv_geo = int.from_bytes(attr.attribute, byteorder='big')
+                            updates[tupl[0]][tupl[2]].append((str(route.prefix), conv_geo))
 
-                            if 'path_attr' in bgp_update.fields:
-                                for attr in bgp_update.fields['path_attr']:
-                                    if attr.type_code == 42:
-                                        count += 1
+failed = 0
+for from_peer in updates.keys():
+    for to_peer in updates[from_peer].keys():
 
-                                        if ip_src not in dict_attr_42:
-                                            dict_attr_42[ip_src] = dict()
+        # print(sorted(updates[from_peer][to_peer], key=lambda x: x[0]))
+        # print(sorted(updates[to_peer][from_peer], key=lambda x: x[0]))
 
-                                        if ip_dst not in dict_attr_42[ip_src]:
-                                            dict_attr_42[ip_src][ip_dst] = set()
+        a_routes = set([i for i, _ in updates[from_peer][to_peer]])
+        b_routes = set([i for i, _ in updates[to_peer][from_peer]])
 
-                                        converted_nb = int.from_bytes(attr.attribute, byteorder='big')
-                                        dict_attr_42[ip_src][ip_dst].add((prefix.prefix, converted_nb))
+        a_attr = set([j for _, j in updates[from_peer][to_peer]])
+        b_attr = set([j for _, j in updates[to_peer][from_peer]])
 
-    print(len(routes))
+        assert len(a_routes) == len(updates[from_peer][to_peer]), \
+            "Expected %d, but %d received" % (len(updates[from_peer][to_peer]), len(a_routes))
+        assert len(b_routes) == len(updates[to_peer][from_peer]), \
+            "Expected %d, but %d received" % (len(updates[to_peer][from_peer]), len(b_routes))
 
-    for src in dict_attr_42.keys():
-        for dst in dict_attr_42[src]:
-            print("Update from %s to %s: nb routes %d" % (src, dst, len(dict_attr_42[src][dst])))
+        diff_route = a_routes.difference(b_routes)
+        diff_attr = a_attr.difference(b_attr)
+
+        if len(diff_route) != 0:
+            print("Missing routes %s <--> %s" % (from_peer, to_peer))
+            print("Correct was %s" % a_routes.intersection(b_routes))
+
+        if len(diff_attr) != 0:
+            print("Attribute mismatch %s <--> %s (%d)" % (from_peer, to_peer, len(diff_attr)))
+            print("Correct was %s" % a_attr.intersection(b_attr))
+
+print(failed)

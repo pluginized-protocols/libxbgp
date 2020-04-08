@@ -26,8 +26,9 @@ external_function
     is omitted
 
 project_conf_dir
-    The path associated to the configuration folder of your program. It is used to indicate the location of the
-    plugin folder and the json required to correctly load eBPF bytecode.
+    The path associated to the configuration folder of your program.
+    It is used to indicate the location of the local state directory, where the library can
+    read the JSON manifest path and store files that are used when the eBPF is running.
 
 len_char
     Actual size of the `project_conf_dir` string
@@ -224,3 +225,41 @@ new insertion point. The new entry point of your program becomes :
 As the monitoring address and port are set to NULL, eBPF bytecode will not be able to send data to an external
 server. Also, the project_conf_dir path is NULL. Hence, it is in the charge of the programmer to manually load
 eBPF bytecodes if they must be loaded before executing the first instructions of the real program.
+
+----------------------
+Example from FRRouting
+----------------------
+
+This little example is taken from one implementation of FRRouting we decided to pluginize.
+The variable ``frr_sysconfdir`` contains the path ``/etc/frr``. Hence, every files the
+library will create will be contained in ``/etc/frr``
+
+First, the plugin manager is initialized. When no errors occur, static plugins that needs to be loaded
+at startup will be so when ``load_plugin_from_json`` is called. The variable ``json_conf`` contains the
+manifest of plugin at is loaded at startup (located at ``/etc/frr/manifest.json``). The variable
+``plugin_dir`` contains the path folder containing the eBPF byte code to be loaded (on the example
+``/etc/frr/plugins``). The folder path can be overrided inside the manifest with the ``dir`` field.
+
+.. code-block:: c
+
+    int must_slash = frr_sysconfdir[strnlen(frr_sysconfdir, PATH_MAX) - 1] == '/' ? 0 : 1;
+
+    char json_conf[PATH_MAX];
+    char plugin_dir[PATH_MAX];
+    int len = 0;
+
+    memset(json_conf, 0, sizeof(char) * PATH_MAX);
+    memset(plugin_dir, 0, sizeof(char) * PATH_MAX);
+
+    snprintf(json_conf, PATH_MAX-1, must_slash? "%s/manifest.json" : "%smanifest.json", frr_sysconfdir);
+    len = snprintf(plugin_dir, PATH_MAX-1, must_slash ? "%s/plugins" : "%splugins", frr_sysconfdir);
+
+    if (init_plugin_manager(api_proto, frr_sysconfdir, strnlen(frr_sysconfdir, PATH_MAX), plugin_info,
+                            NULL, NULL, 0) != 0) {
+        exit(EXIT_FAILURE);
+    }
+
+
+    if (load_plugin_from_json(json_conf, plugin_dir, len) != 0) {
+        exit(EXIT_FAILURE);
+    }

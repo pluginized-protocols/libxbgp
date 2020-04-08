@@ -20,9 +20,6 @@ extern int add_lst_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(v
 
 extern int add_single_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), uint32_t length, void *val);
 
-extern int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
-                       uint32_t length, void *val, int is_lst);
-
 extern void remove_mempool(struct mem_pool *mp, uint32_t type);
 
 extern uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type);

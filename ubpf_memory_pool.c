@@ -73,6 +73,9 @@ static int init_memnode_list(struct mem_node *node, uint32_t type, uint32_t leng
     return 0;
 }
 
+static inline int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
+                              uint32_t length, void *val, int type_mem);
+
 int add_lst_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
                     uint32_t length, void *val) {
     return add_mempool(mp, type, cleanup, length, val, MEMPOOL_TYPE_LST);
@@ -87,8 +90,8 @@ int add_raw_ptr_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void
     return add_mempool(mp, type, cleanup, sizeof(uintptr_t), val, MEMPOOL_TYPE_RAW_PTR);
 }
 
-inline int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
-                       uint32_t length, void *val, int type_mem) {
+static inline int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
+                              uint32_t length, void *val, int type_mem) {
 
     struct mem_node new_mem, *current_mem_node;
     memset(&new_mem, 0, sizeof(struct mem_node));
@@ -150,9 +153,10 @@ void *get_mempool_ptr(struct mem_pool *mp, uint32_t type) {
     node = hashmap_get(&mp->mp, type);
     if (!node) return NULL;
 
-    // if the size don't match with the one of a pointer OR it is a list --> return NULL
-    return node->val_type != MEMPOOL_TYPE_RAW_PTR &&
-           node->val_type != MEMPOOL_TYPE_PTR ? NULL : node->value.ptr;
+    // if the type is a list --> return NULL
+    return node->val_type == MEMPOOL_TYPE_U64 ? (void *) &node->value.val :
+           node->val_type == MEMPOOL_TYPE_PTR ? node->value.ptr :
+           node->val_type == MEMPOOL_TYPE_RAW_PTR ? node->value.ptr : NULL;
 }
 
 uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type) {

@@ -58,9 +58,6 @@ int add_single_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void 
 
 int add_raw_ptr_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), void *val);
 
-int add_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *),
-                uint32_t length, void *val, int is_lst);
-
 void remove_mempool(struct mem_pool *mp, uint32_t type);
 
 uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type);
