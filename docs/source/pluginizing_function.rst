@@ -31,27 +31,27 @@ Insertion points
 ----------------
 
 An insertion point is a given location in the code where the virtual machine can be executed.
-Inside an insertion point three type of VM anchor can be executed :
+Inside an insertion point, three types of VM anchor can be executed :
 
-.. image:: pluginized_function.svg
+.. image:: _static/pluginized_function.svg
     :alt: Execution flow of a pluginized function compared to a normal function
     :align: center
 
 1. PRE anchor. This anchor can execute multiple bytecode of the same type. It will be executed before any
-   instruction of the function. Each bytecode has only a read access to the function, and thus cannot modify
-   internal structures of you program.
-2. REPLACE anchor. Bytecode associated to this anchor is the actual redefinition of the function body. Hence, it
-   can modify the internal data of your program. Since this anchor can actual modify the data, libubpf only allows
-   one REPLACE bytecode to be executed for the given insertion point. This will avoid to make undesired effects if
+   instruction of the function. Each bytecode has only read access to the function, and thus cannot modify
+   internal structures of your program.
+2. REPLACE anchor. Bytecode associated with this anchor is the actual redefinition of the function body. Hence, it
+   can modify the internal data of your program. Since this anchor can actually modify the data, libubpf only allows
+   one REPLACE bytecode to be executed for the given insertion point. This will avoid making undesired effects if
    two bytecode modify the same internal variable.
-3. POST anchor. Same as PRE anchor but all the bytecode associated to this anchor will be executed just before
-   returning to the calling function (i.e. before finishing the `pluginized` function).
+3. POST anchor. Same as PRE anchor but all the bytecode associated with this anchor will be executed just before
+   returning to the calling function (i.e., before terminating the `pluginized` function).
 
 
 
 To add an insertion
 point to the `find_idx` function described above, libubpf provides macro functions that will do the job for you.
-The function, will now become :
+The function will now become :
 
 .. code-block:: c
 
@@ -73,7 +73,7 @@ The function, will now become :
 
 As you can see, the procedure to add an insertion point can be summarized in three major parts :
 
-1. Create an array of argument that will be passed to the bytecode executed in this location of the code.
+1. Create an array of arguments that will be passed to the bytecode executed in this location of the code.
    This array must be of the type `bpf_args_t`. The fields of this structure are the following :
 
         .. code-block:: c
@@ -86,30 +86,30 @@ As you can see, the procedure to add an insertion point can be summarized in thr
             } bpf_args_t;
 
    - *arg* is the pointer of the argument. It is not possible to directly pass the "real" argument since
-     the way to pass data to a eBPF bytecode is generic and do not depend on the function to pluginize.
+     the way to pass data to an eBPF bytecode is generic and does not depend on the function to pluginize.
    - *len* is the total size of the argument
    - *kind* whether the argument is a pointer or a primitive. Used by the internal libubpf library.
 
-     There exist three type of arguments :
+     There exist three types of arguments :
 
      `kind_pointer`
         Used if the data to be passed to the plugin is a pointer to a
 
      `kind_primitive`
-        Used if the data to be passed is a pointer to a primitive (``int``, ``char``, ``long``, etc.)
+        Used if the data to be transmitted is a pointer to a primitive (``int``, ``char``, ``long``, etc.)
 
      `kind_hidden`
-        This argument will be not directly accessible in the plugin. However, this mechanism could be used to
-        pass data to the helper function. Suppose your plugin want to add a new route to the RIB (routing table)
+        This argument will not be directly accessible in the plugin. However, this mechanism could be used to
+        pass data to the helper function. Suppose your plugin wants to add a new route to the RIB (routing table)
         of a protocol.
         In normal time, the route will be added through the functions that directly manipulate the RIB. These
-        functions can be accessed with helper function. This is fine if the plugin is only dedicated for a
+        functions can be accessed with helper function. This is fine if the plugin is only dedicated to a
         unique protocol implementation. However, if your plugin needs to support multiple protocol implementation,
         this could be useful to hide the internal representation of the RIB. Since each helper function can
         access to the call context of each eBPF bytecode, the function can retrieve the hidden argument related
         to the RIB.
 
-        Suppose this simple pseudo-code that parse a stream received from a peer:
+        Suppose this simple pseudo-code that parses a stream received from a peer:
 
         .. code-block:: c
 
@@ -128,7 +128,7 @@ As you can see, the procedure to add an insertion point can be summarized in thr
             }
 
         To avoid the plugin to directly expose the pointer of the RIB, we hide the pointer with ``kind_hidden``.
-        When the plugin will insert the new parsed route, it will call an helper :
+        When the plugin inserts the new parsed route, it will call a helper :
 
         .. code-block:: c
 
@@ -148,41 +148,41 @@ As you can see, the procedure to add an insertion point can be summarized in thr
         1. Since the RIB is an internal structure, its memory is not accessible through the plugin. This is then
            not useful to pass a pointer without any particular meaning to the plugin.
 
-        2. From a security view point, give the ability to the user to explicitely pass the RIB pointer to the
+        2. From a security view point, allowing the user to explicitly pass the RIB pointer to the
            helper function may lead to a corruption of the protocol memory. If it does not pass the right pointer,
            the helper function can crash the whole program.
 
         3. We give a mechanism to abstract the plugin from the host implementation. The plugin does not depend
-           to strange structure maintained by the host.
+           on strange structure maintained by the host.
 
 
    - *type* is a user custom id, providing extra information about the type of argument. It might be useful later
-     when defining custom external API call. This could be a way to check if the argument passed to the external
-     function is valid or not. On the above example, the helper function ``add_route`` checks if the argument is
+     when defining custom external API calls. This could be a way to check if the argument passed to the external
+     function is valid or not. In the above example, the helper function ``add_route`` checks if the argument is
      of type ``RIB`` before doing the computation.
 
-2. Call the VM_CALL macro. The defintion of the macro is the following :
+2. Call the VM_CALL macro. The definition of the macro is the following :
 
        .. code-block:: c
 
            VM_CALL(plugin_id, arguments, number_of_arguments, __VA_ARGS__)
 
    - *plugin_id* is the numerical identifier corresponding to the insertion point. Since there could be multiple
-     insertion points inside a same program, this interger will help libubpf to pick the right bytecode to execute
+     insertion points inside the same program, this integer will help libubpf to pick the right bytecode to execute
      when the virtual machine is called.
    - *argument* is the pointer of the array containing the argument to pass to the eBPF bytecode.
    - __VA_ARGS__ is the actual definition of the function. If no bytecode is injected for this function (or
-     insertion point)t this will be the code that will be executed instead. The function body must be written
+     insertion point) this will be the code that will be executed instead. The function body must be written
      between two curly brackets to avoid compilation errors.
 
-3. Since the function returns a result, the `return` keyword must be replaced by another marco call :
+3. Since the function returns a result, the `return` keyword must be replaced by another macro call :
 
        .. code-block:: c
 
            RETURN_VM_VAL(result)
 
-   This macro will first call the POST part of the insertion point for you and then return with the value `result`
-   given at argument of the macro.
+   This macro will first call the POST part of the insertion point for you and then return to the value `result`
+   given to the argument of the macro.
 
 The case of `void` functions
 ----------------------------
@@ -190,7 +190,7 @@ The case of `void` functions
 In the case of a `void` function, another macro is provided for you. Since the POST part of an insertion point is
 executed just before the return keyword. As the return keyword could appear everywhere, it is needed to
 explicitly change the "return" line by a macro in the case of a "returning" function. However, for a void
-function, if the "return" keyword must be summoned, then "nothing" needs to be returned from the function.
+function, if the "return" keyword must be summoned, then "nothing" needs to be returned to the function.
 Therefore, the two macro functions to use are :
 
 .. code-block:: c
@@ -201,7 +201,7 @@ Therefore, the two macro functions to use are :
 .. note::
 
     /* 1 \*/ The arguments are the same as VM_CALL defined above. It is not needed to explicitly add the return
-    macro at the and of the body definition. The POST anchor is automatically called.
+    macro at the end of the body definition. The POST anchor is automatically called.
 
     /* 2 \*/ same as RETURN_VM_VAL but without any arguments. This macro is only intended to be used with
     void functions.
@@ -272,15 +272,15 @@ the plugin. Its definition is provided below :
           }
         })
 
-    This code is intended to compare one attribute of two routes pointing to the same IP prefix. On this
-    example, the branch ``on_err`` correspond to the case whether the plugins returns antother value
+    This code is intended to compare one attribute of two routes pointing to the same IP prefix. In this
+    example, the branch ``on_err`` correspond to the case whether the plugins return another value
     than ``RTE_NEW``, ``RTE_OLD``, ``RTE_UNK`` or
-    if its execution crashed. The code will just fallback on the original decision code of the host
+    if its execution crashed. The code just fallback on the original decision code of the host
     implementation.
 
-    If the plugins has been correctly executed, and so ``ret_val_med_decision`` returns
+    If the plugin has been correctly executed, and so ``ret_val_med_decision`` returns
     1, the code will continue through the __VA_ARGS__ branch. When the program is on this last branch,
-    the MACRO will retrieve the value returned by the plugin and will take an action accordingly.
+    the MACRO will retrieve the value returned by the plugin and will take action accordingly.
 
 `on_err`
     Branch that will be executed if the function ``arg_vm_check`` returns 0 or if the plugin execution
@@ -288,5 +288,5 @@ the plugin. Its definition is provided below :
     etc.)
 
 `__VA_ARGS__`
-    The last branch will be executed if the plugin has not crashed and the ``arg_vm_check`` returns 1.
+    The last branch will be executed if the plugin has not crashed and the ``arg_vm_check`` return 1.
 

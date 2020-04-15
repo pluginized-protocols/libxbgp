@@ -2,14 +2,14 @@
 Dynamic pluglet insertion
 =========================
 
-Pluglets can be injected while the program is running. libubpf starts a thread to accept eBPF bytecode. It relies
+Pluglets can be injected while the program is running. libubpf starts a thread accepting eBPF bytecode. It relies
 on a kernel queue for this purpose. For the moment, it is only possible to inject bytecode from the same machine.
 This prevents that other malicious machine load unexpected bytecode to the main program.
 
 We provide an executable that takes an object ELF file, and then send it to the "pluginized" program. In addition,
 the program can replace and remove pluglet as well as removing a whole plugin.
 
-The injecter is named ``ebpf_injecter``. This binary can be used as the following :
+The injector is named ``ebpf_injecter``. This binary can be used as the following :
 
 .. code-block::
 
@@ -23,17 +23,17 @@ The injecter is named ``ebpf_injecter``. This binary can be used as the followin
 
 -m msqid
    Mandatory argument. It might be the case that multiple "pluginized" programs are running on the same machine (e.g.
-   OSPF, BGP and RIP are all "pluginized"). The kernel queue is different on each program. Hence, to tell to
+   OSPF, BGP and RIP are all "pluginized"). The kernel queue is different on each program. Hence, to tell
    ``ebpf_injecter`` to send the action on the right program, the kernel queue id must be specified.
 
    The msqid should normally be written by the libubpf program on a folder (todo: normally should be written
-   on the folder specified in the ``init_plugin_manager`` function).
+   in the folder specified in the ``init_plugin_manager`` function).
 
 -a action
     Mandatory argument. Specify the action to send to the libubpf. The following actions are valid :
 
     add
-        Add a pluglet to the speficied "pluginized" program. Must be used in conjuction
+        Add a pluglet to the speficied "pluginized" program. Must be used in conjunction
         with ``-n``, ``-p`` and ``-h`` parameters. ``-j``, ``-e`` and ``-s`` can be used
         to compile in the eBPF code in x86_64 machine code, add extra stack and add a
         shared memory respectively.
@@ -42,10 +42,10 @@ The injecter is named ``ebpf_injecter``. This binary can be used as the followin
         Remove a whole plugin.
 
     replace
-        Replace a specified pluglet. Must be used in conjuction with ``-n``, ``-p`` and ``-h`` parameters
+        Replace a specified pluglet. Must be used in conjunction with ``-n``, ``-p`` and ``-h`` parameters
 
     rm_pluglet
-        Remove a specified pluglet. Must be used in conjuction with ``-n`` and ``-h`` parameters
+        Remove a specified pluglet. Must be used in conjunction with ``-n`` and ``-h`` parameters
 
 -i plugin_name
     Mandatory argument. Specify on which plugin the action must be executed. ``plugin_name`` is a string value
@@ -55,8 +55,7 @@ The injecter is named ``ebpf_injecter``. This binary can be used as the followin
     path of the ELF eBPF object. The path must be accessible by ``ebpf_injecter``
 
 -h anchor_type
-    If ``ebpf_injecter`` is used to add, replace, remove a pluglet, the option specify on which anchor of the plugin
-    the action will take place. Valid anchors are :
+    If ``ebpf_injecter`` is used to add, replace, remove a pluglet. This option specifies at which plugin anchor the action will take place. Valid anchors are
 
     pre
         PRE anchor of the plugin
@@ -74,7 +73,7 @@ The injecter is named ``ebpf_injecter``. This binary can be used as the followin
     Tells the size of the shared memory space in bytes.
 
 -n sequence_number
-    If the action is requesting changes in the PRE or POST anchor of a plugin, it tells on which pluglet the action
+    If the action is requesting changes in the PRE or POST anchor of a plugin, it tells of which pluglet the action
     will take place. The sequence number must be a positive number only.
 
 -j

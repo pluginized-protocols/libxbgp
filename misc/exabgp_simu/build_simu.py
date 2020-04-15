@@ -5,7 +5,6 @@ import random
 import sys
 from shutil import copy2
 import json
-from time import sleep
 
 from mako.template import Template
 
@@ -36,15 +35,29 @@ myconf = {
     ]
 }
 
+
+def build_exaconf_router(conf_path, templt):
+    for neighbor_info in myconf['neighbors']:
+        custom_conf = myconf.copy()
+        custom_conf['neighbors'] = [neighbor_info]
+
+        custom_path_conf = os.path.join(conf_path, "as_%d_exa_conf.conf" % neighbor_info['local-as'])
+        with open(custom_path_conf, 'w') as file:
+            file.write(templt.render(conf=custom_conf))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Build exabgp conf")
     parser.add_argument('-d', '--dir', help="Output directory", default=".", type=str)
     parser.add_argument('-f', '--file', help="File containing networks to announce",
                         type=argparse.FileType('r'), default=sys.stdin)
+    parser.add_argument('-s', '--split', help="Whether or not the test is split into multiple routers",
+                        action='store_true')
+
     args = parser.parse_args()
 
     if not os.path.exists(args.dir):
-        print("Error: path %s does not exists" % args.dir)
+        print("Error: path %s does not exist" % args.dir)
         exit(1)
     elif not os.access(args.dir, os.X_OK):
         print("Error: %s access refused" % args.dir)
@@ -72,7 +85,10 @@ if __name__ == '__main__':
     myconf['file'] = "sampled_routes"
     template = Template(filename="exa_conf.conf.mako")
 
-    with open(exa_conf_output, 'w') as f:
-        f.write(template.render(conf=myconf))
+    if args.split:
+        build_exaconf_router(args.dir, template)
+    else:
+        with open(exa_conf_output, 'w') as f:
+            f.write(template.render(conf=myconf))
 
     copy2('announce_routes.py', args.dir)

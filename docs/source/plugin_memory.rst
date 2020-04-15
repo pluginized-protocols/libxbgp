@@ -4,12 +4,12 @@ Plugin Memory
 
 The plugin is isolated from the main memory of the program. This behavior prevents bad utilization of it, which
 could eventually crash the whole program. To prevent that, the memory structure is a bit different as traditional
-C memory structure. Three type of memory is allocated for the plugin :
+C memory structure. Three types of memory is allocated for the plugin :
 
-.. image:: memory.svg
+.. image:: _static/memory.svg
     :align: center
 
-1. The stack: allocation dedicated for every pluglet. This memory is unique and rely on the process stack. Due
+1. The stack: allocation dedicated for every pluglet. This memory is unique and relies on the process stack. Due
    to the limitations of eBPF with the clang compiler, a maximum of 512 bytes can be allocated for each pluglet.
 2. The extra memory zone: stack like allocation handled by an external API call. This zone is shared by every
    pluglet of a plugin. However, the memory is **automatically cleaned** after the execution of the pluglet. This
@@ -25,7 +25,7 @@ C memory structure. Three type of memory is allocated for the plugin :
    this memory location is identified by a unique identifier. It is up to the user that allocate memory to pick
    an identifier. Hence, other pluglet could easily retrieve the pointer associated to the ID. Note that the same
    ID can be used on different plugins. Indeed, as plugins are isolated from each other, the allocated
-   system memory is different. The manager keep different mapping <identifier; memory pointer> for each plugin.
+   system memory is different. The manager keeps different mapping <identifier; memory pointer> for each plugin.
    Functions dedicated to this memory part are defined below :
 
    .. code-block:: c

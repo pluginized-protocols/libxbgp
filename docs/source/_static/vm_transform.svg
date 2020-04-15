@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" width="361px"
+     height="256px" viewBox="-0.5 -0.5 361 256"
+     content="&lt;mxfile host=&quot;app.diagrams.net&quot; modified=&quot;2020-04-14T15:24:05.413Z&quot; agent=&quot;5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36&quot; version=&quot;12.9.12&quot; etag=&quot;5qJA_zFEowsVliSLX8oB&quot; type=&quot;device&quot;&gt;&lt;diagram id=&quot;ha-lcWzR-Kypn3YrBCRQ&quot;&gt;7VdNj9sgEP01ltoeVgnYTnPcZNP20JUqRerHacUaYtNik2KycfrrC2bw9+6mSo5NcvA8hoF5bwacAK/z6qMi++xeUiYCNKNVgO8ChOYhQoH9zejJIYswdECqOAWnFtjyPwzAGaAHTlnZc9RSCs33fTCRRcES3cOIUvLYd9tJ0V91T1I2ArYJEWP0G6c6c+h7tGjxT4ynmV95Hi/dSE68M2RSZoTKYwfCmwCvlZTaPeXVmglLnufFzfvwzGizMcUKfc4EEOKJiAPkBvvSJ5+skoeCMus/C/DqmHHNtnuS2NGjkddgmc6FsebmkZIyq32tsZOFBvEQBnsthVR1YBzXH4OXWslfzI8UsjAzVrAxpjSrnk1u3lBmao3JnGl1Mi4woWEZyiyagX1sRcMxYFlHMBRGUCxQKGkTu+XSPACd09TiEbX56SFjYs/UG24SMNEDtLYTauOxayRdg75t6OjIYmjRfe4nadxxIQYQETwtjJkYGpnBV5Zkbqr7FgZyTqldZlLsfjl0JJ7HL0h8DTVxdBP19AyXE3qi5VjPa8gZviBngGJhxTAaxqmu03UA94A5iaxgD1bPd4muvINZlQ8nGawTqK2D/+VySfMvzm3+axRLNOKfUXODgCmVzmQqCyI2LTpgqvX5LOUeJPvJtD4Bf+Sg5ZSg/kIK/+EAdru1W+yRXcqDSgCK4ZolKmW61xFnSKKYIJo/9aNfwm88cW255rEp1je/zzL+fZCuk3y+Hcg12df7Tuu5AL77LrkLX2HffbwfrDG+QzsNaSbtIvsdde+VeweHg4tz4qCdo4ne8f10ibaL119JWEFv7WucPZUEKUueXKsTWMX1dyvvTQTWD4hpn+8qUL42TmCc0T143D3x2aJ0SI8mOPfY2U0GK3yR7r6oBnqC5vFioKXLB2Z1XymHgRaDQGgQyLEwClTXRZP2VKkYs30zdu7t/wu8+Qs=&lt;/diagram&gt;&lt;/mxfile&gt;"
+     style="background-color: rgb(255, 255, 255);">
+    <defs/>
+    <g>
+        <rect x="0" y="10" width="360" height="245" fill="#ffffff" stroke="none" pointer-events="all"/>
+        <rect x="15.5" y="0" width="329" height="45" fill="none" stroke="none" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%"
+                               height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml"
+                         style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 327px; height: 1px; padding-top: 23px; margin-left: 17px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 16px; font-family: Helvetica; color: #666666; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                my_helper(int a, int b, int c, int d);
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="180" y="27" fill="#666666" font-family="Helvetica" font-size="16px" text-anchor="middle">
+                    my_helper(int a, int b, int c, int d);
+                </text>
+            </switch>
+        </g>
+        <rect x="0" y="210" width="360" height="45" fill="none" stroke="none" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%"
+                               height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml"
+                         style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 358px; height: 1px; padding-top: 233px; margin-left: 1px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 16px; font-family: Helvetica; color: #666666; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                my_helper(
+                                <b>
+                                    <i>context_t *ctx</i>
+                                </b>
+                                , int a, int b, int c, int d);
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="180" y="237" fill="#666666" font-family="Helvetica" font-size="16px" text-anchor="middle">
+                    my_helper(context_t *ctx, int a, int b, int c...
+                </text>
+            </switch>
+        </g>
+        <path d="M 180 160 L 180 198.03" fill="none" stroke="#000000" stroke-width="4" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 180 205.53 L 175 195.53 L 180 198.03 L 185 195.53 Z" fill="#000000" stroke="#000000" stroke-width="4"
+              stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="120" y="100" width="120" height="60" fill="#f5f5f5" stroke="#666666" stroke-dasharray="3 3"
+              pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%"
+                               height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml"
+                         style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 118px; height: 1px; padding-top: 130px; margin-left: 121px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 23px; font-family: Helvetica; color: #333333; line-height: 1.2; pointer-events: all; font-weight: bold; white-space: normal; word-wrap: normal; ">
+                                <font color="#666666">VM</font>
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="180" y="137" fill="#333333" font-family="Helvetica" font-size="23px" text-anchor="middle"
+                      font-weight="bold">VM
+                </text>
+            </switch>
+        </g>
+        <path d="M 180 45 L 180 88.03" fill="none" stroke="#000000" stroke-width="4" stroke-miterlimit="10"
+              pointer-events="stroke"/>
+        <path d="M 180 95.53 L 175 85.53 L 180 88.03 L 185 85.53 Z" fill="#000000" stroke="#000000" stroke-width="4"
+              stroke-miterlimit="10" pointer-events="all"/>
+    </g>
+    <switch>
+        <g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/>
+        <a transform="translate(0,-5)" xlink:href="https://desk.draw.io/support/solutions/articles/16000042487"
+           target="_blank">
+            <text text-anchor="middle" font-size="10px" x="50%" y="100%">Viewer does not support full SVG 1.1</text>
+        </a>
+    </switch>
+</svg>

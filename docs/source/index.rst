@@ -21,6 +21,7 @@ of multiple virtual machine to be executed on a same project via its simple API.
    writing_pluglets
    dynamic_pluglet_insertion
    mempool
+   vm_internals
 
 
 

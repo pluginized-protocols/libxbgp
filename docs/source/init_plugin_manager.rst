@@ -20,13 +20,13 @@ takes multiple parameters which are explained below :
 
 
 external_function
-    Is an array of proto_ext_fun_t structure defining an extra external call (see section TODO). The structure
-    take the string name of the function and the pointer related to it.
+    It is an array of proto_ext_fun_t structure defining an extra external call (see section TODO). The structure
+    takes the string name of the function and the pointer related to it.
     The last element of this list must be the NULL structure. The library might crash if this termination element
-    is omitted
+    is omitted.
 
 project_conf_dir
-    The path associated to the configuration folder of your program.
+    The path associated with the configuration folder of your program.
     It is used to indicate the location of the local state directory, where the library can
     read the JSON manifest path and store files that are used when the eBPF is running.
 
@@ -38,30 +38,30 @@ insertion_point
     which contains two fields:
 
     1. ***plugin_str*** :  the string name of the actual insertion point.
-    2. ***plugin_id*** : the identifier associated to this insertion point
+    2. ***plugin_id*** : the identifier associated with this insertion point
 
     The string is used in parallel with the json file (TODO). The identifier is used with the definition of an
     insertion point as explained in the "pluginization" section (TODO reference)
 
 monitoring_address
-    Some plugins might want to send data to an external exporter to be eventually analysed after. This string
-    is either the IP address of the exporter or its domain name
+    Some plugins might want to send data to an external exporter to be eventually analyzed after. This string
+    is either the IP address of the exporter or its domain name.
 
 monitoring_port
     The port of the exporter
 
 require_monitoring
-    If no plugins are intended to send data, put this argument to 0. This tells to the library to not start the
+    If no plugins are intended to send data, put this argument to 0. It tells the library not to start the
     monitoring listener. Also, if monitoring_address, monitoring_port are not null, and libubpf cannot
     reach the external server, every data sent by plugins will be dropped. However, if require_monitoring is
     set to 1, the manager will wait until a connection is established with the server.
 
 -----------------------------------
-Loading bytecode at program startup
+Loading Bytecode at Program Startup
 -----------------------------------
 
-libubpf provide a function to load plugins from a JSON file. This latter must be formatted on a specific way
-to be recognised by the helper. It has the following definition :
+libubpf provide a function to load plugins from a JSON file. This latter must be formatted in a specific way
+to be recognized by the helper. It has the following definition :
 
 .. code-block:: c
 
@@ -131,19 +131,19 @@ The JSON file must be structured as the following :
 The structure follows the following syntax :
 
 jit_all
-    true or false. This is the main directive to tell to libubpf to compile the code in x86_64 machine code
+    true or false. This is the main directive to tell libubpf to compile the code in x86_64 machine code
     and then directly execute the machine code when the plugin is called. If the attribute is missing the
     default value is false.
 
 dir
-    Path of the folder containing of the eBPF bytecodes. If the variable is missing, libupf take the default
+    Path of the folder containing the eBPF bytecodes. If the variable is missing, libupf take the default
     value passed to the project_conf_dir argument of init_plugin_manager.
 
 plugins
-    Is the most important variable since it contains every plugin to be loaded inside the program.
+    It is the most important variable since it contains every plugin to be loaded inside the program.
     Each object of this variable takes as key, the name of the plugin such as defined in the array
     insertion_point of the function init_plugin_manager.
-    The following keys are now used inside each plugins
+    The following keys are now used inside each plugin
 
         extra_mem
             The number of **bytes** granted to the current plugin. If omitted, no additional memory will be
@@ -154,9 +154,9 @@ plugins
             If omitted no shared memory space is created.
 
         pre
-            contains every pluglet associated to the "pre" hook of the plugin. Each pluglet are associated to
+            contains every pluglet associated with the "pre" hook of the plugin. Each pluglet are associated with
             a sequence number which is the order of execution of the plugin. A smaller number will be thus
-            executed before an higher sequence number. Each pluglet can take two more keys :
+            executed before a higher sequence number. Each pluglet can take two more keys :
 
                 jit
                     true or false, override the jit_master choice defined on the root of the JSON object
@@ -167,14 +167,14 @@ plugins
                     The bytecode must be contained inside the default folder or the path defined in the "dir"
                     variable.
 
-            The pre hook can be omitted. In this case, no pluglet will be attached to the pre hook of the plugin
+            The pre hook can be omitted. In this case, no pluglet will be attached to the pre hook of the plugin.
 
         replace
             Only one pluglet can be defined for this hook. Hence no sequence number must be provided.
 
         post
-            Same description as the pre hook. All pluglet attached to this hook, will be executed right before
-            returning the function associated to the plugin.
+            The same description as the pre hook. All pluglet attached to this hook will be executed right before
+            returning the function associated with the plugin.
 
 
 -------
@@ -231,14 +231,13 @@ Example from FRRouting
 ----------------------
 
 This little example is taken from one implementation of FRRouting we decided to pluginize.
-The variable ``frr_sysconfdir`` contains the path ``/etc/frr``. Hence, every files the
-library will create will be contained in ``/etc/frr``
+The variable ``frr_sysconfdir`` contains the path ``/etc/frr``. Hence, each file that the library creates will be contained in ``/etc/frr``
 
 First, the plugin manager is initialized. When no errors occur, static plugins that needs to be loaded
-at startup will be so when ``load_plugin_from_json`` is called. The variable ``json_conf`` contains the
-manifest of plugin at is loaded at startup (located at ``/etc/frr/manifest.json``). The variable
+at startups will be so when ``load_plugin_from_json`` is called. The variable ``json_conf`` contains the
+manifest of plugin that is loaded at startups (located at ``/etc/frr/manifest.json``). The variable
 ``plugin_dir`` contains the path folder containing the eBPF byte code to be loaded (on the example
-``/etc/frr/plugins``). The folder path can be overrided inside the manifest with the ``dir`` field.
+``/etc/frr/plugins``). The folder path can be overridden inside the manifest with the ``dir`` field.
 
 .. code-block:: c
 

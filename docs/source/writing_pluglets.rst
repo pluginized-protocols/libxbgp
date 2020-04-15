@@ -41,8 +41,7 @@ It will produce a ``program.o`` object file that can be used to load bytecode wi
 Retrieving Arguments Inside the Plugin
 --------------------------------------
 
-As seen in examples, every plugin receives a pointer to its arguments. However, these are not directly
-accessible on read. Arguments must be first copied to the memory plugin by the helper function
+As you can see in the examples, each plugin receives a pointer to its arguments. However, these are not directly accessible in "read mode". Arguments must be first copied to the memory plugin by the helper function
 ``bpf_get_args(unsigned int arg_nb, bpf_full_args_t *args);``
 
 `arg_nb`
@@ -92,4 +91,4 @@ inside this insertion point is found below :
         return decode_attr(*code, *len, *flags, data) == -1 ? EXIT_FAILURE : EXIT_SUCCESS;
     }
 
-The four arguments is now accessible through the plugin.
+The four arguments are now accessible through the plugin.

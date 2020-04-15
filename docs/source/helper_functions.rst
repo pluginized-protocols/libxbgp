@@ -2,8 +2,8 @@
 Helper Functions
 ================
 
-A pluglet is a contiguous series of eBPF instructions. The eBPF instruction set do not allow making jumps to
-another function defined in the bytecode. However, eBPF allows to call functions which are not defined inside
+A pluglet is a contiguous series of eBPF instructions. The eBPF instruction set does not allow making jumps to
+another function defined in the bytecode. However, eBPF allows calling functions which are not defined inside
 the pluglet bytecode, but rather inside the program where libubpf runs. It can be roughly compared to a Linux
 system call.
 
@@ -31,7 +31,7 @@ When defining external functions, some precautions must be considered :
 1. The external function cannot contain more than 5 arguments. This is a direct limitation of the eBPF
    instruction set.
 2. The first argument of the function is **always** a pointer to a context_t structure. The virtual machine
-   rewrite each external function call to include a pointer to the execution context of the uBPF VM. This is
+   rewrites each external function call to include a pointer to the execution context of the uBPF VM. This is
    particularly useful to check the validity of some arguments or to allocate memory inside the extra memory
    space of the pluglet.
 3. If the function returns a pointer, it must be inside the bound of the allowed memory for the pluglet.
@@ -41,7 +41,7 @@ Calling external function inside eBPF bytecode
 ----------------------------------------------
 
 As previously said, the VM will automatically insert the execution context to the arguments of the helper
-function. Suppose you defined an external function as such :
+function. Suppose you define an external function as such :
 
 .. code-block:: c
 
@@ -54,12 +54,12 @@ This helper function will be used inside every bytecode as :
     int add_two(int *a);
 
 The context is intentionally not provided to the bytecode since it contains internal structure of libubpf.
-The pointer is located on a memory area not allowed for the plugin. Which means that giving the context to
+The pointer is located in a memory area not allowed for the plugin. Which means that giving the context to
 the eBPF programmer is pretty useless.
 
 However, the context is particularly worthwhile to check the validity of some pointer. When defining arguments
-to pass on the plugin, the bpf_args_t structure contains a ``type`` field, which is a user defined integer.
-This integer can be used if the pointer given at argument of an helper function is valid.
+to pass on the plugin, the bpf_args_t structure contains a ``type`` field, which is a user-defined integer.
+This integer can be used if the pointer given as an argument of a helper function is valid.
 Consider this small example:
 
 .. code-block:: c
@@ -85,12 +85,12 @@ Consider this small example:
         })
     }
 
-If you try to write a plugin which reproduce the same behavior as the original function, the modification of the
+If you try to write a plugin which reproduces the same behavior as the original function, the modification of the
 pointer will be local to the execution of the plugin. Remember that variable is copied inside the VM memory when
 the data is requested.
 
-Hence to make the modification of the variable pointer by ``a``, the bytecode has to call an helper function which
-will change the variable value. The bytecode associated to this function will then be :
+Hence to make the modification of the variable pointer by ``a``, the bytecode has to call a helper function which
+will change the variable value. The bytecode associated with this function will then be :
 
 .. code-block:: c
 
@@ -120,8 +120,8 @@ This helper shows the use of the context to check if the call is valid. Here is 
 
 The helper function contains some interesting instructions that are worth to discuss:
 
-- ``auto_get`` is a macro checking the validity of the argument located at position ``pos_args`` of the
-  bytecode ``args``. To use this macro, the first three arguments (and the name associated to the variables)
+- ``auto_get`` is a macro that checks the validity of the argument located at position ``pos_args`` of the
+  bytecode ``args``. To use this macro, the first three arguments (and the name associated with the variables)
   must be exactly the same as depicted to the example above. We provide another macro ``api_args`` providing
   the first three arguments to avoid any programming errors. The definition of the same function is then :
 
@@ -129,12 +129,11 @@ The helper function contains some interesting instructions that are worth to dis
 
       int set_int_global(api_args, int new_value);
 
-  The function body remains the same. ``auto_get`` is a macro function taking two argument :
+  The function body remains the same. ``auto_get`` is a macro function taking two arguments :
 
   1. The type of argument as defined in the ``bpf_args_t`` array
   2. The type of pointer (cast value)
 
-  ``auto_get`` returns the original pointer to the variable to modify. If the macro cannot check the validity of
-  the argument, it returns NULL.
+  ``auto_get`` returns the original pointer to the variable to modify. If the macro cannot check the validity of the argument, it returns NULL.
 - The pointer returner by ``auto_get`` is the original pointer as defined in the ``bpf_args_t`` array. Any
-  changes will be also visible outside the VM
+  changes will also be visible outside the VM.
