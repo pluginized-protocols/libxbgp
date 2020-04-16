@@ -200,7 +200,7 @@ def build_bgp_route(ip_networks):
 
         next_hop = BGPAttribute("next-hop", "self")
         as_path = BGPAttribute("as-path", ExaList(rnd_list(random.randint(1, 25))))
-        geo_tags = BGPAttribute(42, GeoTags(rnd_coord[0], rnd_coord[1]), BGPAttributeFlags(1, 0, 0, 0))
+        geo_tags = BGPAttribute(42, GeoTags(rnd_coord[0], rnd_coord[1]), BGPAttributeFlags(1, 1, 0, 0))
         communities = BGPAttribute("community",
                                    ExaList(["%d:%d" % (j, k) for j, k in zip(rnd_list(24, True), rnd_list(24, True))]))
         med = BGPAttribute("med", random.randint(1, __MAX_UINT32_))

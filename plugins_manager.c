@@ -51,7 +51,7 @@ struct json_pluglet_args {
 plugins_t *plugins_manager = NULL;
 int already_init = 0;
 
-static char daemon_vty_dir[PATH_MAX]; // config folder of the protocol
+static char daemon_vty_dir[PATH_MAX]; // var state folder of the protocol
 static plugin_info_t *plugins_info; // insertion points for the protocol
 static int max_plugin; // number of insertion points
 pthread_t plugin_listener; // thread receiving pluglets from outside the main process

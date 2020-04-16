@@ -28,7 +28,7 @@ external_function
 project_conf_dir
     The path associated with the configuration folder of your program.
     It is used to indicate the location of the local state directory, where the library can
-    read the JSON manifest path and store files that are used when the eBPF is running.
+    store files that are used when the eBPF is running.
 
 len_char
     Actual size of the `project_conf_dir` string
