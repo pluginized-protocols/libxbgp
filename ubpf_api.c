@@ -158,19 +158,14 @@ void ctx_shmrm(context_t *vm_ctx, key_t key) {
     ubpf_shmrm(&vm_ctx->p->mem.shared_heap.smp, key);
 }
 
-int get_time(UNUSED context_t *vm_ctx, uint64_t *time) {
-    struct timespec spec;
-    uint64_t curr_ntp;
-    /* assuming CLOCK_REALTIME returns UTC (UNIX EPOCH
-     * is considered as 00:00:00 UTC on 1 January 1970) */
-    if (clock_gettime(CLOCK_REALTIME, &spec) != 0) {
+int get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
+
+    memset(spec, 0, sizeof(*spec));
+
+    if (clock_gettime(CLOCK_MONOTONIC, spec) != 0) {
         perror("Clock gettime");
         return -1;
     }
-
-    curr_ntp = (uint64_t) spec.tv_sec + OFFSET_UNIX_EPOCH_TO_NTP;
-
-    *time = (uint64_t) (curr_ntp << 32u | (uint32_t) spec.tv_nsec);
 
     return 0;
 }

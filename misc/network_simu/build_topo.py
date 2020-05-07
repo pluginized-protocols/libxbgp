@@ -60,6 +60,7 @@ def make_ns(ns_name):
     try:
         new_netns = NetNS(ns_name, flags=os.O_CREAT | os.O_EXCL)
         idx = new_netns.link_lookup(ifname='lo')[0]
+        new_netns.addr()
         new_netns.link('set', index=idx, state='up')
     except Exception as e:
         print("Cannot create namespace %s" % e)

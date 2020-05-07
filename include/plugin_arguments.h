@@ -23,6 +23,7 @@ typedef struct {
     bpf_args_t *args;
     int nargs;
     int plugin_type;
+    uintptr_t return_value;
 } bpf_full_args_t;
 
 #endif //FRR_UBPF_PLUGIN_ARGUMENTS_H

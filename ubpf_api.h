@@ -54,11 +54,9 @@ int send_to_monitor(context_t *vm_ctx, const void *data, size_t len, unsigned in
  */
 // int destroy_shared_memory(int id);
 
-int get_time(context_t *vm_ctx, uint64_t *time);
+int get_time(context_t *vm_ctx, struct timespec *spec);
 
 clock_t bpf_clock(context_t *vm_ctx);
-
-char *as_path_store_from_attr(context_t *vm_ctx, bpf_full_args_t *args, int nb_arg, size_t *total_len);
 
 void *ebpf_memcpy(context_t *vm_ctx, void *dst0, const void *src0, size_t length);
 

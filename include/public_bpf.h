@@ -30,7 +30,7 @@ ebpf_bvsnprintf(str, size, format, (uintptr_t[]){__NUMARGS(__VA_ARGS__) __VA_OPT
  */
 extern int send_to_monitor(const void *data, size_t len, unsigned int type);
 
-extern int get_time(uint64_t *time);
+extern int get_time(struct timespec *spec);
 
 extern clock_t bpf_clock(void);
 

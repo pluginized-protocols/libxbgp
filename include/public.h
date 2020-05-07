@@ -141,6 +141,7 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
 #define PLUGIN_ID __plugin_id__
 
 #define RETURN(return_val) {\
+    PTR_FULL_ARGS->return_value = (uintptr_t) (return_val);\
     run_plugin_post(PLUGIN_ID, PTR_FULL_ARGS, sizeof(uintptr_t), NULL);\
     unset_args(PTR_FULL_ARGS);\
     return return_val;\
@@ -151,8 +152,8 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
   unsigned int PLUGIN_ID = plug_id;\
   PTR_FULL_ARGS = new_argument(plug_args, PLUGIN_ID, nargs, &FULL_ARGS);\
   run_plugin_pre(PLUGIN_ID, PTR_FULL_ARGS, sizeof(uintptr_t), NULL);\
-  {__VA_ARGS__}\
-  RETURN(ok_ret_val)\
+  {__VA_ARGS__};\
+  RETURN(ok_ret_val);\
 }
 
 #endif //FRR_UBPF_PUBLIC_H

@@ -10,24 +10,47 @@
 
 //#include "ubpf_context.h"
 
+#define UBPF_AFI_IPV4 1
+#define UBPF_AFI_IPV6 2
+
+#define UBPF_SAFI_UNICAST 1
+#define UBPF_SAFI_MULTICAST 2
+#define UBPF_MPLS 4
+
 struct ubpf_prefix {
-    uint8_t family;
+    uint16_t afi;
+    uint8_t safi;
     uint16_t prefixlen;
     uint8_t u[20];
 };
 
 
 struct path_attribute {
-
     uint8_t flags;
     uint8_t code;
     uint16_t len;
     uint8_t *data;
 };
 
+struct ubpf_peer_info {
+    uint32_t as;
+    uint32_t router_id;
+    uint32_t capability;
+    uint8_t peer_type;
+
+    struct mem_pool *extra_info;
+
+    struct {
+        uint8_t af;
+        struct sockaddr sa;
+    } addr;
+};
+
 struct bgp_route {
-    // todo ip addr
-    struct path_attribute attr;
+    struct ubpf_prefix pfx;
+    struct path_attribute *attr;
+    struct ubpf_peer_info *peer_info;
+    uint32_t type; // CONNECTED, STATIC, IGP, BGP
 };
 
 /**
