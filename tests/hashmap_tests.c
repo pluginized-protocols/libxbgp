@@ -9,11 +9,11 @@
 typedef hashmap_t(int) hashint_t;
 typedef hashmap_iterator(int) hashint_iterator_t;
 
-int setup(void) {
+static int setup(void) {
     return 0;
 }
 
-int teardown(void) {
+static int teardown(void) {
     return 0;
 }
 

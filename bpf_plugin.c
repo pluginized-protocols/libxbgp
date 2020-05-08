@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <include/tools_ubpf_api.h>
+#include <assert.h>
 
 
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) {
@@ -57,7 +58,9 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) 
 
     new_tree(&p->pre_functions);
     new_tree(&p->post_functions);
-    p->replace_function = NULL;
+
+    p->replace.nb = 0;
+    new_tree(&p->replace.replace_functions);
 
     if (plugid == 0) { // TODO additional check
         free(super_block);
@@ -69,29 +72,52 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) 
     return p;
 }
 
+int must_fallback(plugin_t *p) {
+    if (!p) return 1;
+    return p->fallback_request;
+}
+
+void fallback_request(plugin_t *p) {
+    if (!p) return;
+    p->fallback_request = 1;
+}
+
+void post_plugin_exec(plugin_t *p) {
+    if (!p) return;
+    p->fallback_request = 0;
+}
+
+static inline void flush_vm_tree(tree_t *vms) {
+
+    struct tree_iterator *it, _it;
+    vm_container_t **curr_vm;
+
+    it = new_tree_iterator(vms, &_it);
+    if (!it) {
+        fprintf(stderr, "Unable to remove replace function");
+        return;
+    }
+
+    while (tree_iterator_has_next(it)) {
+        curr_vm = tree_iterator_next(it);
+        shutdown_vm(*curr_vm);
+    }
+
+}
+
 inline unsigned int get_plugin_id(plugin_t *plugin) {
     return plugin ? plugin->plugin_id : -1;
 }
 
 static inline void _destroy_plugin(plugin_t *p, int free_p) {
-    int i;
-    struct tree_iterator *it, _it;
-    vm_container_t **curr_vm;
+    unsigned int i;
     if (!p) return;
 
-    tree_t *it_list[] = {&p->pre_functions, &p->post_functions};
+    tree_t *it_list[] = {&p->pre_functions, &p->post_functions, &p->replace.replace_functions};
 
-    for (i = 0; i < 2; i++) {
-        it = new_tree_iterator(it_list[i], &_it);
-        while (tree_iterator_has_next(it)) {
-            curr_vm = tree_iterator_next(it);
-            shutdown_vm(*curr_vm);
-        }
-        rm_tree_iterator(it);
-        delete_tree(it_list[i]);
+    for (i = 0; i < sizeof(it_list) / sizeof(it_list[0]); i++) {
+        flush_vm_tree(it_list[i]);
     }
-
-    if (p->replace_function) shutdown_vm(p->replace_function);
 
     destroy_memory_management(&p->mem.shared_heap.smp);
     free(p->mem.block);
@@ -114,6 +140,8 @@ static int init_ebpf_code(plugin_t *p, vm_container_t **new_vm, uint32_t seq,
     if (!ctx) return -1;
 
     ctx->type = type;
+    ctx->seq = seq;
+    ctx->plugin_id = p->plugin_id;
 
     if (!register_context(ctx)) {
         free(ctx);
@@ -146,10 +174,8 @@ generic_add_function(plugin_t *p, const uint8_t *bytecode, size_t len,
             l = &p->post_functions;
             break;
         case BPF_REPLACE:
-            if (p->replace_function) {
-                shutdown_vm(p->replace_function);
-                p->replace_function = NULL;
-            }
+            seq = p->replace.nb++; // update after storing
+            l = &p->replace.replace_functions;
             break;
         default:
             return -1;
@@ -159,14 +185,10 @@ generic_add_function(plugin_t *p, const uint8_t *bytecode, size_t len,
         return -1;
     }
 
-    if (type != BPF_REPLACE) {
-        if (tree_get(l, seq, &get_vm) == 0) {
-            shutdown_vm(get_vm);
-        }
-        tree_put(l, seq, &new_vm, sizeof(vm_container_t *));
-    } else {
-        p->replace_function = new_vm;
+    if (tree_get(l, seq, &get_vm) == 0) {
+        shutdown_vm(get_vm);
     }
+    tree_put(l, seq, &new_vm, sizeof(vm_container_t *));
 
     return 0;
 }
@@ -241,8 +263,9 @@ static inline int generic_rm_function(plugin_t *p, uint32_t seq, int anchor) {
             if (tree_get(&p->pre_functions, seq, &vm) != 0) return -1;
             break;
         case BPF_REPLACE:
-            vm = p->replace_function;
-            break;
+            flush_vm_tree(&p->replace.replace_functions);
+            p->replace.nb = 0;
+            return 0;
         case BPF_POST:
             if (tree_get(&p->post_functions, seq, &vm) != 0) return -1;
             break;
@@ -273,12 +296,13 @@ static inline int generic_run_function(plugin_t *p, uint8_t *args, size_t args_s
 
     struct tree_iterator _it, *it;
     tree_t *t;
-    vm_container_t **vm;
+    vm_container_t **vm, *replace_vm;
     int exec_ok;
 
     switch (type) {
         case BPF_REPLACE:
-            exec_ok = run_injected_code(p->replace_function, args, args_size, ret);
+            if (tree_get(&p->replace.replace_functions, 0, &replace_vm) != 0) return -1;
+            exec_ok = run_injected_code(replace_vm, args, args_size, ret);
             return exec_ok;
         case BPF_PRE:
             t = &p->pre_functions;
@@ -323,4 +347,28 @@ int run_post_functions(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *r
 int run_replace_function(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret) {
     if (!p) return -1;
     return generic_run_function(p, args, args_size, BPF_REPLACE, ret);
+}
+
+int run_replace_next_replace_function(context_t *ctx) {
+
+    plugin_t *plugin;
+    vm_container_t *vmc;
+
+    if (!ctx) return -1;
+    if (ctx->type != BPF_REPLACE) return -1;
+
+    plugin = ctx->p;
+
+    if (!plugin) return -1;
+
+    if (tree_get(&plugin->replace.replace_functions, ctx->seq + 1, &vmc) != 0) {
+        // ask to run fallback code
+        fallback_request(ctx->p);
+        return -1;
+    }
+
+    // flush all memory taken by the previous call
+    reset_bump(&vmc->ctx->p->mem.heap.mp);
+    return run_injected_code(vmc, ctx->args, ctx->size_args, ctx->return_val);
+
 }

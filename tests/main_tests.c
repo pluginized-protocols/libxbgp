@@ -19,6 +19,7 @@
 #include "mempool_tests.h"
 #include "hashmap_tests.h"
 #include "internal_tests.h"
+#include "next_replace_tests.h"
 
 int main(int argc, char *argv[]) {
 
@@ -69,6 +70,7 @@ int main(int argc, char *argv[]) {
         (hashmap_tests() != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
+        (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (ubpf_monitoring_tests(plugin_folder_path) != CUE_SUCCESS)) {
 
         fprintf(stderr, "%s\n", CU_get_error_msg());

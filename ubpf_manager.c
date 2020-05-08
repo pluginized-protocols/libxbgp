@@ -123,6 +123,7 @@ int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn) {
     }
 
     if (vmc->num_ext_fun == 0x3F) vmc->num_ext_fun++; // skip because the ID is already taken for OOB call
+    if (vmc->num_ext_fun == 0x7F) vmc->num_ext_fun++; // skip because the ID is already taken for next call
     if (ubpf_register(vmc->vm, vmc->num_ext_fun++, name, fn) == -1) return 0;
 
     return 1;
@@ -133,6 +134,10 @@ static inline int base_register(vm_container_t *vmc) {
 
     // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO INFORM ILLEGAL MEM ACCESS
     if (ubpf_register(vmc->vm, 0x3F, "membound_fail", membound_fail) == -1) return 0;
+    // DO NOT TOUCH THIS FUNCTION, NEITER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE PLUGIN
+    if (vmc->ctx->type == BPF_REPLACE) {
+        if (ubpf_register(vmc->vm, 0x7F, "next", next) == -1) return 0;
+    }
 
     /* helper from various things */
     if (!safe_ubpf_register(vmc, "send_to_monitor", send_to_monitor)) return 0;
@@ -278,6 +283,7 @@ int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
     uintptr_t start_mem;
     uintptr_t ctx_id;
     ubpf_jit_fn fn;
+    int call_next_rewrite;
 
     if (!data) return 0;
 
@@ -288,14 +294,18 @@ int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
         return 0;
     }
 
+    call_next_rewrite = vmc->ctx->type == BPF_REPLACE ? 1 : 0;
+
     ok_len = (uint32_t) len;
     start_mem = (uintptr_t) vmc->args;
     ctx_id = (uintptr_t) vmc->ctx;
 
     if (elf) {
-        err = ubpf_load_elf(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id);
+        err = ubpf_load_elf(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id,
+                            call_next_rewrite);
     } else {
-        err = ubpf_load(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id);
+        err = ubpf_load(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id,
+                        call_next_rewrite);
     }
     //free(loaded_code);
 
@@ -387,14 +397,18 @@ bpf_full_args_t *valid_args(bpf_full_args_t *args) {
 
 int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *ret_val) {
 
-    uint64_t ret;
+    uint64_t ret = 0;
 
     vmc->ctx->args = mem; // bpf_full_args pointer
+    vmc->ctx->size_args = mem_len;
+    vmc->ctx->return_val = ret_val;
 
-    if (vmc->jit) { // NON INTERPRETED MODE
-        ret = vmc->fun(mem, mem_len);
-    } else {
-        ret = ubpf_exec(vmc->vm, mem, mem_len);
+    if (!must_fallback(vmc->ctx->p)) {
+        if (vmc->jit) { // NON INTERPRETED MODE
+            ret = vmc->fun(mem, mem_len);
+        } else {
+            ret = ubpf_exec(vmc->vm, mem, mem_len);
+        }
     }
 
     if (vmc->ctx->error_status) {
@@ -402,7 +416,7 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
         vmc->ctx->error_status = 0; // reset error
     }
 
-    if (ret == UINT64_MAX) {
+    if (ret == UINT64_MAX && !must_fallback(vmc->ctx->p)) {
         fprintf(stderr, "Plugin %s crashed (%s seq %d)\n",
                 id_plugin_to_str(vmc->ctx->p->plugin_id),
                 vmc->ctx->type == BPF_REPLACE ? "replace" :
@@ -417,7 +431,9 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
     if (ret_val) *ret_val = ret;
     // flush heap is done just before returning
     reset_bump(&vmc->ctx->p->mem.heap.mp);
-    return 0;
+
+    vmc->ctx->size_args = -1;
+    return must_fallback(vmc->ctx->p) ? -1 : 0;
 }
 
 void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data) {

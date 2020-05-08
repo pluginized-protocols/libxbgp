@@ -125,15 +125,15 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
     int ___ubpf_the_err___ = 0; \
     bpf_full_args_t ___fargs, *______fargs; \
     ______fargs = new_argument(plug_args, plug_id, nargs, &___fargs); \
-    ___ubpf_status___ = run_plugin_replace(plug_id, ______fargs, sizeof(______fargs), &VM_RETURN_VALUE);\
-    if(!___ubpf_status___) ___ubpf_the_err___ = 1;\
-    else if (!arg_vm_check(VM_RETURN_VALUE)) ___ubpf_the_err___ = 1;\
-    unset_args(______fargs);\
-    if (___ubpf_the_err___) {\
+    ___ubpf_status___ = run_plugin_replace(plug_id, ______fargs, sizeof(uintptr_t), &VM_RETURN_VALUE); \
+    if(!___ubpf_status___) {___ubpf_the_err___ = 1;} \
+    else if (!arg_vm_check(VM_RETURN_VALUE)) {___ubpf_the_err___ = 1;} \
+    unset_args(______fargs); \
+    if (___ubpf_the_err___) { \
         {on_err} \
-    } else {\
+    } else { \
        {__VA_ARGS__} \
-    }\
+    } \
 }
 
 #define PTR_FULL_ARGS _fargs__
@@ -154,6 +154,25 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
   run_plugin_pre(PLUGIN_ID, PTR_FULL_ARGS, sizeof(uintptr_t), NULL);\
   {__VA_ARGS__};\
   RETURN(ok_ret_val);\
+}
+
+#define CALL_ALL(plug_id, plug_args, nargs, args_vm_check, default_ret_val, on_err, ...){\
+  uint64_t VM_RETURN_VALUE = 0; \
+  bpf_full_args_t FULL_ARGS, *PTR_FULL_ARGS;\
+  unsigned int PLUGIN_ID = plug_id;\
+  int ___ubpf_the_err___ = 0; \
+  int ___ubpf_status___ = 0; \
+  PTR_FULL_ARGS = new_argument(plug_args, PLUGIN_ID, nargs, &FULL_ARGS);\
+  run_plugin_pre(PLUGIN_ID, PTR_FULL_ARGS, sizeof(uintptr_t), NULL);\
+  ___ubpf_status___ = run_plugin_replace(plug_id, PTR_FULL_ARGS, sizeof(uintptr_t), &VM_RETURN_VALUE);\
+  if (!___ubpf_status___) ___ubpf_the_err___ = 1;\
+  else if (!arg_vm_check(VM_RETURN_VALUE)) ___ubpf_the_err___ = 1;\
+  if (___ubpf_the_err___) {\
+    {on_err} \
+  } else {\
+     {__VA_ARGS__} \
+  }\
+  RETURN(default_ret_val);\
 }
 
 #endif //FRR_UBPF_PUBLIC_H

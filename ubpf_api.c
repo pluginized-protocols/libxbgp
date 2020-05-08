@@ -184,6 +184,10 @@ void ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
 
 }
 
+int next(context_t *vm_ctx) {
+    return run_replace_next_replace_function(vm_ctx);
+}
+
 
 /* The following piece of code is taken and adapted from bird routing project */
 /* ~~~ BEGIN BIRD CODE ~~~*/

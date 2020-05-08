@@ -7,6 +7,7 @@
 
 #include "plugin_arguments.h"
 #include <stdint.h>
+#include <sys/socket.h>
 
 //#include "ubpf_context.h"
 
@@ -20,6 +21,7 @@
 struct ubpf_prefix {
     uint16_t afi;
     uint8_t safi;
+    uint8_t padding;
     uint16_t prefixlen;
     uint8_t u[20];
 };

@@ -706,6 +706,7 @@ run_plugin_generic(int plug_id, int type, void *mem, size_t mem_len, uint64_t *r
     plugin_t *plugin_vm;
     uint64_t return_value; // of code executed by VM
     int exec_ok;
+    int fallback;
     if (ret_val) *ret_val = EXIT_FAILURE; // will be overwritten when function is executed
 
     if (!is_id_in_use(plug_id)) {
@@ -740,6 +741,10 @@ run_plugin_generic(int plug_id, int type, void *mem, size_t mem_len, uint64_t *r
         /*if(*ret_val == EXIT_FAILURE)
             fprintf(stderr, "plugin execution encountered an error %s\n", id_plugin_to_str(plug_id));*/
     }
+
+    fallback = must_fallback(plugin_vm);
+    post_plugin_exec(plugin_vm);
+    if (fallback) return 0;
 
     if (exec_ok != 0) {
         // fprintf(stderr, "No eBPF code has been executed by the VM (%s)\n", id_plugin_to_str(plug_id));

@@ -10,10 +10,10 @@
 
 /* taken for test */
 
-#define __NUMARGS(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
+#define __NUMARGS_SPRINTF(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
 
 #define ubpf_sprintf(str, size, format, ...)\
-ebpf_bvsnprintf(NULL, str, size, format, (uintptr_t[]) {__NUMARGS(__VA_ARGS__), ##__VA_ARGS__ })
+ebpf_bvsnprintf(NULL, str, size, format, (uintptr_t[]) {__NUMARGS_SPRINTF(__VA_ARGS__), ##__VA_ARGS__ })
 
 
 static int setup(void) {

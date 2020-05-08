@@ -3,7 +3,7 @@
 //
 #include "../../include/public_bpf.h"
 
-void post_function_call();
+void post_function_call(void);
 
 uint64_t macro_void_test_post(bpf_full_args_t *args) {
 

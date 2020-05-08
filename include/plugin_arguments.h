@@ -6,6 +6,7 @@
 #define FRR_UBPF_PLUGIN_ARGUMENTS_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define kind_null 0
 #define kind_ptr 1

@@ -12,10 +12,10 @@
 #include "ebpf_mod_struct.h"
 
 
-#define __NUMARGS(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
+#define NUMARGS_SPRINTF__(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
 
 #define ubpf_sprintf(str, size, format, ...)\
-ebpf_bvsnprintf(str, size, format, (uintptr_t[]){__NUMARGS(__VA_ARGS__) __VA_OPT__(,) __VA_ARGS__})
+ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__) __VA_OPT__(,) __VA_ARGS__})
 
 
 /**
@@ -75,6 +75,8 @@ extern int bpf_sockunion_cmp(const struct sockaddr *su1, const struct sockaddr *
 extern uint64_t ebpf_sqrt(uint64_t a, unsigned int precision);
 
 extern int ebpf_bvsnprintf(char *buf, int size, const char *fmt, uintptr_t *args);
+
+extern int next(void);
 
 
 #endif //FRR_UBPF_PUBLIC_BPF_H

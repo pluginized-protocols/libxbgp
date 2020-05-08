@@ -94,4 +94,6 @@ uint64_t ebpf_sqrt(context_t *ctx, uint64_t a, unsigned int precision);
 
 int ebpf_bvsnprintf(context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args);
 
+int next(context_t *vm_ctx);
+
 #endif //FRR_THESIS_UBPF_API_H

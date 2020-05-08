@@ -3,6 +3,7 @@ LLC = llc
 
 CFLAGS += -I../../include
 CFLAGS += -I../..
+CFLAGS += -fno-stack-protector
 
 SRC=$(shell find . -name '*.c')
 OBJ=$(SRC:.c=.o)

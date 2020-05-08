@@ -13,5 +13,5 @@ uint64_t main_macro_weird(bpf_full_args_t *args) {
 
     if (!a || !b || !c || !d) return 0;
 
-    return *a + *b + *c + *d;
+    return (uint64_t) *a + *b + *c + *d;
 }

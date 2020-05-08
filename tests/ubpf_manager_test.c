@@ -107,7 +107,7 @@ static int teardown(void) {
     return 0;
 }
 
-void test_file_id_exist(void) {
+static void test_file_id_exist(void) {
 
     CU_ASSERT_EQUAL(access("./queue.id", F_OK), 0)
     CU_ASSERT_EQUAL(access("./shared.id", F_OK), 0)
@@ -142,7 +142,7 @@ void test_add_plugin(void) {
     rm_plugin(1, NULL);
 }
 
-void test_read_json_add_plugins(void) {
+static void test_read_json_add_plugins(void) {
 
     int super_arg = 12;
     uint64_t ret_val = 0;

@@ -47,13 +47,25 @@ typedef struct plugin {
 
     tree_t pre_functions;
     tree_t post_functions;
-    vm_container_t *replace_function;
+
+    struct {
+        int nb;
+        tree_t replace_functions;
+    } replace;
+
+    int fallback_request;
 
     struct plugin *new_transaction;
 
 } plugin_t;
 
 unsigned int get_plugin_id(plugin_t *plugin);
+
+void fallback_request(plugin_t *p);
+
+int must_fallback(plugin_t *p);
+
+void post_plugin_exec(plugin_t *p);
 
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid);
 
@@ -91,5 +103,7 @@ int rm_pre_function(plugin_t *p, uint32_t seq);
 int rm_replace_function(plugin_t *p, uint32_t seq);
 
 int rm_post_function(plugin_t *p, uint32_t seq);
+
+int run_replace_next_replace_function(context_t *ctx);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H

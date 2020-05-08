@@ -4,7 +4,7 @@
 
 #include "../../include/public_bpf.h"
 
-uint64_t main_post_simple(bpf_full_args_t *args) {
+uint64_t main_post_simple(UNUSED bpf_full_args_t *args) {
 
     int return_val;
 
