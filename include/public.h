@@ -166,7 +166,7 @@ VM_CALL_CHECK_GEN(plug_id, plug_args, nargs, VAL, __VA_ARGS__)
   run_plugin_pre(PLUGIN_ID, PTR_FULL_ARGS, sizeof(uintptr_t), NULL);\
   ___ubpf_status___ = run_plugin_replace(plug_id, PTR_FULL_ARGS, sizeof(uintptr_t), &VM_RETURN_VALUE);\
   if (!___ubpf_status___) ___ubpf_the_err___ = 1;\
-  else if (!arg_vm_check(VM_RETURN_VALUE)) ___ubpf_the_err___ = 1;\
+  else if (!args_vm_check(VM_RETURN_VALUE)) ___ubpf_the_err___ = 1;\
   if (___ubpf_the_err___) {\
     {on_err} \
   } else {\
