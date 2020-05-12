@@ -146,7 +146,8 @@ void ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
 void *ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
     void *addr;
     addr = ubpf_shmnew(&vm_ctx->p->mem.shared_heap.smp, key, size);
-    memset(addr, 0, size);
+    if (addr)
+        memset(addr, 0, size);
     return addr;
 }
 
