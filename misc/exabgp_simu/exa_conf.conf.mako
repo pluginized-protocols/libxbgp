@@ -1,9 +1,10 @@
 % for neighbor in conf['neighbors']:
-process ${neighbor['name-process']} {
-  run ./announce_routes.py ${neighbor['name-process']}.json ${conf['file']};
+    % if not neighbor['passive']:
+process ${neighbor['name']} {
+  run ./announce_routes.py ${neighbor['name']}.json ${conf['file']};
   encoder text;
 }
-
+    % endif
 % endfor
 
 template {
@@ -27,13 +28,17 @@ neighbor ${neighbor['peer-address']} {
   local-address ${neighbor['local-address']};
   router-id ${neighbor['router-id']};
 
+    % if neighbor['passive']:
+  passive;
+    % else:
   api connection_${neighbor['local-as']}_${neighbor['remote-as']} {
-    processes [ ${neighbor['name-process']} ];
+    processes [ ${neighbor['name']} ];
     send {
       parsed;
       update;
     }
   }
+    % endif
 
 }
 % endfor

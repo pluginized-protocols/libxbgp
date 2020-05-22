@@ -37,6 +37,8 @@ extern int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_
 
 extern int rm_plugin(int id_plugin, int *err);
 
+extern int plugin_is_registered(int plugin_id);
+
 extern void ubpf_terminate(void);
 
 

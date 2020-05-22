@@ -359,6 +359,8 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
 
     struct json_pluglet_args info;
 
+    int have_0_replace = 0;
+
     memset(plug_dir, 0, PATH_MAX * sizeof(char));
 
     json_object *plugins;
@@ -439,6 +441,8 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
         it_curr_plugin = json_object_iter_begin(curr_plugin);
         it_curr_plugin_end = json_object_iter_end(curr_plugin);
 
+        have_0_replace = 0;
+
         while (!json_object_iter_equal(&it_curr_plugin, &it_curr_plugin_end)) {
 
             const char *hook = json_object_iter_peek_name(&it_curr_plugin);
@@ -459,11 +463,30 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
 
             if (pluglet_type != -1) {
 
-                if (BPF_REPLACE == pluglet_type) {
+                struct json_object_iterator it_curr_pluglet;
+                struct json_object_iterator it_curr_pluglet_end;
+
+                it_curr_pluglet = json_object_iter_begin(pluglets);
+                it_curr_pluglet_end = json_object_iter_end(pluglets);
+
+                while (!json_object_iter_equal(&it_curr_pluglet, &it_curr_pluglet_end)) {
+
+                    const char *seq_str = json_object_iter_peek_name(&it_curr_pluglet);
+                    struct json_object *pluglet = json_object_iter_peek_value(&it_curr_pluglet);
+
+                    seq = strtoul(seq_str, &end_ptr, 10);
+                    if (*end_ptr != 0) {
+                        json_object_iter_next(&it_curr_pluglet);
+                        continue;
+                    }
+
+                    if (seq == 0 && pluglet_type == BPF_REPLACE) {
+                        have_0_replace = 1;
+                    }
 
                     memset(&info, 0, sizeof(info));
-                    if (json_pluglet_parse(pluglets, &info) != 0) {
-                        json_object_iter_next(&it_curr_plugin);
+                    if (json_pluglet_parse(pluglet, &info) != 0) {
+                        json_object_iter_next(&it_curr_pluglet);
                         continue;
                     }
                     strncpy(ptr_plug_dir, info.name, info.str_len);
@@ -471,44 +494,15 @@ int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len
 
                     jit = info.jit == -1 ? jit_master : info.jit;
 
-                    if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, 0, jit) != 0) {
-                        ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, 0, "Startup");
+                    if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) != 0) {
+                        ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, seq, "Startup");
                     }
-                } else {
-                    struct json_object_iterator it_curr_pluglet;
-                    struct json_object_iterator it_curr_pluglet_end;
 
-                    it_curr_pluglet = json_object_iter_begin(pluglets);
-                    it_curr_pluglet_end = json_object_iter_end(pluglets);
-
-                    while (!json_object_iter_equal(&it_curr_pluglet, &it_curr_pluglet_end)) {
-
-                        const char *seq_str = json_object_iter_peek_name(&it_curr_pluglet);
-                        struct json_object *pluglet = json_object_iter_peek_value(&it_curr_pluglet);
-
-                        seq = strtoul(seq_str, &end_ptr, 10);
-                        if (*end_ptr != 0) {
-                            json_object_iter_next(&it_curr_pluglet);
-                            continue;
-                        }
-
-                        memset(&info, 0, sizeof(info));
-                        if (json_pluglet_parse(pluglet, &info) != 0) {
-                            json_object_iter_next(&it_curr_pluglet);
-                            continue;
-                        }
-                        strncpy(ptr_plug_dir, info.name, info.str_len);
-                        ptr_plug_dir[info.str_len] = 0;
-
-                        jit = info.jit == -1 ? jit_master : info.jit;
-
-                        if (fn(NULL, master_sysconfdir, extra_mem, shared_mem, plugin_id, pluglet_type, seq, jit) !=
-                            0) {
-                            ubpf_log(INSERTION_ERROR, plugin_id, pluglet_type, seq, "Startup");
-                        }
-
-                        json_object_iter_next(&it_curr_pluglet);
-                    }
+                    json_object_iter_next(&it_curr_pluglet);
+                }
+                if (!have_0_replace && pluglet_type == BPF_REPLACE) {
+                    fprintf(stderr, "Must have replace 0 at least !\n");
+                    return -1;
                 }
             }
             json_object_iter_next(&it_curr_plugin);

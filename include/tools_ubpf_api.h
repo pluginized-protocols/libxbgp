@@ -8,6 +8,7 @@
 #include "plugin_arguments.h"
 #include <stdint.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 
 //#include "ubpf_context.h"
 
@@ -26,6 +27,12 @@ struct ubpf_prefix {
     uint8_t u[20];
 };
 
+enum {
+    EBGP_SESSION,
+    IBGP_SESSION,
+    LOCAL_SESSION,
+};
+
 
 struct path_attribute {
     uint8_t flags;
@@ -38,18 +45,22 @@ struct ubpf_peer_info {
     uint32_t as;
     uint32_t router_id;
     uint32_t capability;
-    uint8_t peer_type;
-
-    struct mem_pool *extra_info;
+    uint8_t peer_type; // iBGP, eBGP, or LOCAL for local_bgp_sessions field.
 
     struct {
         uint8_t af;
-        struct sockaddr sa;
+        union {
+            struct in6_addr in6;
+            struct in_addr in;
+        } addr;
     } addr;
+
+    struct ubpf_peer_info *local_bgp_session; // NULL if the structure is about the local BGP router.
 };
 
 struct bgp_route {
     struct ubpf_prefix pfx;
+    int attr_nb;
     struct path_attribute *attr;
     struct ubpf_peer_info *peer_info;
     uint32_t type; // CONNECTED, STATIC, IGP, BGP

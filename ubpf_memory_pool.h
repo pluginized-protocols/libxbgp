@@ -28,6 +28,11 @@ typedef hashmap_t(struct mem_node) _mem_pool;
 
 typedef hashmap_iterator(struct mem_node) _mem_pool_it;
 
+struct mempool_data {
+    int length;
+    void *data;
+};
+
 // encapsulation for public header
 // (hashmap macros should not be visible externally)
 struct mem_pool {
@@ -61,6 +66,8 @@ int add_raw_ptr_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void
 void remove_mempool(struct mem_pool *mp, uint32_t type);
 
 uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type);
+
+int get_mempool_data(struct mem_pool *mp, uint32_t type, struct mempool_data *data);
 
 void *get_mempool_ptr(struct mem_pool *mp, uint32_t type);
 

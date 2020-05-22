@@ -159,6 +159,21 @@ void *get_mempool_ptr(struct mem_pool *mp, uint32_t type) {
            node->val_type == MEMPOOL_TYPE_RAW_PTR ? node->value.ptr : NULL;
 }
 
+int get_mempool_data(struct mem_pool *mp, uint32_t type, struct mempool_data *data) {
+
+    struct mem_node *node;
+    if (!mp) return -1;
+    node = hashmap_get(&mp->mp, type);
+    if (!node) return -1;
+
+    data->length = node->length;
+    data->data = node->val_type == MEMPOOL_TYPE_U64 ? (void *) &node->value.val :
+                 node->val_type == MEMPOOL_TYPE_PTR ? node->value.ptr :
+                 node->val_type == MEMPOOL_TYPE_RAW_PTR ? node->value.ptr : NULL;
+
+    return 0;
+}
+
 uint64_t get_mempool_u64(struct mem_pool *mp, uint32_t type) {
     struct mem_node *node;
 

@@ -7,6 +7,11 @@
 
 #include <stdint.h>
 
+struct mempool_data {
+    int length;
+    void *data;
+};
+
 typedef struct mem_pool mem_pool;
 
 typedef struct lst_mempool_iterator lst_mempool_iterator;
@@ -51,5 +56,7 @@ extern void *next_mempool_iterator(mempool_iterator *it);
 extern int hasnext_mempool_iterator(mempool_iterator *it);
 
 extern int add_raw_ptr_mempool(struct mem_pool *mp, uint32_t type, void (*cleanup)(void *), void *val);
+
+extern int get_mempool_data(struct mem_pool *mp, uint32_t type, struct mempool_data *data);
 
 #endif //UBPF_TOOLS_UBPF_MEMPOOL_HDR_H

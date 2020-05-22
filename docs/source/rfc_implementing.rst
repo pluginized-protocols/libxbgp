@@ -419,3 +419,70 @@ RFC8654
 =======
 64K buffer
 Maybe impossible
+
+
+Working Use Cases
+=================
+
+Adapting the MED
+----------------
+
+Changing the MED attribute can avoid side effects such as routing instabilities.
+Let us consider the following example :
+
+.. code-block::
+
+              +----------------------------------------------------------------------------------+
+              | AS 0        +--------+                                                           |
+              |             |        |         +---------------------+        +-------+          |
+              |   +---------+   R2   +---+     |                     |        |  R4   |          |      +-----------------+
+              |   |         |        |   |     |                     |    +---+       +---------------->+                 |
+              |   |         +--------+   |     |                     |    |   |       |          |      |                 |
+              | +-+--+                   +-----+      Internal       +----+   +-------+          |      |                 |
+              | |    |                         |      Network        |                           |      |      AS 1       |
+    P +---------> R1 |                         |      Topology       |                     +----------->+                 |
+              | |    |                   +-----+                     +----+                |     |      |                 |
+              | +-+--+      +--------+   |     |                     |    |   +-------+    |     |      |                 |
+              |   |         |        |   |     |                     |    |   |       |    |     |      +-----------------+
+              |   +---------+   R3   +---+     +---------------------+    +---+  R5   +----+     |
+              |             |        |                                        |       |          |
+              |             +--------+                                        +-------+          |
+              +----------------------------------------------------------------------------------+
+
+The MED is usually reflects the IGP cost to reach a given prefix. It signals to the peer
+that AS0 would like that incoming traffic goes through the router that has advertised the lowest
+MED value. A small
+modification of the path cost inside the intra-network results to a readvertisement of the MED for
+every prefix impacted by this such modification. In some cases, this IGP cost update don't change
+the choice of the preferred router for the incoming traffic. This is therefore useless to
+advertise again the unmodified path.
+To avoid these route oscillations, the MED can rely on both geographical coordinates of the router
+and the prefix. Each route carries a new attribute containing the geographical coordinate of
+the prefix whereas the router contains its own geographical position. When advertising the prefix
+to another AS, the edge router compute the euclidean distance with its own coordinates and the
+router that advertised the prefix within the AS. This is done on export filter part of the
+extension only if the peer is on a different AS.
+If the router inject the prefix through BGP (i.e. the prefix is local to the router or
+received from an eBGP session), it must
+add its own geographical position to the attributes of the path. Step made on import filter side
+of the router (Phase 1).
+
+
+Compare the euclidean distance on the MED step
+----------------------------------------------
+
+The second "use case" with the coordinate attribute. The MED is not directly computed from
+the originator AS but only when the local router compute the MED.
+The remote AS don't compute the MED when advertising the route to the peer.
+The MED is computed in a lazy way.
+This use case just shows how to modify the BGP decision process (since the first use case)
+follows the normal flow of the BGP decision process.
+
+When the router receive a route, it will replace both PREFIX_INJECTOR with its own coordinate
+(if is is an eBGP session) and PREFIX_LOCATOR with old PREFIX_INJECTOR of the old AS (if the
+attribute exists).
+
+When BGP announce a local route from the IGP (local) it will add to the PREFIX_INJECTOR the
+coordinate of the router.
+
+In the MED step, the router computes the euclidean distance between these two attributes

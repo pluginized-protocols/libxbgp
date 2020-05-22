@@ -51,6 +51,7 @@ typedef struct plugin {
     struct {
         int nb;
         tree_t replace_functions;
+        int ret_val_set;
     } replace;
 
     int fallback_request;

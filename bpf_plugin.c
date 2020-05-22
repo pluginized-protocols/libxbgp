@@ -60,6 +60,7 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid) 
     new_tree(&p->post_functions);
 
     p->replace.nb = 0;
+    p->replace.ret_val_set = 0;
     new_tree(&p->replace.replace_functions);
 
     if (plugid == 0) { // TODO additional check

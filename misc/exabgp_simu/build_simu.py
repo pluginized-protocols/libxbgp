@@ -12,7 +12,10 @@ from mako.template import Template
 
 from misc.exabgp_simu.generate_routes import parse_iptables_stream, build_bgp_route
 
-MY_CONF = {
+REQUIRED_FIELDS = ['name', 'remote-as', 'peer-address',
+                   'router-id', 'local-as', 'local-address']
+
+MY_CONF__ = {
     "route_to_announce": 100,  # testing purpose
     "file": "???",  # :str to be filled by main
     "neighbors": [
@@ -35,6 +38,32 @@ MY_CONF = {
             "peer-address": "192.168.56.2",
             "local-as": 65004,
             "name-process": "rte_65004_to_65002",
+        }
+    ],
+}
+
+MY_CONF = {
+    "route_to_announce": 100,  # testing purpose
+    "file": "???",  # :str to be filled by main
+    "neighbors": [
+        {
+            "name": "BGP1",
+            "remote-as": 65002,
+            "hold-time": 90,
+            "local-address": "192.168.56.3",
+            "router-id": "192.168.56.3",
+            "peer-address": "192.168.56.2",
+            "local-as": 65002,
+        },
+        {
+            "name": "BGP2",
+            "remote-as": 65002,
+            "hold-time": 90,
+            "local-address": "192.168.56.4",
+            "router-id": "192.168.56.4",
+            "peer-address": "192.168.56.2",
+            "local-as": 65002,
+            "passive": True,
         }
     ],
 }
@@ -95,7 +124,7 @@ def build_neighbor_json(conf_path: str, split: bool = False):
         else:
             info_neigh_path = conf_path
 
-        info_neigh_path = os.path.join(info_neigh_path, "%s.json" % curr_neighbor['name-process'])
+        info_neigh_path = os.path.join(info_neigh_path, "%s.json" % curr_neighbor['name'])
 
         with closing(open(info_neigh_path, 'w')) as json_file:
             json.dump(curr_neighbor, json_file)
@@ -107,6 +136,8 @@ def build_sampled_route(conf_path: str, pfx_routes, split: bool = False):
 
     if split:
         for curr_neighbor in MY_CONF['neighbors']:
+            if curr_neighbor['passive']:
+                continue
             my_join = os.path.join(conf_path, curr_neighbor['name'])
             check_dir(my_join)
             with closing(open(os.path.join(my_join, MY_CONF['file']), 'w')) as f:
@@ -119,10 +150,25 @@ def build_sampled_route(conf_path: str, pfx_routes, split: bool = False):
 def copy_helper_daemon(conf_dir, split=False):
     if split:
         for curr_neighbor in MY_CONF['neighbors']:
-            copy2('announce_routes.py', os.path.join(conf_dir, curr_neighbor['name']))
+            if not curr_neighbor['passive']:
+                copy2('announce_routes.py', os.path.join(conf_dir, curr_neighbor['name']))
     else:
         copy2('announce_routes.py', conf_dir)
 
+
+def validate_conf(conf):
+    for neighbor in conf['neighbors']:
+
+        if not all(elem in neighbor.keys() for elem in REQUIRED_FIELDS):
+            return False
+
+        if 'passive' not in neighbor:
+            neighbor['passive'] = False
+
+    return True
+
+
+# PYTHONPATH=/home/thomas/Documents/GitHub/ubpf_tools ./build_simu.py -d /tmp/conf_exa -s < ../v4_full_table_and_default
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Build exabgp conf")
@@ -139,6 +185,10 @@ if __name__ == '__main__':
         exit(1)
     elif not os.access(args.dir, os.X_OK):
         print("Error: \"%s\" access refused" % args.dir)
+        exit(1)
+
+    if not validate_conf(MY_CONF):
+        print("Invalid configuration")
         exit(1)
 
     ipnet = parse_iptables_stream(args.file)

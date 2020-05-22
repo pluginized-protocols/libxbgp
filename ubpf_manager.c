@@ -428,11 +428,26 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
     // reset --> this VM is not in use for now
     vmc->ctx->args = NULL;
 
-    if (ret_val) *ret_val = ret;
+    if (ret_val) {
+        if (vmc->ctx->type == BPF_REPLACE) {
+            if (!vmc->ctx->p->replace.ret_val_set) {
+                *ret_val = ret;
+                vmc->ctx->p->replace.ret_val_set = 1;
+            }
+        } else {
+            *ret_val = ret;
+        }
+    }
     // flush heap is done just before returning
     reset_bump(&vmc->ctx->p->mem.heap.mp);
 
     vmc->ctx->size_args = -1;
+
+    if (vmc->ctx->type == BPF_REPLACE && vmc->ctx->seq == 0) {
+        vmc->ctx->p->replace.ret_val_set = 0;
+        // reset since seq 0 is always the first executed pluglet in the REPLACE hook
+    }
+
     return must_fallback(vmc->ctx->p) ? -1 : 0;
 }
 
