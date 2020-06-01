@@ -5,6 +5,7 @@
 #include <json-c/json_object_iterator.h>
 #include "plugin_extra_configuration.h"
 #include "ubpf_memory_pool.h"
+#include "include/global_info_str.h"
 #include <string.h>
 #include <json-c/json.h>
 #include <arpa/inet.h>
@@ -24,19 +25,21 @@ struct json_conf_parse {
     int (*parser)(json_object *, struct conf_val *);
 
     int (*delete)(struct conf_val *);
+
+    int (*copy)(struct global_info *info, void *buf, size_t len_buf);
 };
 
-#define null_json_conf_parse {.val_id = 0, .str = NULL, .len_str = 0, .parser = NULL, .delete = NULL}
+#define null_json_conf_parse {.val_id = 0, .str = NULL, .len_str = 0, .parser = NULL, .delete = NULL, .copy = NULL}
 
 struct json_conf_parse val_parsers[] = {
-        [conf_val_type_int] = {.val_id = conf_val_type_int, .str = "int", .len_str = 3, .parser = extra_conf_parse_int, .delete = extra_conf_parse_delete_int},
-        [conf_val_type_double] = {.val_id = conf_val_type_double, .str = "float", .len_str = 5, .parser = extra_conf_parse_float, .delete = extra_conf_parse_delete_float},
-        [conf_val_type_ipv4] = {.val_id = conf_val_type_ipv4, .str = "ipv4", .len_str = 4, .parser = extra_conf_parse_ip4, .delete = extra_conf_parse_delete_ip4},
-        [conf_val_type_ipv6] = {.val_id = conf_val_type_ipv6, .str = "ipv6", .len_str = 4, .parser = extra_conf_parse_ip6, .delete = extra_conf_parse_delete_ip6},
-        [conf_val_type_ipv4_prefix] = {.val_id = conf_val_type_ipv4_prefix, .str = "ipv4_prefix", .len_str = 11, .parser = extra_conf_parse_ip4_prefix, .delete = extra_conf_parse_delete_ip4_prefix},
-        [conf_val_type_ipv6_prefix] = {.val_id = conf_val_type_ipv6_prefix, .str = "ipv6_prefix", .len_str = 11, .parser = extra_conf_parse_ip6_prefix, .delete = extra_conf_parse_delete_ip6_prefix},
-        [conf_val_type_string] = {.val_id = conf_val_type_string, .str = "str", .len_str = 3, .parser = extra_conf_parse_str, .delete = extra_conf_parse_delete_str},
-        [conf_val_type_list] = {.val_id = conf_val_type_list, .str = "list", .len_str = 4, .parser = extra_conf_parse_list, .delete = extra_conf_parse_delete_list},
+        [conf_val_type_int] = {.val_id = conf_val_type_int, .str = "int", .len_str = 3, .parser = extra_conf_parse_int, .delete = extra_conf_parse_delete_int, .copy = extra_conf_copy_int},
+        [conf_val_type_double] = {.val_id = conf_val_type_double, .str = "float", .len_str = 5, .parser = extra_conf_parse_float, .delete = extra_conf_parse_delete_float, .copy = extra_conf_copy_float},
+        [conf_val_type_ipv4] = {.val_id = conf_val_type_ipv4, .str = "ipv4", .len_str = 4, .parser = extra_conf_parse_ip4, .delete = extra_conf_parse_delete_ip4, .copy = extra_conf_copy_ip4},
+        [conf_val_type_ipv6] = {.val_id = conf_val_type_ipv6, .str = "ipv6", .len_str = 4, .parser = extra_conf_parse_ip6, .delete = extra_conf_parse_delete_ip6, .copy = extra_conf_copy_ip6},
+        [conf_val_type_ipv4_prefix] = {.val_id = conf_val_type_ipv4_prefix, .str = "ipv4_prefix", .len_str = 11, .parser = extra_conf_parse_ip4_prefix, .delete = extra_conf_parse_delete_ip4_prefix, .copy = extra_conf_copy_ip4_prefix},
+        [conf_val_type_ipv6_prefix] = {.val_id = conf_val_type_ipv6_prefix, .str = "ipv6_prefix", .len_str = 11, .parser = extra_conf_parse_ip6_prefix, .delete = extra_conf_parse_delete_ip6_prefix, .copy = extra_conf_copy_ip6_prefix},
+        [conf_val_type_string] = {.val_id = conf_val_type_string, .str = "str", .len_str = 3, .parser = extra_conf_parse_str, .delete = extra_conf_parse_delete_str, .copy = extra_conf_copy_str},
+        [conf_val_type_list] = {.val_id = conf_val_type_list, .str = "list", .len_str = 4, .parser = extra_conf_parse_list, .delete = extra_conf_parse_delete_list, .copy = error_cpy},
         [conf_val_type_max] = null_json_conf_parse,
 };
 
@@ -107,6 +110,45 @@ struct conf_val *get_extra_from_key(const char *key) {
     return the_arg->val;
 }
 
+int get_global_info(const char *key, struct global_info *info) {
+
+    struct conf_arg *the_arg;
+    HASH_FIND_STR(global_conf, key, the_arg);
+
+    if (!the_arg) return -1;
+
+    info->type = the_arg->val->type;
+    info->hidden_ptr = the_arg->val;
+
+    return 0;
+}
+
+int get_info_lst_idx(struct global_info *info, int array_idx) {
+
+    struct conf_val *val;
+    struct conf_lst *curr_elem;
+
+    if (info->type != conf_val_type_list) return -1;
+
+    val = info->hidden_ptr;
+
+    DL_FOREACH(val->val.lst, curr_elem) {
+        if (array_idx == 0) {
+            info->type = curr_elem->cf_val->type;
+            info->hidden_ptr = curr_elem->cf_val;
+            return 0;
+        }
+        array_idx -= 1;
+    }
+    return -1;
+}
+
+int extra_info_copy_data(struct global_info *info, void *buf, size_t len) {
+
+    if (info->type == conf_val_type_list) return -1; // not here
+
+    return val_parsers[info->type].copy(info, buf, len);
+}
 
 static int parse_current_info(const char *type, json_object *value, struct conf_val *val) {
     int i;
@@ -161,7 +203,8 @@ int extra_conf_parse_str(json_object *value, struct conf_val *val) {
     cpy_str = calloc(len + 1, sizeof(char));
     strncpy(cpy_str, my_char, len);
 
-    val->val.string = cpy_str;
+    val->val.string.len = len;
+    val->val.string.str = cpy_str;
     val->type = conf_val_type_string;
 
     return 0;
@@ -323,7 +366,7 @@ int extra_conf_parse_delete_ip6(struct conf_val *val) {
 
 int extra_conf_parse_delete_str(struct conf_val *val) {
     if (val->type != conf_val_type_string) return -1;
-    free(val->val.string);
+    free(val->val.string.str);
     free(val);
     return 0;
 }
@@ -339,6 +382,75 @@ int extra_conf_parse_delete_list(struct conf_val *val) {
     }
 
     free(val);
+    return 0;
+}
+
+int extra_conf_copy_int(struct global_info *info, void *buf, size_t len) {
+
+    struct conf_val *val;
+
+    if (info->type != conf_val_type_int) return -1;
+    if (len < sizeof(uint64_t)) return -1;
+
+    val = info->hidden_ptr;
+
+    memcpy(buf, &val->val.int_val, sizeof(uint64_t));
+    return 0;
+}
+
+int extra_conf_copy_float(struct global_info *info, void *buf, size_t len) {
+    struct conf_val *val = info->hidden_ptr;
+    if (val->type != conf_val_type_double) return -1;
+    if (len < sizeof(double)) return -1;
+
+
+    memcpy(buf, &val->val.dbl_val, sizeof(double));
+    return 0;
+}
+
+int extra_conf_copy_ip4(struct global_info *info, void *buf, size_t len) {
+    struct conf_val *val = info->hidden_ptr;
+    if (val->type != conf_val_type_ipv4) return -1;
+    if (len < sizeof(struct in_addr)) return -1;
+
+    memcpy(buf, &val->val.ip4, sizeof(struct in_addr));
+    return 0;
+}
+
+int extra_conf_copy_ip6(struct global_info *info, void *buf, size_t len) {
+    struct conf_val *val = info->hidden_ptr;
+    if (val->type != conf_val_type_ipv6) return -1;
+    if (len < sizeof(struct in6_addr)) return -1;
+
+    memcpy(buf, &val->val.ip6, sizeof(struct in6_addr));
+    return 0;
+}
+
+int extra_conf_copy_ip4_prefix(struct global_info *info, void *buf, size_t len) {
+    struct conf_val *val = info->hidden_ptr;
+    if (val->type != conf_val_type_ipv4_prefix) return -1;
+    if (len < sizeof(struct prefix_ip4)) return -1;
+
+    memcpy(buf, &val->val.ip4_pfx, sizeof(struct prefix_ip4));
+    return 0;
+}
+
+int extra_conf_copy_ip6_prefix(struct global_info *info, void *buf, size_t len) {
+    struct conf_val *val = info->hidden_ptr;
+    if (val->type != conf_val_type_ipv6_prefix) return -1;
+    if (len < sizeof(struct prefix_ip6)) return -1;
+
+    memcpy(buf, &val->val.ip6_pfx, sizeof(struct prefix_ip6));
+    return 0;
+}
+
+int extra_conf_copy_str(struct global_info *info, void *buf, size_t len) {
+    struct conf_val *val = info->hidden_ptr;
+    if (val->type != conf_val_type_string) return -1;
+    if (len < val->val.string.len + 1) return -1;
+
+    memcpy(buf, val->val.string.str, val->val.string.len);
+    ((char *) buf)[val->val.string.len] = 0;
     return 0;
 }
 
@@ -394,7 +506,13 @@ int json_parse_extra_info(json_object *manifest) {
             return -1;
         }
 
-        len_str_key = strnlen(current_key, 255) + 1;
+        len_str_key = strnlen(current_key, 256) + 1;
+
+        if (len_str_key == 257) {
+            fprintf(stderr, "Too long key\n");
+            return -1;
+        }
+
         new_arg = new_conf_arg(current_key, len_str_key);
         if (!new_arg) return -1;
         HASH_ADD_STR(global_conf, key, new_arg);

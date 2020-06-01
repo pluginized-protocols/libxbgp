@@ -78,5 +78,8 @@ extern int ebpf_bvsnprintf(char *buf, int size, const char *fmt, uintptr_t *args
 
 extern int next(void);
 
+extern int get_extra_info_value(const char *key, void *buf, size_t len_buf);
+
+extern int get_extra_info_lst_idx(const char *key, int arr_idx, void *buf, size_t len_buf);
 
 #endif //FRR_UBPF_PUBLIC_BPF_H

@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <include/global_info_str.h>
 
 #define OFFSET_UNIX_EPOCH_TO_NTP 2208988800
 #define SOCKET_PATH "\0monitor_ubpf_plug.socket"
@@ -95,5 +96,11 @@ uint64_t ebpf_sqrt(context_t *ctx, uint64_t a, unsigned int precision);
 int ebpf_bvsnprintf(context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args);
 
 int next(context_t *vm_ctx);
+
+int get_extra_info_value(context_t *ctx, struct global_info *info, void *buf, size_t len_buf);
+
+int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx, void *buf, size_t len_buf);
+
+int get_extra_info(context_t *ctx, const char *key, struct global_info *info);
 
 #endif //FRR_THESIS_UBPF_API_H

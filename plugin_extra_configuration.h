@@ -8,6 +8,7 @@
 #include <json-c/json_object.h>
 #include <netinet/in.h>
 #include <include/prefix.h>
+#include <include/global_info_str.h>
 #include "uthash.h"
 #include "utlist.h"
 
@@ -39,7 +40,10 @@ struct conf_val {
         struct in6_addr ip6;
         uint64_t int_val;
         double dbl_val;
-        char *string;
+        struct {
+            size_t len;
+            char *str;
+        } string;
         struct conf_lst *lst;
     } val;
 
@@ -58,6 +62,14 @@ int extra_info_from_json(const char *path, json_object **manifest, const char *k
 int json_parse_extra_info(json_object *manifest);
 
 struct conf_val *get_extra_from_key(const char *key);
+
+int get_global_info(const char *key, struct global_info *info);
+
+int get_info_lst_idx(struct global_info *info, int array_idx);
+
+int extra_info_copy_data(struct global_info *info, void *buf, size_t len);
+
+int extra_info_copy_data_lst_idx(const char *key, int arr_idx, void *buf, size_t len);
 
 int delete_conf_arg(const char *key);
 
@@ -96,5 +108,23 @@ int extra_conf_parse_delete_ip6_prefix(struct conf_val *val);
 int extra_conf_parse_delete_str(struct conf_val *val);
 
 int extra_conf_parse_delete_list(struct conf_val *val);
+
+int extra_conf_copy_int(struct global_info *info, void *buf, size_t len);
+
+int extra_conf_copy_float(struct global_info *info, void *buf, size_t len);
+
+int extra_conf_copy_ip4(struct global_info *info, void *buf, size_t len);
+
+int extra_conf_copy_ip6(struct global_info *info, void *buf, size_t len);
+
+int extra_conf_copy_ip4_prefix(struct global_info *info, void *buf, size_t len);
+
+int extra_conf_copy_ip6_prefix(struct global_info *info, void *buf, size_t len);
+
+int extra_conf_copy_str(struct global_info *info, void *buf, size_t len);
+
+static inline int error_cpy(struct global_info *val, void *buf, size_t len) {
+    return -1;
+}
 
 #endif //UBPF_TOOLS_PLUGIN_EXTRA_CONFIGURATION_H

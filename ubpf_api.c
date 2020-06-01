@@ -16,10 +16,12 @@
 #include "ubpf_context.h"
 
 #include "include/tools_ubpf_api.h"
+#include "include/global_info_str.h"
 #include "bpf_plugin.h"
 #include <unistd.h>
 
 #include "stdarg.h"
+#include "plugin_extra_configuration.h"
 
 #include <netinet/in.h>
 #include <float.h>
@@ -43,7 +45,7 @@ int init_queue_ext_send(const char *working_dir) {
     }
     // msgget creates a message queue
     // and returns identifier
-    msgid = msgget(key, 0666u | (unsigned int)IPC_CREAT);
+    msgid = msgget(key, 0666u | (unsigned int) IPC_CREAT);
 
     if (msgid < 0) {
         perror("msget error create");
@@ -701,13 +703,12 @@ void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args
 
 
 static int in6addr_cmp(const struct in6_addr *addr1,
-                       const struct in6_addr *addr2)
-{
+                       const struct in6_addr *addr2) {
     size_t i;
     const uint8_t *p1, *p2;
 
-    p1 = (const uint8_t *)addr1;
-    p2 = (const uint8_t *)addr2;
+    p1 = (const uint8_t *) addr1;
+    p2 = (const uint8_t *) addr2;
 
     for (i = 0; i < sizeof(struct in6_addr); i++) {
         if (p1[i] > p2[i])
@@ -768,4 +769,16 @@ uint64_t ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned 
     res = s_half * pow(10, precision);
 
     return res;
+}
+
+int get_extra_info_value(context_t *ctx, struct global_info *info, void *buf, size_t len_buf) {
+    return extra_info_copy_data(info, buf, len_buf);
+}
+
+int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx, void *buf, size_t len_buf) {
+    return get_info_lst_idx(info, arr_idx);
+}
+
+int get_extra_info(context_t *ctx, const char *key, struct global_info *info) {
+    return get_global_info(key, info);
 }
