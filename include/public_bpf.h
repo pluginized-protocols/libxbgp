@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include "tools_ubpf_api.h"
 #include "ebpf_mod_struct.h"
+#include "global_info_str.h"
 
 
 #define NUMARGS_SPRINTF__(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
@@ -78,8 +79,10 @@ extern int ebpf_bvsnprintf(char *buf, int size, const char *fmt, uintptr_t *args
 
 extern int next(void);
 
-extern int get_extra_info_value(const char *key, void *buf, size_t len_buf);
+extern int get_extra_info_value(struct global_info *info, void *buf, size_t len_buf);
 
-extern int get_extra_info_lst_idx(const char *key, int arr_idx, void *buf, size_t len_buf);
+extern int get_extra_info_lst_idx(struct global_info *info, int arr_idx);
+
+extern int get_extra_info(const char *key, struct global_info *info);
 
 #endif //FRR_UBPF_PUBLIC_BPF_H

@@ -99,7 +99,7 @@ int next(context_t *vm_ctx);
 
 int get_extra_info_value(context_t *ctx, struct global_info *info, void *buf, size_t len_buf);
 
-int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx, void *buf, size_t len_buf);
+int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx);
 
 int get_extra_info(context_t *ctx, const char *key, struct global_info *info);
 

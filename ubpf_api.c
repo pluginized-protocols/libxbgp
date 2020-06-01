@@ -775,7 +775,7 @@ int get_extra_info_value(context_t *ctx, struct global_info *info, void *buf, si
     return extra_info_copy_data(info, buf, len_buf);
 }
 
-int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx, void *buf, size_t len_buf) {
+int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx) {
     return get_info_lst_idx(info, arr_idx);
 }
 
