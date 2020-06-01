@@ -122,7 +122,7 @@ static int parse_current_info(const char *type, json_object *value, struct conf_
 
 inline int delete_current_info(struct conf_val *val) {
 
-    if (val->type >= conf_val_type_max) return -1;
+    if (0 > val->type || val->type >= conf_val_type_max) return -1;
 
     return val_parsers[val->type].delete(val);
 
