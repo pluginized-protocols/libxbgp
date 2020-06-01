@@ -219,13 +219,13 @@ structures in parallel.
     .. code-block :: c
 
          bpf_args_t args[] = {
-                    [0] = {.arg = &type, .len = sizeof(uint8_t), .kind= kind_primitive, .type = UNSIGNED_INT},
-                    [1] = {.arg = &flag, .len = sizeof(uint8_t), .kind = kind_primitive, .type = UNSIGNED_INT},
-                    [2] = {.arg = stream_pnt(BGP_INPUT(peer)), .len = length, .kind=kind_ptr, .type = BUFFER_ARRAY},
-                    [3] = {.arg = &attr_args.length, .len = sizeof(uint16_t), .kind=kind_primitive, .type = UNSIGNED_INT},
-                    [4] = {.arg = attr->ubpf_mempool, .len=sizeof(mem_pool *), .kind=kind_hidden, .type=MEMPOOL},
-                    [5] = {.arg = attr, .len=sizeof(attr), .kind= kind_hidden, .type=ATTRIBUTE},
-            };
+           [0] = {.arg = &type, .len = sizeof(uint8_t), .kind= kind_primitive, .type = UNSIGNED_INT},
+           [1] = {.arg = &flag, .len = sizeof(uint8_t), .kind = kind_primitive, .type = UNSIGNED_INT},
+           [2] = {.arg = stream_pnt(BGP_INPUT(peer)), .len = length, .kind=kind_ptr, .type = BUFFER_ARRAY},
+           [3] = {.arg = &attr_args.length, .len = sizeof(uint16_t), .kind=kind_primitive, .type = UNSIGNED_INT},
+           [4] = {.arg = attr->ubpf_mempool, .len=sizeof(mem_pool *), .kind=kind_hidden, .type=MEMPOOL},
+           [5] = {.arg = attr, .len=sizeof(attr), .kind= kind_hidden, .type=ATTRIBUTE},
+         };
 
     When the plugin wants to access to the buffer located at argument index 2, it calls
     ``bpf_get_args``. Internally, the helper function looks if it has the right to retrieve
@@ -240,11 +240,11 @@ structures in parallel.
     .. code-block:: c
 
         struct bgp_route {
-            struct ubpf_prefix pfx; // prefix that is reachable (support for AFI/SAFI)
-            int attr_nb; // number of attributes
-            struct path_attribute *attr; // attribute list
-            struct ubpf_peer_info *peer_info; // information related to the peer having announced the route
-            uint32_t type; // CONNECTED, STATIC, IGP, BGP
+          struct ubpf_prefix pfx; // prefix that is reachable (support for AFI/SAFI)
+          int attr_nb; // number of attributes
+          struct path_attribute *attr; // attribute list
+          struct ubpf_peer_info *peer_info; // information related to the peer having announced the route
+          uint32_t type; // CONNECTED, STATIC, IGP, BGP
         };
 
 `int rib_iterator(/* to be determined */)` [Not implemented yet]
@@ -372,22 +372,16 @@ Let us consider the following example :
 
 .. code-block::
 
-              +----------------------------------------------------------------------------------+
-              | AS 0        +--------+                                                           |
-              |             |        |         +---------------------+        +-------+          |
-              |   +---------+   R2   +---+     |                     |        |  R4   |          |      +-----------------+
-              |   |         |        |   |     |                     |    +---+       +---------------->+                 |
-              |   |         +--------+   |     |                     |    |   |       |          |      |                 |
-              | +-+--+                   +-----+      Internal       +----+   +-------+          |      |                 |
-              | |    |                         |      Network        |                           |      |      AS 1       |
-    P +---------> R1 |                         |      Topology       |                     +----------->+                 |
-              | |    |                   +-----+                     +----+                |     |      |                 |
-              | +-+--+      +--------+   |     |                     |    |   +-------+    |     |      |                 |
-              |   |         |        |   |     |                     |    |   |       |    |     |      +-----------------+
-              |   +---------+   R3   +---+     +---------------------+    +---+  R5   +----+     |
-              |             |        |                                        |       |          |
-              |             +--------+                                        +-------+          |
-              +----------------------------------------------------------------------------------+
+        +--------------------------+
+        | AS0                +--+  |
+        |    +----------+  +-+R0+------------+
+        |    | Internal +--+ +--+  |      +--v--+
+    P------->+ Network  |          |      | AS1 |
+        |    | Topology +--+ +--+  |      +--^--+
+        |    +----------+  +-+R1+------------+
+        |                    +--+  |
+        +--------------------------+
+
 
 The MED is usually reflecting the IGP cost to reach a given prefix. It signals to the peer
 that AS0 would like that incoming traffic goes through the router that has advertised the lowest

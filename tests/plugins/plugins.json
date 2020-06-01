@@ -5,8 +5,10 @@
       "extra_mem": 4,
       "shared_mem": 0,
       "replace": {
-        "path": "simple_test_api.o",
-        "jit": true
+        "0": {
+          "path": "simple_test_api.o",
+          "jit": true
+        }
       }
     },
     "full_plugin": {
@@ -21,7 +23,9 @@
         }
       },
       "replace": {
-        "path": "replace_simple.o"
+        "0": {
+          "path": "replace_simple.o"
+        }
       },
       "post": {
         "25": {

@@ -338,6 +338,10 @@ static int json_pluglet_parse(json_object *pluglet, struct json_pluglet_args *in
     return 0;
 }
 
+static int parse_replace() {
+
+}
+
 /*
  * If syconfdir is NULL, the path must be filled in the JSON file
  */

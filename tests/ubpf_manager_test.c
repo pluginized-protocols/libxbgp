@@ -27,7 +27,7 @@ enum custom_user_type {
 
 static unsigned int plugin_set_post = -1;
 
-char plugin_folder_path[PATH_MAX];
+static char plugin_folder_path[PATH_MAX];
 
 static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c, short d) {
 
@@ -121,7 +121,7 @@ void test_add_plugin(void) {
 
     char path_pluglet[PATH_MAX];
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "simple_test_api.o");
+    snprintf(path_pluglet, PATH_MAX - 19, "%s/%s", plugin_folder_path, "simple_test_api.o");
 
 
     bpf_args_t args[1] = {
@@ -152,7 +152,7 @@ static void test_read_json_add_plugins(void) {
     };
 
     char path_json[PATH_MAX];
-    snprintf(path_json, PATH_MAX, "%s/plugins.json", plugin_folder_path);
+    snprintf(path_json, PATH_MAX - 14, "%s/plugins.json", plugin_folder_path);
     int status;
 
     status = load_plugin_from_json(path_json, plugin_folder_path, strnlen(plugin_folder_path, PATH_MAX));
@@ -186,7 +186,7 @@ static void test_macro_function(void) {
 
     char path_pluglet[PATH_MAX];
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "replace_fun_macro.o");
+    snprintf(path_pluglet, PATH_MAX - 20, "%s/%s", plugin_folder_path, "replace_fun_macro.o");
 
     // should not execute any plugins
     return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
@@ -209,7 +209,7 @@ static void macro_void_example_with_set(void) {
     int my_arg_to_be_modified = 2142;
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "macro_void_test.o");
+    snprintf(path_pluglet, PATH_MAX - 23, "%s/%s", plugin_folder_path, "macro_void_test.o");
 
     my_function_void(&my_arg_to_be_modified);
     CU_ASSERT_EQUAL(my_arg_to_be_modified, 42);
@@ -222,7 +222,7 @@ static void macro_void_example_with_set(void) {
     CU_ASSERT_EQUAL(status, 0);
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "macro_void_test_post.o");
+    snprintf(path_pluglet, PATH_MAX - 25, "%s/%s", plugin_folder_path, "macro_void_test_post.o");
 
     status = add_pluglet(path_pluglet, 64, 0,
                          1, BPF_POST, 0, 0);

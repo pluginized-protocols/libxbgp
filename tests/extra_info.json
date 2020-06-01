@@ -1,0 +1,21 @@
+{
+  "router_info": {
+    "my_int": {
+      "type_arg": "int",
+      "arg": 42
+    },
+    "my_list": {
+      "type_arg": "list",
+      "arg": [
+        {
+          "type_arg": "ipv4",
+          "arg": "192.168.56.12"
+        },
+        {
+          "type_arg": "ipv4",
+          "arg": "192.168.56.13"
+        }
+      ]
+    }
+  }
+}

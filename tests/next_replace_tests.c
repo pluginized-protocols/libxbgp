@@ -163,7 +163,7 @@ int next_replace_tests(const char *plugin_folder) {
     memset(plugin_folder_path, 0, PATH_MAX * sizeof(char));
     realpath(plugin_folder, plugin_folder_path);
     // ...
-    pSuite = CU_add_suite("ubpf_manager_test_suite", setup, teardown);
+    pSuite = CU_add_suite("next_replace_tests", setup, teardown);
     if (NULL == pSuite) {
         CU_cleanup_registry();
         return CU_get_error();

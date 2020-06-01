@@ -1,0 +1,410 @@
+//
+// Created by thomas on 28/05/20.
+//
+
+#include <json-c/json_object_iterator.h>
+#include "plugin_extra_configuration.h"
+#include "ubpf_memory_pool.h"
+#include <string.h>
+#include <json-c/json.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+
+struct conf_arg *global_conf = NULL;
+
+
+const char *type_arg_char_key = "type_arg";
+const char *arg_char_key = "arg";
+
+struct json_conf_parse {
+    const char *str;
+    enum type_val val_id;
+    size_t len_str;
+
+    int (*parser)(json_object *, struct conf_val *);
+
+    int (*delete)(struct conf_val *);
+};
+
+#define null_json_conf_parse {.val_id = 0, .str = NULL, .len_str = 0, .parser = NULL, .delete = NULL}
+
+struct json_conf_parse val_parsers[] = {
+        [conf_val_type_int] = {.val_id = conf_val_type_int, .str = "int", .len_str = 3, .parser = extra_conf_parse_int, .delete = extra_conf_parse_delete_int},
+        [conf_val_type_double] = {.val_id = conf_val_type_double, .str = "float", .len_str = 5, .parser = extra_conf_parse_float, .delete = extra_conf_parse_delete_float},
+        [conf_val_type_ipv4] = {.val_id = conf_val_type_ipv4, .str = "ipv4", .len_str = 4, .parser = extra_conf_parse_ip4, .delete = extra_conf_parse_delete_ip4},
+        [conf_val_type_ipv6] = {.val_id = conf_val_type_ipv6, .str = "ipv6", .len_str = 4, .parser = extra_conf_parse_ip6, .delete = extra_conf_parse_delete_ip6},
+        [conf_val_type_ipv4_prefix] = {.val_id = conf_val_type_ipv4_prefix, .str = "ipv4_prefix", .len_str = 11, .parser = extra_conf_parse_ip4_prefix, .delete = extra_conf_parse_delete_ip4_prefix},
+        [conf_val_type_ipv6_prefix] = {.val_id = conf_val_type_ipv6_prefix, .str = "ipv6_prefix", .len_str = 11, .parser = extra_conf_parse_ip6_prefix, .delete = extra_conf_parse_delete_ip6_prefix},
+        [conf_val_type_string] = {.val_id = conf_val_type_string, .str = "str", .len_str = 3, .parser = extra_conf_parse_str, .delete = extra_conf_parse_delete_str},
+        [conf_val_type_list] = {.val_id = conf_val_type_list, .str = "list", .len_str = 4, .parser = extra_conf_parse_list, .delete = extra_conf_parse_delete_list},
+        [conf_val_type_max] = null_json_conf_parse,
+};
+
+static struct conf_lst *new_conf_lst() {
+    struct conf_lst *lst;
+    struct conf_val *val;
+
+    lst = calloc(1, sizeof(*lst));
+    if (!lst) return NULL;
+
+    val = malloc(sizeof(*val));
+    if (!val) {
+        free(lst);
+        return NULL;
+    }
+
+    lst->cf_val = val;
+
+    return lst;
+}
+
+static struct conf_arg *new_conf_arg(const char *key, size_t len_key) {
+    struct conf_arg *arg;
+    arg = calloc(1, sizeof(*arg) + len_key + 1);
+    if (!arg) return NULL;
+
+    arg->len_key = len_key;
+    memcpy(arg->key, key, len_key);
+
+    arg->val = malloc(sizeof(struct conf_val));
+
+    if (!arg->val) {
+        free(arg);
+        return NULL;
+    }
+
+    return arg;
+}
+
+int delete_conf_arg(const char *key) {
+    struct conf_arg *the_arg;
+
+    HASH_FIND_STR(global_conf, key, the_arg);
+    if (!the_arg) return -1; // not found
+
+    delete_current_info(the_arg->val);
+    free(the_arg);
+    return 0;
+}
+
+int delete_all() {
+    if (!global_conf) return 0;
+    struct conf_arg *curr_arg, *tmp;
+    HASH_ITER(hh, global_conf, curr_arg, tmp) {
+        delete_current_info(curr_arg->val);
+        free(curr_arg);
+    }
+    global_conf = NULL;
+    return 0;
+}
+
+struct conf_val *get_extra_from_key(const char *key) {
+    struct conf_arg *the_arg;
+    HASH_FIND_STR(global_conf, key, the_arg);
+
+    if (!the_arg) return NULL;
+
+    return the_arg->val;
+}
+
+
+static int parse_current_info(const char *type, json_object *value, struct conf_val *val) {
+    int i;
+    for (i = 0; i < conf_val_type_max; i++) {
+        if (strncmp(type, val_parsers[i].str, val_parsers[i].len_str) == 0) {
+            if (val_parsers[i].parser(value, val) != 0) return -1;
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+inline int delete_current_info(struct conf_val *val) {
+
+    if (val->type >= conf_val_type_max) return -1;
+
+    return val_parsers[val->type].delete(val);
+
+}
+
+int extra_conf_parse_int(json_object *value, struct conf_val *val) {
+
+    uint64_t my_int;
+    my_int = json_object_get_int64(value);
+
+    val->val.int_val = my_int;
+    val->type = conf_val_type_int;
+
+    return 0;
+}
+
+int extra_conf_parse_float(json_object *value, struct conf_val *val) {
+
+    double my_double;
+    my_double = json_object_get_double(value);
+
+    val->val.dbl_val = my_double;
+    val->type = conf_val_type_double;
+
+    return 0;
+}
+
+int extra_conf_parse_str(json_object *value, struct conf_val *val) {
+
+    int len;
+    const char *my_char;
+    char *cpy_str;
+    my_char = json_object_get_string(value);
+    len = json_object_get_string_len(value);
+
+    cpy_str = calloc(len + 1, sizeof(char));
+    strncpy(cpy_str, my_char, len);
+
+    val->val.string = cpy_str;
+    val->type = conf_val_type_string;
+
+    return 0;
+}
+
+int extra_conf_parse_ip4(json_object *value, struct conf_val *val) {
+    //int len;
+    const char *my_cpy;
+    my_cpy = json_object_get_string(value);
+    //len = json_object_get_string_len(value);
+
+    if (inet_pton(AF_INET, my_cpy, &val->val.ip4) == 0) {
+        return -1;
+    }
+    val->type = conf_val_type_ipv4;
+    return 0;
+}
+
+int extra_conf_parse_ip6(json_object *value, struct conf_val *val) {
+    //int len;
+    const char *my_cpy;
+    my_cpy = json_object_get_string(value);
+    //len = json_object_get_string_len(value);
+
+    if (inet_pton(AF_INET6, my_cpy, &val->val.ip6) == 0) {
+        return -1;
+    }
+    val->type = conf_val_type_ipv6;
+
+    return 0;
+}
+
+static inline int extra_conf_parse_ip_prefix(json_object *value, struct conf_val *val, int is_v6) {
+
+    int family;
+    //int len;
+    long prefix_len;
+    const char *my_str_pfx;
+    char cpy_string[MAX_STR_BUF_PFX];
+    char *token;
+    char *endptr;
+    my_str_pfx = json_object_get_string(value);
+    //len = json_object_get_string_len(value);
+
+    memset(cpy_string, 0, sizeof(char) * MAX_STR_BUF_PFX);
+    strncpy(cpy_string, my_str_pfx, MAX_STR_BUF_PFX - 1);
+
+    family = is_v6 ? AF_INET6 : AF_INET;
+
+
+    token = strtok(cpy_string, "/");
+    if (!token) return -1;
+
+    if (inet_pton(family, token, is_v6 ? (void *) &val->val.ip6_pfx.p : &val->val.ip4_pfx.p) != 0) {
+        return -1;
+    }
+
+    token = strtok(0, "/");
+    if (!token) {
+        return -1;
+    }
+
+    prefix_len = strtol(token, &endptr, 10);
+
+    if (endptr) return -1;
+
+    if (is_v6) {
+        if (0 > prefix_len || prefix_len > 128) return -1;
+    } else if (0 > prefix_len || prefix_len > 32) return -1;
+
+
+    val->val.ip4_pfx.prefix_len = (int) prefix_len;
+    val->val.ip4_pfx.family = family;
+    return 0;
+}
+
+int extra_conf_parse_ip4_prefix(json_object *value, struct conf_val *val) {
+    return extra_conf_parse_ip_prefix(value, val, 0);
+}
+
+int extra_conf_parse_ip6_prefix(json_object *value, struct conf_val *val) {
+    return extra_conf_parse_ip_prefix(value, val, 1);
+}
+
+
+int extra_conf_parse_list(json_object *value, struct conf_val *val) {
+
+    size_t i;
+    struct array_list *lst;
+    size_t len;
+    json_object *array_val;
+    struct conf_lst *curr_elem_lst;
+
+    const char *nested_type_value;
+    json_object *nested_type_value_json;
+    json_object *nested_value;
+
+    lst = json_object_get_array(value);
+    len = array_list_length(lst);
+
+    val->type = conf_val_type_list;
+    val->val.lst = NULL;
+
+    for (i = 0; i < len; i++) {
+        array_val = array_list_get_idx(lst, i);
+
+        if (!json_object_object_get_ex(array_val, type_arg_char_key, &nested_type_value_json)) return -1;
+
+        if (!json_object_object_get_ex(array_val, arg_char_key, &nested_value)) return -1;
+
+        nested_type_value = json_object_get_string(nested_type_value_json);
+
+        curr_elem_lst = new_conf_lst();
+        if (!curr_elem_lst) return -1;
+        if (parse_current_info(nested_type_value, nested_value, curr_elem_lst->cf_val) == -1) return -1;
+
+        DL_APPEND(val->val.lst, curr_elem_lst);
+    }
+
+    return 0;
+}
+
+
+int extra_conf_parse_delete_int(struct conf_val *val) {
+    if (val->type != conf_val_type_int) return -1;
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_float(struct conf_val *val) {
+    if (val->type != conf_val_type_double) return -1;
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_ip4(struct conf_val *val) {
+    if (val->type != conf_val_type_ipv4) return -1;
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_ip4_prefix(struct conf_val *val) {
+    if (val->type != conf_val_type_ipv4_prefix) return -1;
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_ip6_prefix(struct conf_val *val) {
+    if (val->type != conf_val_type_ipv6_prefix) return -1;
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_ip6(struct conf_val *val) {
+    if (val->type != conf_val_type_ipv6) return -1;
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_str(struct conf_val *val) {
+    if (val->type != conf_val_type_string) return -1;
+    free(val->val.string);
+    free(val);
+    return 0;
+}
+
+int extra_conf_parse_delete_list(struct conf_val *val) {
+
+    struct conf_lst *lst_elem;
+
+    if (val->type != conf_val_type_list) return -1;
+
+    DL_FOREACH(val->val.lst, lst_elem) {
+        delete_current_info(lst_elem->cf_val);
+    }
+
+    free(val);
+    return 0;
+}
+
+int extra_info_from_json(const char *path, json_object **manifest, const char *key) {
+    json_object *tmp, *tmp2;
+    tmp = json_object_from_file(path);
+    if (!tmp) return -1;
+
+    if (key) {
+        if (!json_object_object_get_ex(tmp, key, &tmp2)) {
+            return -1;
+        }
+        *manifest = tmp2;
+    } else {
+        *manifest = tmp;
+    }
+    return 0;
+}
+
+int json_parse_extra_info(json_object *manifest) {
+
+    if (!manifest) return -1;
+
+    const char *current_key;
+    struct json_object *current_val;
+
+    struct json_object *type_arg;
+    struct json_object *arg;
+    const char *type_arg_str;
+
+    struct json_object_iterator it_value_info;
+    struct json_object_iterator it_value_info_end;
+
+
+    it_value_info_end = json_object_iter_end(manifest);
+
+
+    int len_str_key;
+    struct conf_arg *new_arg;
+
+    for (it_value_info = json_object_iter_begin(manifest);
+         !json_object_iter_equal(&it_value_info, &it_value_info_end);
+         json_object_iter_next(&it_value_info)) {
+
+        current_key = json_object_iter_peek_name(&it_value_info);
+        current_val = json_object_iter_peek_value(&it_value_info);
+
+        if (!json_object_object_get_ex(current_val, type_arg_char_key, &type_arg)) {
+            return -1;
+        }
+
+        if (!json_object_object_get_ex(current_val, arg_char_key, &arg)) {
+            return -1;
+        }
+
+        len_str_key = strnlen(current_key, 255) + 1;
+        new_arg = new_conf_arg(current_key, len_str_key);
+        if (!new_arg) return -1;
+        HASH_ADD_STR(global_conf, key, new_arg);
+
+
+        type_arg_str = json_object_get_string(type_arg);
+
+        parse_current_info(type_arg_str, arg, new_arg->val);
+
+    }
+
+    return 0;
+}

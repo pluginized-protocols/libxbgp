@@ -26,7 +26,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-char plugin_folder_path[PATH_MAX];
+static char plugin_folder_path[PATH_MAX];
 
 pid_t exporter_pid = -1;
 
@@ -87,7 +87,7 @@ static int setup(void) {
 
         strncpy(this_file_path, __FILE__, PATH_MAX);
         strncpy(this_file_dirname, dirname(this_file_path), sizeof(char) * PATH_MAX);
-        snprintf(server_process, PATH_MAX - 1, "%s/exporter_example.py", this_file_dirname);
+        snprintf(server_process, PATH_MAX - 22, "%s/exporter_example.py", this_file_dirname);
 
         char *const args[] = {basename(server_process), NULL};
         char *const env[] = {NULL};
@@ -132,7 +132,7 @@ void send_monitoring_record_test(void) {
     struct timespec tv = {.tv_sec = 5, .tv_nsec = 0};
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "send_monitoring_data.o");
+    snprintf(path_pluglet, PATH_MAX - 24, "%s/%s", plugin_folder_path, "send_monitoring_data.o");
 
     bpf_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -151,7 +151,7 @@ void send_monitoring_record_test(void) {
     rm_plugin(1, NULL);
 }
 
-void send_multiple_records_test(void) {
+static void send_multiple_records_test(void) {
     uint64_t ret_val;
     int status;
     int dummy_arg = 0;
@@ -161,7 +161,7 @@ void send_multiple_records_test(void) {
     struct timespec tv = {.tv_sec = 5, .tv_nsec = 0};
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
+    snprintf(path_pluglet, PATH_MAX - 24, "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
 
     bpf_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -180,7 +180,7 @@ void send_multiple_records_test(void) {
     rm_plugin(3, NULL);
 }
 
-void send_multiple_records_type_test(void) {
+static void send_multiple_records_type_test(void) {
     uint64_t ret_val;
     int status;
     int dummy_arg = 0;
@@ -190,7 +190,7 @@ void send_multiple_records_type_test(void) {
     struct timespec tv = {.tv_sec = 5, .tv_nsec = 0};
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX, "%s/%s", plugin_folder_path, "multiple_type_record.o");
+    snprintf(path_pluglet, PATH_MAX - 25, "%s/%s", plugin_folder_path, "multiple_type_record.o");
 
     bpf_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
