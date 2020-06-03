@@ -19,7 +19,7 @@
 #define UBPF_SAFI_MULTICAST 2
 #define UBPF_MPLS 4
 
-struct ubpf_prefix {
+struct ubpf_prefix__ {
     uint16_t afi;
     uint8_t safi;
     uint8_t padding;
@@ -59,7 +59,7 @@ struct ubpf_peer_info {
 };
 
 struct bgp_route {
-    struct ubpf_prefix pfx;
+    struct ubpf_prefix__ pfx;
     int attr_nb;
     struct path_attribute *attr;
     struct ubpf_peer_info *peer_info;

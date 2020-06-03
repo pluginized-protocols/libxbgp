@@ -75,13 +75,15 @@ extern int bpf_sockunion_cmp(const struct sockaddr *su1, const struct sockaddr *
 
 extern uint64_t ebpf_sqrt(uint64_t a, unsigned int precision);
 
+extern int ebpf_memcmp(const void *s1, const void *s2, size_t n);
+
 extern int ebpf_bvsnprintf(char *buf, int size, const char *fmt, uintptr_t *args);
 
 extern int next(void);
 
 extern int get_extra_info_value(struct global_info *info, void *buf, size_t len_buf);
 
-extern int get_extra_info_lst_idx(struct global_info *info, int arr_idx);
+extern int get_extra_info_lst_idx(struct global_info *info, int arr_idx, struct global_info *value);
 
 extern int get_extra_info(const char *key, struct global_info *info);
 

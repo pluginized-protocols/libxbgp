@@ -21,4 +21,12 @@ struct prefix_ip4 {
     struct in_addr p;
 };
 
+union ubpf_prefix {
+
+    int family;
+
+    struct prefix_ip4 ip4_pfx;
+    struct prefix_ip6 ip6_pfx;
+};
+
 #endif //UBPF_TOOLS_PREFIX_H

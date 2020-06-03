@@ -65,7 +65,7 @@ struct conf_val *get_extra_from_key(const char *key);
 
 int get_global_info(const char *key, struct global_info *info);
 
-int get_info_lst_idx(struct global_info *info, int array_idx);
+int get_info_lst_idx(struct global_info *info, int array_idx, struct global_info *value);
 
 int extra_info_copy_data(struct global_info *info, void *buf, size_t len);
 

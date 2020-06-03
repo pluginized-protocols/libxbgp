@@ -771,14 +771,20 @@ uint64_t ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned 
     return res;
 }
 
-int get_extra_info_value(context_t *ctx, struct global_info *info, void *buf, size_t len_buf) {
+int ebpf_memcmp(context_t *ctx UNUSED, const void *s1, const void *s2, size_t n) {
+
+    return memcmp(s1, s2, n);
+
+}
+
+int get_extra_info_value(context_t *ctx UNUSED, struct global_info *info, void *buf, size_t len_buf) {
     return extra_info_copy_data(info, buf, len_buf);
 }
 
-int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx) {
-    return get_info_lst_idx(info, arr_idx);
+int get_extra_info_lst_idx(context_t *ctx UNUSED, struct global_info *info, int arr_idx, struct global_info *value) {
+    return get_info_lst_idx(info, arr_idx, value);
 }
 
-int get_extra_info(context_t *ctx, const char *key, struct global_info *info) {
+int get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
     return get_global_info(key, info);
 }

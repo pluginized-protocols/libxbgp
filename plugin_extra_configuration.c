@@ -123,7 +123,7 @@ int get_global_info(const char *key, struct global_info *info) {
     return 0;
 }
 
-int get_info_lst_idx(struct global_info *info, int array_idx) {
+int get_info_lst_idx(struct global_info *info, int array_idx, struct global_info *value) {
 
     struct conf_val *val;
     struct conf_lst *curr_elem;
@@ -134,8 +134,8 @@ int get_info_lst_idx(struct global_info *info, int array_idx) {
 
     DL_FOREACH(val->val.lst, curr_elem) {
         if (array_idx == 0) {
-            info->type = curr_elem->cf_val->type;
-            info->hidden_ptr = curr_elem->cf_val;
+            value->type = curr_elem->cf_val->type;
+            value->hidden_ptr = curr_elem->cf_val;
             return 0;
         }
         array_idx -= 1;

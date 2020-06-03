@@ -146,6 +146,7 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "ebpf_print", ebpf_print)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_memcpy", ebpf_memcpy)) return 0;
     if (!safe_ubpf_register(vmc, "set_error", set_error)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_memcmp", ebpf_memcmp)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_bvsnprintf", ebpf_bvsnprintf)) return 0;
 
     /* memory related*/
@@ -452,6 +453,8 @@ int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *
         vmc->ctx->p->replace.ret_val_set = 0;
         // reset since seq 0 is always the first executed pluglet in the REPLACE hook
     }
+
+    if (ret == UINT64_MAX) return -1;
 
     return must_fallback(vmc->ctx->p) ? -1 : 0;
 }
