@@ -10,6 +10,7 @@
 #include <time.h>
 #include <netinet/in.h>
 #include "tools_ubpf_api.h"
+#include "ubpf_prefix.h"
 
 #define MAXMSG
 
@@ -56,7 +57,7 @@ typedef struct monit_update_msg {
 
 
 typedef struct monit_prefix_update {
-    struct ubpf_prefix p;
+    union ubpf_prefix p;
     struct in_addr remote_id;
     struct in_addr local_id;
     uint64_t loc_rib;
@@ -68,7 +69,7 @@ typedef struct monit_prefix_update {
 } monit_prefix_update_t;
 
 typedef struct monit_prefix_withdraw {
-    struct ubpf_prefix p;
+    union ubpf_prefix p;
     struct in_addr remote_id;
     struct in_addr local_id;
     uint32_t peer_as;
@@ -82,7 +83,7 @@ typedef struct monit_decision_process {
 } monit_decision_process_t;
 
 typedef struct monit_invalid_update_inbound {
-    struct ubpf_prefix p;
+    union ubpf_prefix p;
     struct in_addr local_id;
     struct in_addr remote_id;
     uint32_t peer_as;
