@@ -13,11 +13,10 @@
 
 #include "utlist.h"
 
-char json_path[PATH_MAX];
+static char json_path[PATH_MAX];
 
 
 static int setup(void) {
-    json_object *manifest;
     char cpy_folder_file[PATH_MAX];
     char *folder;
 
@@ -27,10 +26,7 @@ static int setup(void) {
     folder = dirname(cpy_folder_file);
     snprintf(json_path, PATH_MAX - 17, "%s/extra_info.json", folder);
 
-    if (extra_info_from_json(json_path, &manifest, "router_info") != 0) return -1;
-    if (json_parse_extra_info(manifest) != 0) return -1;
-
-    json_object_put(manifest);
+    if (extra_info_from_json(json_path, "router_info") != 0) return -1;
 
     return 0;
 }
@@ -56,9 +52,9 @@ static void test_parse_extra_info(void) {
 
 static void test_list_iter(void) {
 
-    int i;
+    int i, j;
     struct conf_val *val;
-    struct conf_lst *curr_val;
+    struct conf_val *curr_val;
     uint8_t seen[2];
     const char *ip4_str[] = {[0] = "192.168.56.12", [1] = "192.168.56.13"};
     struct in_addr ips[2];
@@ -74,11 +70,14 @@ static void test_list_iter(void) {
 
     CU_ASSERT_EQUAL(val->type, conf_val_type_list)
 
-    DL_FOREACH(val->val.lst, curr_val) {
-        CU_ASSERT_EQUAL(curr_val->cf_val->type, conf_val_type_ipv4);
-        for (i = 0; i < 2; i++) {
-            if (ips[i].s_addr == curr_val->cf_val->val.ip4.s_addr) {
-                seen[i] = 1;
+    for (i = 0; i < val->val.lst.len; i++) {
+
+        curr_val = val->val.lst.array[i];
+
+        CU_ASSERT_EQUAL(curr_val->type, conf_val_type_ipv4);
+        for (j = 0; j < 2; j++) {
+            if (ips[j].s_addr == curr_val->val.ip4.s_addr) {
+                seen[j] = 1;
             }
         }
     }
@@ -86,6 +85,63 @@ static void test_list_iter(void) {
     for (i = 0; i < 2; i++) {
         CU_ASSERT_EQUAL(seen[i], 1);
     }
+}
+
+static void test_nested_list(void) {
+    int g, h, i;
+    struct conf_val *val;
+    struct conf_val *curr_val, *nested_curr_val;
+
+    const char *ip4_str[] = {[0] = "192.168.56.2", [1] = "192.168.56.3"};
+    struct in_addr ips[2];
+    uint8_t seen_ip[] = {0, 0};
+
+    for (i = 0; i < 2; i++) {
+        if (!inet_pton(AF_INET, ip4_str[i], ips + i)) CU_FAIL_FATAL("Unable to convert IPs");
+    }
+
+    uint64_t expected_val[] = {5698, 9999};
+    uint8_t seen_int[] = {0, 0};
+
+    val = get_extra_from_key("nested_list");
+    CU_ASSERT_PTR_NOT_NULL_FATAL(val);
+
+    for (g = 0; g < val->val.lst.len; g++) {
+        curr_val = val->val.lst.array[g];
+        CU_ASSERT_EQUAL_FATAL(curr_val->type, conf_val_type_list);
+        for (h = 0; h < curr_val->val.lst.len; h++) {
+            nested_curr_val = curr_val->val.lst.array[h];
+
+            if (nested_curr_val->type == conf_val_type_int) {
+
+                for (i = 0; i < 2; i++) {
+                    if (expected_val[i] == nested_curr_val->val.int_val) {
+                        seen_int[i] = 1;
+                    }
+                }
+
+            } else if (nested_curr_val->type == conf_val_type_ipv4) {
+
+                for (i = 0; i < 2; i++) {
+                    if (ips[i].s_addr == nested_curr_val->val.ip4.s_addr) {
+                        seen_ip[i] = 1;
+                    }
+                }
+
+
+            } else {
+                CU_FAIL_FATAL("UNEXPECTED TYPE !")
+            }
+
+        }
+    }
+
+
+    for (i = 0; i < 2; i++) {
+        CU_ASSERT_EQUAL(seen_int[i], 1);
+        CU_ASSERT_EQUAL(seen_ip[i], 1);
+    }
+
 }
 
 
@@ -99,7 +155,8 @@ int extra_info_tests(void) {
     }
 
     if ((NULL == CU_add_test(pSuite, "Parse JSON", test_parse_extra_info)) ||
-        (NULL == CU_add_test(pSuite, "Iterator extra Info", test_list_iter))) {
+        (NULL == CU_add_test(pSuite, "Iterator extra Info", test_list_iter)) ||
+        (NULL == CU_add_test(pSuite, "Nested List", test_nested_list))) {
         CU_cleanup_registry();
         return CU_get_error();
     }

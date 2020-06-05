@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <json-c/json_object.h>
 #include "plugin_arguments.h"
 #include "ebpf_mod_struct.h"
 #include "context_hdr.h"
@@ -53,6 +54,7 @@ int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor
 /* manipulating memory of plugins in helper functions */
 extern void *ctx_malloc(context_t *vm_ctx, size_t size);
 
+extern int extra_info_from_json(const char *path, const char *key);
 
 #define RETURN_VM_VOID(ret_val, ...) \
 {\

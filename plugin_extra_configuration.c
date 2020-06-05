@@ -43,24 +43,6 @@ struct json_conf_parse val_parsers[] = {
         [conf_val_type_max] = null_json_conf_parse,
 };
 
-static struct conf_lst *new_conf_lst() {
-    struct conf_lst *lst;
-    struct conf_val *val;
-
-    lst = calloc(1, sizeof(*lst));
-    if (!lst) return NULL;
-
-    val = malloc(sizeof(*val));
-    if (!val) {
-        free(lst);
-        return NULL;
-    }
-
-    lst->cf_val = val;
-
-    return lst;
-}
-
 static struct conf_arg *new_conf_arg(const char *key, size_t len_key) {
     struct conf_arg *arg;
     arg = calloc(1, sizeof(*arg) + len_key + 1);
@@ -94,9 +76,11 @@ int delete_all() {
     if (!global_conf) return 0;
     struct conf_arg *curr_arg, *tmp;
     HASH_ITER(hh, global_conf, curr_arg, tmp) {
+        HASH_DEL(global_conf, curr_arg);
         delete_current_info(curr_arg->val);
         free(curr_arg);
     }
+
     global_conf = NULL;
     return 0;
 }
@@ -126,34 +110,33 @@ int get_global_info(const char *key, struct global_info *info) {
 int get_info_lst_idx(struct global_info *info, int array_idx, struct global_info *value) {
 
     struct conf_val *val;
-    struct conf_lst *curr_elem;
 
     if (info->type != conf_val_type_list) return -1;
 
     val = info->hidden_ptr;
 
-    DL_FOREACH(val->val.lst, curr_elem) {
-        if (array_idx == 0) {
-            value->type = curr_elem->cf_val->type;
-            value->hidden_ptr = curr_elem->cf_val;
-            return 0;
-        }
-        array_idx -= 1;
-    }
-    return -1;
+    if (array_idx >= val->val.lst.len) return -1;
+
+    value->type = val->val.lst.array[array_idx]->type;
+    value->hidden_ptr = val->val.lst.array[array_idx];
+    return 0;
 }
 
 int extra_info_copy_data(struct global_info *info, void *buf, size_t len) {
 
     if (info->type == conf_val_type_list) return -1; // not here
 
+    if (info->type >= conf_val_type_max) return -1;
+
     return val_parsers[info->type].copy(info, buf, len);
 }
 
-static int parse_current_info(const char *type, json_object *value, struct conf_val *val) {
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+static int parse_current_info(const char *type, size_t len, json_object *value, struct conf_val *val) {
     int i;
     for (i = 0; i < conf_val_type_max; i++) {
-        if (strncmp(type, val_parsers[i].str, val_parsers[i].len_str) == 0) {
+        if (strncmp(type, val_parsers[i].str, MAX(val_parsers[i].len_str, len)) == 0) {
             if (val_parsers[i].parser(value, val) != 0) return -1;
             return 0;
         }
@@ -258,7 +241,8 @@ static inline int extra_conf_parse_ip_prefix(json_object *value, struct conf_val
     token = strtok(cpy_string, "/");
     if (!token) return -1;
 
-    if (inet_pton(family, token, is_v6 ? (void *) &val->val.ip6_pfx.p : &val->val.ip4_pfx.p) != 0) {
+    /* gneuhgneuhgneuh not POSIX return value............ */
+    if (!inet_pton(family, token, is_v6 ? (void *) &val->val.ip6_pfx.p : &val->val.ip4_pfx.p)) {
         return -1;
     }
 
@@ -269,12 +253,12 @@ static inline int extra_conf_parse_ip_prefix(json_object *value, struct conf_val
 
     prefix_len = strtol(token, &endptr, 10);
 
-    if (endptr) return -1;
+    if (endptr && *endptr != '\0')
+        return -1;
 
     if (is_v6) {
         if (0 > prefix_len || prefix_len > 128) return -1;
     } else if (0 > prefix_len || prefix_len > 32) return -1;
-
 
     val->val.ip4_pfx.prefix_len = (int) prefix_len;
     val->val.ip4_pfx.family = family;
@@ -282,10 +266,12 @@ static inline int extra_conf_parse_ip_prefix(json_object *value, struct conf_val
 }
 
 int extra_conf_parse_ip4_prefix(json_object *value, struct conf_val *val) {
+    val->type = conf_val_type_ipv4_prefix;
     return extra_conf_parse_ip_prefix(value, val, 0);
 }
 
 int extra_conf_parse_ip6_prefix(json_object *value, struct conf_val *val) {
+    val->type = conf_val_type_ipv6_prefix;
     return extra_conf_parse_ip_prefix(value, val, 1);
 }
 
@@ -296,17 +282,20 @@ int extra_conf_parse_list(json_object *value, struct conf_val *val) {
     struct array_list *lst;
     size_t len;
     json_object *array_val;
-    struct conf_lst *curr_elem_lst;
+    struct conf_val *curr_elem_lst;
 
     const char *nested_type_value;
+    int nested_type_value_len;
     json_object *nested_type_value_json;
     json_object *nested_value;
 
     lst = json_object_get_array(value);
-    len = array_list_length(lst);
+    len = json_object_array_length(value);
 
     val->type = conf_val_type_list;
-    val->val.lst = NULL;
+    val->val.lst.len = len;
+    val->val.lst.array = malloc(sizeof(struct conf_val *) * len); // constant time access ...
+    if (!val->val.lst.array) return -1;
 
     for (i = 0; i < len; i++) {
         array_val = array_list_get_idx(lst, i);
@@ -316,12 +305,15 @@ int extra_conf_parse_list(json_object *value, struct conf_val *val) {
         if (!json_object_object_get_ex(array_val, arg_char_key, &nested_value)) return -1;
 
         nested_type_value = json_object_get_string(nested_type_value_json);
+        nested_type_value_len = json_object_get_string_len(nested_type_value_json);
 
-        curr_elem_lst = new_conf_lst();
+        curr_elem_lst = malloc(sizeof(*curr_elem_lst));
         if (!curr_elem_lst) return -1;
-        if (parse_current_info(nested_type_value, nested_value, curr_elem_lst->cf_val) == -1) return -1;
+        if (parse_current_info(nested_type_value, nested_type_value_len, nested_value, curr_elem_lst) ==
+            -1)
+            return -1;
 
-        DL_APPEND(val->val.lst, curr_elem_lst);
+        val->val.lst.array[i] = curr_elem_lst; // append to the list
     }
 
     return 0;
@@ -373,14 +365,17 @@ int extra_conf_parse_delete_str(struct conf_val *val) {
 
 int extra_conf_parse_delete_list(struct conf_val *val) {
 
-    struct conf_lst *lst_elem;
+    struct conf_val *lst_elem;
+    int i;
 
     if (val->type != conf_val_type_list) return -1;
 
-    DL_FOREACH(val->val.lst, lst_elem) {
-        delete_current_info(lst_elem->cf_val);
+    for (i = 0; i < val->val.lst.len; i++) {
+        lst_elem = val->val.lst.array[i];
+        delete_current_info(lst_elem);
+        // free(lst_elem);
     }
-
+    free(val->val.lst.array);
     free(val);
     return 0;
 }
@@ -454,7 +449,7 @@ int extra_conf_copy_str(struct global_info *info, void *buf, size_t len) {
     return 0;
 }
 
-int extra_info_from_json(const char *path, json_object **manifest, const char *key) {
+int extra_info_from_json(const char *path, const char *key) {
     json_object *tmp, *tmp2;
     tmp = json_object_from_file(path);
     if (!tmp) return -1;
@@ -463,10 +458,13 @@ int extra_info_from_json(const char *path, json_object **manifest, const char *k
         if (!json_object_object_get_ex(tmp, key, &tmp2)) {
             return -1;
         }
-        *manifest = tmp2;
+        if (json_parse_extra_info(tmp2) != 0) return -1;
     } else {
-        *manifest = tmp;
+        if (json_parse_extra_info(tmp) != 0) return -1;
     }
+
+    if (!json_object_put(tmp)) return -1;
+
     return 0;
 }
 
@@ -480,6 +478,7 @@ int json_parse_extra_info(json_object *manifest) {
     struct json_object *type_arg;
     struct json_object *arg;
     const char *type_arg_str;
+    int type_arg_str_len;
 
     struct json_object_iterator it_value_info;
     struct json_object_iterator it_value_info_end;
@@ -519,8 +518,9 @@ int json_parse_extra_info(json_object *manifest) {
 
 
         type_arg_str = json_object_get_string(type_arg);
+        type_arg_str_len = json_object_get_string_len(type_arg);
 
-        parse_current_info(type_arg_str, arg, new_arg->val);
+        if (parse_current_info(type_arg_str, type_arg_str_len, arg, new_arg->val) != 0) return -1;
 
     }
 

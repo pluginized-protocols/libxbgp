@@ -24,10 +24,10 @@ enum type_val {
     conf_val_type_max,
 };
 
-struct conf_lst {
+/*struct conf_lst {
     struct conf_val *cf_val;
     struct conf_lst *next, *prev;
-};
+};*/
 
 struct conf_val {
 
@@ -44,7 +44,10 @@ struct conf_val {
             size_t len;
             char *str;
         } string;
-        struct conf_lst *lst;
+        struct {
+            size_t len;
+            struct conf_val **array;
+        } lst;
     } val;
 
 };
@@ -57,7 +60,7 @@ struct conf_arg {
     char key[0];
 };
 
-int extra_info_from_json(const char *path, json_object **manifest, const char *key);
+int extra_info_from_json(const char *path, const char *key);
 
 int json_parse_extra_info(json_object *manifest);
 

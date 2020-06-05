@@ -16,6 +16,37 @@
           "arg": "192.168.56.13"
         }
       ]
+    },
+    "nested_list": {
+      "type_arg": "list",
+      "arg": [
+        {
+          "type_arg": "list",
+          "arg": [
+            {
+              "type_arg": "int",
+              "arg": 5698
+            },
+            {
+              "type_arg": "ipv4",
+              "arg": "192.168.56.2"
+            }
+          ]
+        },
+        {
+          "type_arg": "list",
+          "arg": [
+            {
+              "type_arg": "int",
+              "arg": 9999
+            },
+            {
+              "type_arg": "ipv4",
+              "arg": "192.168.56.3"
+            }
+          ]
+        }
+      ]
     }
   }
 }

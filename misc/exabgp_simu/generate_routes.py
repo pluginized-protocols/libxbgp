@@ -209,6 +209,50 @@ def build_bgp_route(ip_networks):
         yield BGPRoute(ip_network, [next_hop, origin, med, as_path, geo_tags, communities])
 
 
+def select_valid_rpki_routes(bgp_route, valid_ratio):
+    assert 0.0 < valid_ratio <= 1.0
+    nb_valid_rtes = math.ceil(len(bgp_route) * valid_ratio)
+    return random.sample(bgp_route, nb_valid_rtes)
+
+
+def parse_cust_provider_relation():
+    cust_prov = []
+
+    with open("./20200501.as-rel2.txt", "r") as f:
+        for line in f:
+            l_strip = line.strip()
+            if l_strip[0] == "#":
+                continue
+
+            p = l_strip.split('|')
+
+            if int(p[2]) == -1:
+                cust_prov.append((int(p[0]), int(p[1])))
+
+    return cust_prov
+
+
+def gen_formatted_prov_cust(cust_prov_lst):
+    formatted_list = []
+    dict_prov_cust = {
+        "cust_prov": {
+            "type_arg": "list",
+            "arg": formatted_list,
+        }
+    }
+
+    for prov, cust in cust_prov_lst:
+        formatted_list.append({
+            "type_arg": "list",
+            "arg": [
+                {"type_arg": "int", "arg": prov},
+                {"type_arg": "int", "arg": cust},
+            ]
+        })
+
+    return dict_prov_cust
+
+
 if __name__ == '__main__':
 
     if len(sys.argv) != 2:
