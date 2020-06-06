@@ -47,6 +47,37 @@
           ]
         }
       ]
+    },
+    "super_hash": {
+      "type_arg": "dict",
+      "arg": {
+        "192.168.56.0/24": {
+          "type_arg": "int",
+          "arg": 65002
+        },
+        "192.168.57.0/24": {
+          "type_arg": "int",
+          "arg": 65003
+        }
+      }
+    },
+    "super_hash_nested": {
+      "type_arg": "dict",
+      "arg": {
+        "65002": {
+          "type_arg": "list",
+          "arg": [
+            {
+              "type_arg": "ipv4_prefix",
+              "arg": "192.168.56.0/24"
+            },
+            {
+              "type_arg": "ipv4_prefix",
+              "arg": "192.168.57.0/24"
+            }
+          ]
+        }
+      }
     }
   }
 }

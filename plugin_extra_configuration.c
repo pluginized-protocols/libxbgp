@@ -10,6 +10,7 @@
 #include <json-c/json.h>
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <limits.h>
 
 struct conf_arg *global_conf = NULL;
 
@@ -40,6 +41,7 @@ struct json_conf_parse val_parsers[] = {
         [conf_val_type_ipv6_prefix] = {.val_id = conf_val_type_ipv6_prefix, .str = "ipv6_prefix", .len_str = 11, .parser = extra_conf_parse_ip6_prefix, .delete = extra_conf_parse_delete_ip6_prefix, .copy = extra_conf_copy_ip6_prefix},
         [conf_val_type_string] = {.val_id = conf_val_type_string, .str = "str", .len_str = 3, .parser = extra_conf_parse_str, .delete = extra_conf_parse_delete_str, .copy = extra_conf_copy_str},
         [conf_val_type_list] = {.val_id = conf_val_type_list, .str = "list", .len_str = 4, .parser = extra_conf_parse_list, .delete = extra_conf_parse_delete_list, .copy = error_cpy},
+        [conf_val_type_dict] = {.val_id = conf_val_type_dict, .str = "dict", .len_str = 4, .parser = extra_conf_parse_dict, .delete = extra_conf_delete_dict, .copy = error_cpy},
         [conf_val_type_max] = null_json_conf_parse,
 };
 
@@ -119,6 +121,22 @@ int get_info_lst_idx(struct global_info *info, int array_idx, struct global_info
 
     value->type = val->val.lst.array[array_idx]->type;
     value->hidden_ptr = val->val.lst.array[array_idx];
+    return 0;
+}
+
+int get_info_dict(struct global_info *info, const char *key, struct global_info *value) {
+
+    struct conf_val *val;
+    dict *curr_dict;
+    if (info->type != conf_val_type_dict) return -1;
+
+    val = info->hidden_ptr;
+
+    HASH_FIND_STR(val->val.dict, key, curr_dict);
+    if (!curr_dict) return -1;
+
+    value->type = curr_dict->val->type;
+    value->hidden_ptr = curr_dict->val;
     return 0;
 }
 
@@ -319,6 +337,51 @@ int extra_conf_parse_list(json_object *value, struct conf_val *val) {
     return 0;
 }
 
+int extra_conf_parse_dict(json_object *value, struct conf_val *val) {
+
+    val->type = conf_val_type_dict;
+    val->val.dict = NULL;
+
+    const char *current_key;
+    size_t key_len;
+    struct json_object *current_val;
+    struct json_object_iterator it_value_info;
+    struct json_object_iterator it_value_info_end;
+
+    json_object *nested_val_type;
+    json_object *nested_val;
+    const char *type_nested_val;
+    int type_nested_val_len;
+
+    dict *new_hash;
+
+    it_value_info_end = json_object_iter_end(value);
+
+    for (it_value_info = json_object_iter_begin(value);
+         !json_object_iter_equal(&it_value_info, &it_value_info_end);
+         json_object_iter_next(&it_value_info)) {
+
+
+        current_key = json_object_iter_peek_name(&it_value_info);
+        current_val = json_object_iter_peek_value(&it_value_info);
+        key_len = strnlen(current_key, NAME_MAX);
+
+        if (!json_object_object_get_ex(current_val, type_arg_char_key, &nested_val_type)) return -1;
+        if (!json_object_object_get_ex(current_val, arg_char_key, &nested_val)) return -1;
+
+        type_nested_val = json_object_get_string(nested_val_type);
+        type_nested_val_len = json_object_get_string_len(nested_val_type);
+
+        new_hash = new_conf_arg(current_key, key_len);
+        if (!new_hash) return -1;
+
+        HASH_ADD_STR(val->val.dict, key, new_hash);
+
+        if (parse_current_info(type_nested_val, type_nested_val_len, nested_val, new_hash->val) != 0) return -1;
+    }
+    return 0;
+}
+
 
 int extra_conf_parse_delete_int(struct conf_val *val) {
     if (val->type != conf_val_type_int) return -1;
@@ -377,6 +440,20 @@ int extra_conf_parse_delete_list(struct conf_val *val) {
     }
     free(val->val.lst.array);
     free(val);
+    return 0;
+}
+
+int extra_conf_delete_dict(struct conf_val *val) {
+
+    if (val->type != conf_val_type_dict) return -1;
+
+    dict *curr_arg, *tmp;
+
+    HASH_ITER(hh, val->val.dict, curr_arg, tmp) {
+        HASH_DEL(val->val.dict, curr_arg);
+        delete_current_info(curr_arg->val);
+        free(curr_arg);
+    }
     return 0;
 }
 
@@ -515,7 +592,6 @@ int json_parse_extra_info(json_object *manifest) {
         new_arg = new_conf_arg(current_key, len_str_key);
         if (!new_arg) return -1;
         HASH_ADD_STR(global_conf, key, new_arg);
-
 
         type_arg_str = json_object_get_string(type_arg);
         type_arg_str_len = json_object_get_string_len(type_arg);

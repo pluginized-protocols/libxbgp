@@ -179,6 +179,7 @@ static inline int base_register(vm_container_t *vmc) {
     /* getting global info from manifest */
     if (!safe_ubpf_register(vmc, "get_extra_info_value", get_extra_info_value)) return 0;
     if (!safe_ubpf_register(vmc, "get_extra_info_lst_idx", get_extra_info_lst_idx)) return 0;
+    if (!safe_ubpf_register(vmc, "get_extra_info_dict", get_extra_info_dict)) return 0;
     if (!safe_ubpf_register(vmc, "get_extra_info", get_extra_info)) return 0;
 
     return 1;

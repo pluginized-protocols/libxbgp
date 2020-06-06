@@ -103,6 +103,8 @@ int get_extra_info_value(context_t *ctx, struct global_info *info, void *buf, si
 
 int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx, struct global_info *value);
 
+int get_extra_info_dict(context_t *ctx, struct global_info *info, const char *key, struct global_info *value);
+
 int get_extra_info(context_t *ctx, const char *key, struct global_info *info);
 
 #endif //FRR_THESIS_UBPF_API_H

@@ -144,6 +144,60 @@ static void test_nested_list(void) {
 
 }
 
+static void test_dict_value(void) {
+
+    struct global_info info;
+    struct global_info curr_dict_as1;
+    struct global_info curr_dict_as2;
+
+    uint64_t as1, as2;
+
+    CU_ASSERT_EQUAL_FATAL(get_global_info("super_hash", &info), 0);
+
+    CU_ASSERT_EQUAL_FATAL(get_info_dict(&info, "192.168.56.0/24", &curr_dict_as1), 0);
+    CU_ASSERT_EQUAL_FATAL(get_info_dict(&info, "192.168.57.0/24", &curr_dict_as2), 0);
+
+    CU_ASSERT_EQUAL_FATAL(extra_info_copy_data(&curr_dict_as1, &as1, sizeof(as1)), 0);
+    CU_ASSERT_EQUAL_FATAL(extra_info_copy_data(&curr_dict_as2, &as2, sizeof(as2)), 0);
+
+    CU_ASSERT_EQUAL(as1, 65002);
+    CU_ASSERT_EQUAL(as2, 65003)
+}
+
+static void test_nested_dict(void) {
+
+    int i;
+    struct global_info info;
+    struct global_info info_lst;
+    struct global_info curr_val;
+
+    union ubpf_prefix pfx;
+
+    const char *ip4_str[] = {[0] = "192.168.56.0", [1] = "192.168.57.0"};
+    struct in_addr ips[2];
+
+    for (i = 0; i < 2; i++) {
+        if (!inet_pton(AF_INET, ip4_str[i], ips + i)) CU_FAIL_FATAL("Unable to convert IPs");
+    }
+
+    CU_ASSERT_EQUAL_FATAL(get_global_info("super_hash_nested", &info), 0);
+    CU_ASSERT_EQUAL_FATAL(get_info_dict(&info, "65002", &info_lst), 0);
+
+    for (i = 0;; i++) {
+        CU_ASSERT_FATAL(i <= 2)
+        if (get_info_lst_idx(&info_lst, i, &curr_val) != 0) break;
+
+        CU_ASSERT_EQUAL_FATAL(extra_info_copy_data(&curr_val, &pfx, sizeof(pfx)), 0)
+
+        CU_ASSERT_EQUAL(pfx.family, AF_INET);
+        CU_ASSERT_EQUAL(pfx.ip4_pfx.p.s_addr, ips[i].s_addr)
+        CU_ASSERT_EQUAL(pfx.ip4_pfx.prefix_len, 24)
+
+    }
+
+    CU_ASSERT_EQUAL(i, 2);
+
+}
 
 int extra_info_tests(void) {
     CU_pSuite pSuite = NULL;
@@ -156,7 +210,9 @@ int extra_info_tests(void) {
 
     if ((NULL == CU_add_test(pSuite, "Parse JSON", test_parse_extra_info)) ||
         (NULL == CU_add_test(pSuite, "Iterator extra Info", test_list_iter)) ||
-        (NULL == CU_add_test(pSuite, "Nested List", test_nested_list))) {
+        (NULL == CU_add_test(pSuite, "Nested List", test_nested_list)) ||
+        (NULL == CU_add_test(pSuite, "Getting Values from dict arg", test_dict_value)) ||
+        (NULL == CU_add_test(pSuite, "Nested list from dict arg", test_nested_dict))) {
         CU_cleanup_registry();
         return CU_get_error();
     }

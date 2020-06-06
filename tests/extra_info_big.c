@@ -70,7 +70,7 @@ static void test_big_walk(void) {
 int extra_info_big_tests(void) {
     CU_pSuite pSuite = NULL;
 
-    pSuite = CU_add_suite("extra_info_tests_suite", setup, teardown);
+    pSuite = CU_add_suite("extra_info_big_tests_suite", setup, teardown);
     if (NULL == pSuite) {
         CU_cleanup_registry();
         return CU_get_error();

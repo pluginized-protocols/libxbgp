@@ -43,20 +43,27 @@ def main(file_path, valid_ratio):
     real_nb_valid_rte = math.ceil(len(pfxes) * valid_ratio)
     valid_routes = random.sample(pfxes, real_nb_valid_rte)
 
-    for ip_net, origin_as in valid_routes:
+    v_ipv4 = [x for x in valid_routes if isinstance(x[0], IPv4Network)]
+    v_ipv6 = [x for x in valid_routes if isinstance(x[0], IPv6Network)]
 
-        if isinstance(ip_net, IPv4Network):
-            ip = {"type_arg": "ipv4_prefix", "arg": str(ip_net)}
-        else:
-            ip = {"type_arg": "ipv6_prefix", "arg": str(ip_net)}
+    v_ipv4.sort(key=lambda x: x[0], reverse=True)
+    v_ipv6.sort(key=lambda x: x[0], reverse=True)
 
-        list_rpki_like.append({
-            "type_arg": "list",
-            "arg": [
-                {"type_arg": "int", "arg": origin_as},
-                ip
-            ]
-        })
+    for v_ipvx in (v_ipv4, v_ipv6):
+        for ip_net, origin_as in v_ipvx:
+
+            if isinstance(ip_net, IPv4Network):
+                ip = {"type_arg": "ipv4_prefix", "arg": str(ip_net)}
+            else:
+                ip = {"type_arg": "ipv6_prefix", "arg": str(ip_net)}
+
+            list_rpki_like.append({
+                "type_arg": "list",
+                "arg": [
+                    {"type_arg": "int", "arg": origin_as},
+                    ip
+                ]
+            })
 
     print("Total Routes %d, valid %d" % (len(pfxes), real_nb_valid_rte))
 

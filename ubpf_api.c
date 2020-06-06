@@ -785,6 +785,11 @@ int get_extra_info_lst_idx(context_t *ctx UNUSED, struct global_info *info, int 
     return get_info_lst_idx(info, arr_idx, value);
 }
 
+int get_extra_info_dict(context_t *ctx UNUSED, struct global_info *info, const char *key, struct global_info *value) {
+    if (!key) return -1;
+    return get_info_dict(info, key, value);
+}
+
 int get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
     return get_global_info(key, info);
 }

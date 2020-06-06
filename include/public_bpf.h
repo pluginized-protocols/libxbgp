@@ -87,4 +87,6 @@ extern int get_extra_info_lst_idx(struct global_info *info, int arr_idx, struct 
 
 extern int get_extra_info(const char *key, struct global_info *info);
 
+extern int get_extra_info_dict(struct global_info *info, const char *key, struct global_info *value);
+
 #endif //FRR_UBPF_PUBLIC_BPF_H
