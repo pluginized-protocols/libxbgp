@@ -6,19 +6,15 @@
 #define FRR_UBPF_BPF_PLUGIN_H
 
 #include <stdint.h>
-#include "list.h"
-#include "include/public.h"
-#include "tree.h"
-#include <ubpf_manager.h>
+#include <stddef.h>
+#include "shared_memory.h"
+#include "uthash.h"
 
 #define MAX_HEAP_PLUGIN 1048576 // 1MB
 #define MAX_SIZE_ARGS_PLUGIN 512 // 512B must be checked before memcpy args
 
-typedef enum BPF_PLUGIN_TYPE {
-    BPF_PRE = 1,
-    BPF_POST,
-    BPF_REPLACE,
-} bpf_plugin_type_placeholder_t;
+
+typedef struct vm_container vm_container_t;
 
 typedef struct plugin {
     /* ptr_args and ptr_heap are tightened together since
@@ -27,10 +23,7 @@ typedef struct plugin {
      * ptr_heap = ptr_args + MAX_SIZE_ARGS_PLUGIN
      * If no extra mem are allowed both ptr_{args,heap}
      * are null */
-    size_t size_allowed_mem; // 0 if no extra memory
-    // otherwise heap length + size for memory arguments
-    unsigned int plugin_id;
-
+    size_t mem_len; // 0 if no extra memory
     struct {
         struct {
             bump_t mp;
@@ -45,22 +38,15 @@ typedef struct plugin {
         uint8_t *block; // master block
     } mem;
 
-    tree_t pre_functions;
-    tree_t post_functions;
+    vm_container_t *vms; // hash table of vms attached to the plugin
 
-    struct {
-        int nb;
-        tree_t replace_functions;
-        int ret_val_set;
-    } replace;
+    UT_hash_handle hh;
 
-    int fallback_request;
-
-    struct plugin *new_transaction;
+    size_t str_len;
+    char name[0];
 
 } plugin_t;
 
-unsigned int get_plugin_id(plugin_t *plugin);
 
 void fallback_request(plugin_t *p);
 
@@ -68,9 +54,15 @@ int must_fallback(plugin_t *p);
 
 void post_plugin_exec(plugin_t *p);
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, unsigned int plugid);
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len);
 
 int init_plugin_transaction(plugin_t *p);
+
+void destroy_plugin(plugin_t *p);
+
+int plugin_add_vm(plugin_t *p, vm_container_t *vm);
+
+int plugin_delete_vm(vm_container_t *vm);
 
 int commit_transaction(plugin_t *p);
 
@@ -88,23 +80,5 @@ int transaction_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, u
 int transaction_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
 
 int transaction_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int run_pre_functions(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret);
-
-int run_post_functions(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret);
-
-int run_replace_function(plugin_t *p, uint8_t *args, size_t args_size, uint64_t *ret_val);
-
-const char *id_plugin_to_str(unsigned int id);
-
-int str_plugin_to_int(const char *plugin_str);
-
-int rm_pre_function(plugin_t *p, uint32_t seq);
-
-int rm_replace_function(plugin_t *p, uint32_t seq);
-
-int rm_post_function(plugin_t *p, uint32_t seq);
-
-int run_replace_next_replace_function(context_t *ctx);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H

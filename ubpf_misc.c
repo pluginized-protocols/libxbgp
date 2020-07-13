@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "ubpf_misc.h"
 #include "bpf_plugin.h"
+#include "insertion_point.h"
 #include <time.h>
 #include <string.h>
 
@@ -36,14 +37,17 @@ void set_log_file(const char *path) {
 
 }
 
-void ubpf_log(ubpf_error_t error, uint32_t plugin_id, int type, uint32_t seq, const char *extra) {
+void
+ubpf_log(ubpf_error_t error, uint32_t plugin_id __attribute__((unused)),
+         int type, uint32_t seq __attribute__((unused)),
+         __attribute__((unused)) const char *extra) {
 
     if (log_file == NULL) return;
 
     int n;
     char error_str[ERROR_STR];
     const char *error_meaning;
-    const char *type_str;
+    const char *type_str __attribute__((unused));
     memset(error_str, 0, sizeof(char) * ERROR_STR);
 
     switch (type) {
@@ -83,9 +87,9 @@ void ubpf_log(ubpf_error_t error, uint32_t plugin_id, int type, uint32_t seq, co
             error_meaning = "???";
     }
 
-    n = snprintf(error_str, ERROR_STR, "[%s (at %s %s seq:%d)] %s: %s",
-                 format_time(), id_plugin_to_str(plugin_id), type_str,
-                 seq, error_meaning, extra);
+    // todo when time
+    n = snprintf(error_str, ERROR_STR, "%s",
+                 error_meaning);
 
     fwrite(error_str, sizeof(char), n, log_file);
 }

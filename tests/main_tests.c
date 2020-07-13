@@ -17,7 +17,6 @@
 #include "monitoring_tests.h"
 #include "list_test.h"
 #include "mempool_tests.h"
-#include "hashmap_tests.h"
 #include "internal_tests.h"
 #include "next_replace_tests.h"
 #include "extra_info_test.h"
@@ -69,7 +68,7 @@ int main(int argc, char *argv[]) {
     if ((internal_tests() != CUE_SUCCESS) ||
         (tree_tests() != CUE_SUCCESS) ||
         (list_tests() != CUE_SUCCESS) ||
-        (hashmap_tests() != CUE_SUCCESS) ||
+        // (hashmap_tests() != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||

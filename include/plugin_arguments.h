@@ -13,18 +13,31 @@
 #define kind_primitive 2
 #define kind_hidden 3
 
+#define entry_arg_null {.arg = NULL, .len = 0, .kind = 0, .type = 0}
+#define entry_is_null(entry) (((entry)->arg == NULL) && ((entry)->len == 0) && ((entry)->kind == 0) && ((entry)->type == 0))
+
+#define build_args(entries) \
+({ int i__;                               \
+args_t args__;                            \
+i__ = 0;                                  \
+while(!entry_is_null(&(entries)[i__])) {  \
+    i__++;                                \
+}                                         \
+args__.args = (entries);                  \
+args__.nargs = i__;                     \
+args__;})
+
 typedef struct {
     void *arg;
     size_t len;
     short kind;
-    unsigned int type; // custom type defined by the protocol insertion point
-} bpf_args_t;
+    int type; // custom type defined by the protocol insertion point
+} entry_args_t;
 
 typedef struct {
-    bpf_args_t *args;
+    entry_args_t *args;
     int nargs;
-    int plugin_type;
-    uintptr_t return_value;
-} bpf_full_args_t;
+} args_t;
+
 
 #endif //FRR_UBPF_PLUGIN_ARGUMENTS_H

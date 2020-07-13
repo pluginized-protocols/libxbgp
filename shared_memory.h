@@ -7,14 +7,18 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "map.h"
+#include "uthash.h"
 #include <sys/ipc.h>
 
 #define MAGIC 0xCAFEBABEDEADBEEF
 
 #define BLOCK_SIZE 4000 // FIXME: WAY TOO HIGH ! (quick fix for now) 4000 bytes fo a block is not a good idea
 
-typedef map_t(uint8_t *) map_shared_t;
+typedef struct map_shared {
+    UT_hash_handle hh;
+    int id;
+    uint8_t *data;
+} map_shared_t;
 
 typedef struct header_block {
     uint8_t available : 1; // is this block is available ?
@@ -30,7 +34,7 @@ typedef struct shared_memory {
     header_block_t *start;
     uint8_t *last_block; // sbrk limit
     uint8_t *end; // end of allocated memory
-    map_shared_t shared_blocks;
+    map_shared_t *shared_blocks;
     short corrupted;
 } heap_t;
 
@@ -80,7 +84,7 @@ typedef struct memory_pool {
     uint64_t num_initialized;
     uint8_t *mem_start;
     uint8_t *next;
-    map_shared_t shared;
+    map_shared_t *shared;
 } memory_pool_t;
 
 

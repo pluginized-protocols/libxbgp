@@ -3,7 +3,6 @@
 //
 
 #include <sys/un.h>
-#include "include/monitoring_struct.h"
 #include <include/plugin_arguments.h>
 #include "include/ebpf_mod_struct.h"
 #include <json-c/json_object.h>
@@ -13,6 +12,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
+#include <arpa/inet.h>
 #include "ubpf_context.h"
 
 #include "include/tools_ubpf_api.h"
@@ -31,6 +31,88 @@
 
 static int write_fd = -1; // fd to talk to monitoring manager of this library
 static int ebpf_msgid = -1;
+
+
+uint16_t super_ntohs(context_t *ctx, uint16_t value) {
+    ((void) (ctx));
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return (((value & 0x00FFu) << 8u) |
+            ((value & 0xFF00u) >> 8u));
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return value;
+#else
+#    error unsupported endianness
+#endif
+}
+
+
+uint32_t super_ntohl(context_t *ctx, uint32_t value) {
+    ((void) (ctx));
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return (((value & 0x000000FFu) << 24u) |
+            ((value & 0x0000FF00u) << 8u) |
+            ((value & 0x00FF0000u) >> 8u) |
+            ((value & 0xFF000000u) >> 24u));
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return value;
+#else
+#    error unsupported endianness
+#endif
+}
+
+uint64_t super_ntohll(context_t *ctx, uint64_t value) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return (
+            ((u_int64_t) (super_ntohl(ctx, (int) ((value << 32u) >> 32u))) << 32u) |
+            (unsigned int) super_ntohl(ctx, ((int) (value >> 32u)))
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return value;
+#else
+#    error unsupported endianness
+#endif
+}
+
+uint16_t super_htons(context_t *ctx __attribute__((unused)), uint16_t val) {
+#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+
+    return (
+            (((unsigned short) (val) & 0x00FFu)) << 8u |
+            (((unsigned short) (val) & 0xFF00u) >> 8u)
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return val;
+#else
+#error unsupported endianness
+#endif
+}
+
+uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val) {
+#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+    return (
+            ((((unsigned long) (val) & 0x000000FFu)) << 24u) |
+            ((((unsigned long) (val) & 0x0000FF00u)) << 8u) |
+            ((((unsigned long) (val) & 0x00FF0000u)) >> 8u) |
+            ((((unsigned long) (val) & 0xFF000000u)) >> 24u)
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return val;
+#else
+#error unsupported endianness
+#endif
+}
+
+uint64_t super_htonll(context_t *ctx, uint64_t val) {
+#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+    return (
+            ((((uint64_t) super_htonl(ctx, val)) << 32u) + super_htonl(ctx, (val) >> 32u))
+    );
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    return val;
+#else
+#error unsupported endianness
+#endif
+}
 
 
 int init_queue_ext_send(const char *working_dir) {
@@ -76,10 +158,6 @@ int send_ipc_msg(UNUSED context_t *ctx, ebpf_message_t *msg) {
 
     return 0;
 
-}
-
-void set_write_fd(int fd) {
-    write_fd = fd;
 }
 
 static int send_all(int socket, const void *buffer, size_t length) {
@@ -655,50 +733,25 @@ void *ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size_t
 }
 
 
-void set_error(context_t *vm_ctx, const char *reason, size_t len) {
-    if (!reason) return;
-
-
-    len = len < LENGTH_CONTEXT_ERROR ? len : LENGTH_CONTEXT_ERROR - 1;
-
-    vm_ctx->error_status = 1; // the error originate from the code itself and not from the VM
-
-    memset(vm_ctx->error, 0, sizeof(char) * LENGTH_CONTEXT_ERROR);
-    strncpy(vm_ctx->error, reason, len);
-    vm_ctx->error[LENGTH_CONTEXT_ERROR - 1] = 0;
-}
-
-
-void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args) {
-
+void *get_arg(context_t *vm_ctx, int type) {
+    int i;
+    uint8_t *ret_arg;
     // fprintf(stderr, "Ptr ctx at %s call --> %p\n", __FUNCTION__, vm_ctx);
 
-    bpf_args_t *check_args = get_args(args);
+    args_t *check_args = vm_ctx->args;
     if (!check_args) {
-        fprintf(stderr, "Error in arguments (%s)\n", id_plugin_to_str(vm_ctx->p->plugin_id));
-        return NULL;
-    }
-    if (arg_nb >= args->nargs) {
         return NULL;
     }
 
-    if (check_args[arg_nb].kind == kind_hidden) {
-        return NULL;
-    }
-
-    if (check_args[arg_nb].kind == kind_ptr) {
-        if (check_args[arg_nb].arg == NULL) {
-            return NULL;
+    for (i = 0; i < check_args->nargs; i++) {
+        if (check_args->args[i].type == type) {
+            ret_arg = bump_alloc(&vm_ctx->p->mem.heap.mp, check_args->args[i].len);
+            if (!ret_arg) return NULL;
+            memcpy(ret_arg, check_args->args[i].arg, check_args->args[i].len);
+            return ret_arg;
         }
     }
-
-    uint8_t *ret_arg = bump_alloc(&vm_ctx->p->mem.heap.mp, args->args[arg_nb].len);
-    if (ret_arg == NULL) {
-        return NULL;
-    }
-    memcpy(ret_arg, args->args[arg_nb].arg, args->args[arg_nb].len);
-
-    return ret_arg;
+    return NULL;
 }
 
 
@@ -792,4 +845,13 @@ int get_extra_info_dict(context_t *ctx UNUSED, struct global_info *info, const c
 
 int get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
     return get_global_info(key, info);
+}
+
+int ebpf_inet_ntop(context_t *ctx UNUSED, union ubpf_prefix *pfx, char *buf, size_t len) {
+
+    void *ip_src = pfx->family == AF_INET ? (void *) &pfx->ip4_pfx.p : &pfx->ip6_pfx.p;
+
+    if (!inet_ntop(pfx->family, ip_src, buf, len)) return -1;
+
+    return 0;
 }

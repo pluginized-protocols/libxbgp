@@ -8,15 +8,17 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/socket.h>
-#include "tools_ubpf_api.h"
 #include "ebpf_mod_struct.h"
 #include "global_info_str.h"
+#include "ubpf_prefix.h"
+#include "plugin_arguments.h"
+#include "tools_ubpf_api.h"
 
 
 #define NUMARGS_SPRINTF__(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
 
 #define ubpf_sprintf(str, size, format, ...)\
-ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__) __VA_OPT__(,) __VA_ARGS__})
+ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__), __VA_ARGS__})
 
 
 /**
@@ -69,7 +71,7 @@ extern uint64_t ebpf_htonll(uint64_t value);
 
 extern int send_ipc_msg(ebpf_message_t *msg);
 
-extern void *bpf_get_args(unsigned int arg_nb, bpf_full_args_t *args);
+extern void *get_arg(unsigned int arg_type);
 
 extern int bpf_sockunion_cmp(const struct sockaddr *su1, const struct sockaddr *su2);
 
@@ -88,5 +90,7 @@ extern int get_extra_info_lst_idx(struct global_info *info, int arr_idx, struct 
 extern int get_extra_info(const char *key, struct global_info *info);
 
 extern int get_extra_info_dict(struct global_info *info, const char *key, struct global_info *value);
+
+extern int ebpf_inet_ntop(union ubpf_prefix *pfx, char *buf, size_t len);
 
 #endif //FRR_UBPF_PUBLIC_BPF_H

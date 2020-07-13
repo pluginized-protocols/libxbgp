@@ -4,7 +4,7 @@
 
 #include <CUnit/CUnit.h>
 #include "mempool_tests.h"
-#include "public.h"
+#include "ubpf_public.h"
 
 
 enum {
@@ -40,15 +40,19 @@ static int teardown(void) {
 
 static void test_single_value_u16(void) {
 
+    struct mempool_data data;
     uint16_t u16bval;
     mem_pool *mp;
     mp = new_mempool();
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
 
-    u16bval = 63311;
-    add_single_mempool(mp, TYPE_U16, NULL, sizeof(uint16_t), &u16bval);
 
-    CU_ASSERT_EQUAL(get_mempool_u64(mp, TYPE_U16), u16bval);
+    u16bval = 63311;
+    add_mempool(mp, TYPE_U16, NULL, sizeof(uint16_t), &u16bval, 0);
+
+    get_mempool_data(mp, TYPE_U16, &data);
+
+    CU_ASSERT_EQUAL(*(uint16_t *) data.data, u16bval);
 
     delete_mempool(mp);
 }
@@ -56,6 +60,7 @@ static void test_single_value_u16(void) {
 static void test_ptr_value(void) {
 
     struct test_struct ts, *retrieved;
+    struct mempool_data data;
 
     mem_pool *mp;
     mp = new_mempool();
@@ -66,8 +71,10 @@ static void test_ptr_value(void) {
     ts.c = 2836770417;
 
 
-    add_single_mempool(mp, TYPE_SUPER_STRUCT_PTR, NULL, sizeof(ts), &ts);
-    retrieved = get_mempool_ptr(mp, TYPE_SUPER_STRUCT_PTR);
+    add_mempool(mp, TYPE_SUPER_STRUCT_PTR, NULL, sizeof(ts), &ts, 0);
+    get_mempool_data(mp, TYPE_SUPER_STRUCT_PTR, &data);
+
+    retrieved = data.data;
 
     CU_ASSERT_EQUAL(retrieved->a, ts.a);
     CU_ASSERT_EQUAL(retrieved->b, ts.b);
@@ -88,24 +95,28 @@ static void test_ptr_with_memory_to_free(void) {
     struct test_struct_to_free my_struct, *retrieved;
     const char *my_str = "Hello World!";
     mem_pool *mp;
+    struct mempool_data data;
+
+    memset(&my_struct, 0, sizeof(my_struct));
 
     mp = new_mempool();
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
 
     my_struct.a = 461871689768;
     my_struct.b = 0xffffffffffffffff;
-    my_struct.ptr_c = malloc(sizeof(int));
+    my_struct.ptr_c = malloc(sizeof(uint64_t));
     my_struct.str = calloc(13, sizeof(char));
 
     if (!my_struct.ptr_c || !my_struct.str) CU_FAIL("Memory not allocated");
 
-    *my_struct.ptr_c = 6554;
+    *my_struct.ptr_c = 6554LL;
     strncpy(my_struct.str, my_str, 13);
     my_struct.str[12] = 0; // safe copy
 
 
-    add_single_mempool(mp, TYPE_SUPER_STRUCT_PTR, cleanup_my_struct, sizeof(my_struct), &my_struct);
-    retrieved = get_mempool_ptr(mp, TYPE_SUPER_STRUCT_PTR);
+    add_mempool(mp, TYPE_SUPER_STRUCT_PTR, cleanup_my_struct, sizeof(my_struct), &my_struct, 0);
+    get_mempool_data(mp, TYPE_SUPER_STRUCT_PTR, &data);
+    retrieved = data.data;
 
     CU_ASSERT_NSTRING_EQUAL(retrieved->str, my_str, 13);
     CU_ASSERT_EQUAL(*retrieved->ptr_c, 6554);
@@ -116,28 +127,25 @@ static void test_ptr_with_memory_to_free(void) {
 }
 
 static void test_list_value(void) {
-
     int i, *current_value;
-
+    mempool_iterator *it;
     mem_pool *mp;
-    lst_mempool_iterator *it;
     mp = new_mempool();
 
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
 
-
     for (i = 1; i <= 10; i++)
-        add_lst_mempool(mp, TYPE_INT, NULL, sizeof(int), &i);
+        add_mempool(mp, TYPE_INT, NULL, sizeof(int), &i, 0);
 
-    i = 10;
-    for (it = new_lst_iterator_mempool(mp, TYPE_INT); (current_value = next_lst_mempool_iterator(it)) != NULL; i--) {
+    i = 1;
+    for (it = new_mempool_iterator(mp); (current_value = next_mempool_iterator(it)) != NULL; i++) {
         CU_ASSERT_PTR_NOT_NULL_FATAL(current_value)
         CU_ASSERT_EQUAL(*current_value, i)
     }
 
-    CU_ASSERT_EQUAL(i, 0);
+    CU_ASSERT_EQUAL(i, 11);
 
-    destroy_lst_mempool_iterator(it);
+    delete_mempool_iterator(it);
     delete_mempool(mp);
 }
 
@@ -145,6 +153,8 @@ static void test_raw_pointer(void) {
 
     const char *string = "Bonjour le monde!";
     mem_pool *mp;
+    struct mempool_data data;
+    const char *rtv;
 
     mp = new_mempool();
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
@@ -153,9 +163,12 @@ static void test_raw_pointer(void) {
     strncpy(my_string, string, 18);
     my_string[17] = 0;
 
-    add_raw_ptr_mempool(mp, TYPE_RAW, free, my_string);
+    add_mempool(mp, TYPE_RAW, free, sizeof(uintptr_t), my_string, 1);
 
-    CU_ASSERT_NSTRING_EQUAL(get_mempool_ptr(mp, TYPE_RAW), string, 18);
+    get_mempool_data(mp, TYPE_RAW, &data);
+    rtv = data.data;
+
+    CU_ASSERT_NSTRING_EQUAL(rtv, string, 18);
     delete_mempool(mp);
 }
 
@@ -171,13 +184,13 @@ static void test_iterator_whole_mempool(void) {
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp)
 
     for (i = 1; i <= 10; i++) {
-        add_single_mempool(mp, i, NULL, sizeof(int), &i);
+        add_mempool(mp, i, NULL, sizeof(int), &i, 0);
     }
 
     it = new_mempool_iterator(mp);
     CU_ASSERT_PTR_NOT_NULL_FATAL(it)
 
-    while (hasnext_mempool_iterator(it)) {
+    while (mempool_hasnext(it)) {
         j = next_mempool_iterator(it);
         CU_ASSERT_PTR_NOT_NULL_FATAL(j);
         CU_ASSERT_FALSE(seen[(*j) - 1])

@@ -8,16 +8,20 @@
 
 //#include "lib/ubpf_prefix.h"
 
-#include <include/plugin_arguments.h>
-#include <bpf_plugin.h>
-#include "map.h"
+
+
+#include <include/ebpf_mod_struct.h>
+#include <pthread.h>
 #include <limits.h>
+#include <stdint.h>
+#include <include/context_hdr.h>
+#include "insertion_point.h"
 
-
-#define MAX_PLUGINS 128
 #define MAX_SIZE_PLUGIN 1048576
+#define MAX_SIZE_OBJ_CODE 1048576
 #define MTYPE_EBPF_ACTION 1
 #define MTYPE_INFO_MSG 2
+
 
 enum msg_type_id {
     E_BPF_ADD = 1,
@@ -52,54 +56,24 @@ typedef enum status_message_passing {
 
 } status_t;
 
-
-typedef struct ubpf_queue_msg {
-
-    long mtype;
-    unsigned int plugin_action;
-    short jit;
-    char plugin_name[NAME_MAX + 1];
-    size_t bytecode_length;
-    int hook;
-    uint32_t seq;
-    uint16_t extra_memory;
-    uint16_t shared_memory;
-
-} ubpf_queue_msg_t;
-
-typedef struct ubpf_queue_info_msg {
-
-    long mtype;
-    status_t status; // failed or not
-
-} ubpf_queue_info_msg_t;
-
-typedef map_t(plugin_t *) vm_container_map_t;
-
-typedef int (*new_plug)(const char *name_plugin, const char *path_plugin,
-                        size_t extra_memory, size_t shared_memory,
-                        int plugin_id, int pluglet_type,
-                        uint32_t sequence, uint8_t jit);
+typedef struct vm_container vm_container_t;
+typedef struct insertion_point insertion_point_t;
+typedef struct insertion_point_iterator insertrion_point_iterator_t;
+typedef struct plugin plugin_t;
 
 
-typedef struct plugins {
+typedef struct manager {
 
-    int size; // number of plugins already registered
+    insertion_point_info_t *point_info;
+    struct proto_ext_fun *helper_functions;
+    vm_container_t *vms_table;
+    plugin_t *plugin_table;
+    insertion_point_t *insertion_point_table;
 
-    plugin_t *ubpf_machines[MAX_PLUGINS];
+    char var_state_path[PATH_MAX];
+    pthread_t receiver; // communication socket blah blah blah
 
-    //vm_container_map_t *ubpf_machines;
-    // map containing current uBPF plugins.
-    // keys are actually ID associated to a particular
-    // uBPF machine which contains a particular plugin
-
-} plugins_t;
-
-/**
- * Global plugin manager which could be accessed
- * everywhere in the BGP code.
- */
-extern plugins_t *plugins_manager;
+} manager_t;
 
 /**
  * Initialise the plugin manager by allocating required memory.
@@ -109,79 +83,84 @@ extern plugins_t *plugins_manager;
  *         0 otherwise
  */
 int
-init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len, plugin_info_t *plugins_array,
+init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len,
+                    insertion_point_info_t *plugins_array,
                     const char *monitoring_address, const char *monitoring_port, int require_monit);
 
 /**
- * Add an uBPF plugin to the plugin_manager given in argument
- * @param plugin_manager pointer to the associated plugin_manager. Pointer should not be NULL
- * @param path_code path to the compiled uBPF plugin (with clang)
- * @param id_plugin which id must this plugin use (required later to run a particular plugin)
- * @return 1 if the operation succeed
- *         0 otherwise ( - ID is already used by another plugin,
- *                       - invalid path
- *                       - provided uBPF file contains errors
- *                       - unable to allocate new memory for this plugin )
+ *
+ * @param plugin_name
+ * @param plugin_name_len
+ * @param extra_mem
+ * @param shared_mem
+ * @param insertion_point_id
+ * @param insertion_point
+ * @param i_pt_name
+ * @param type_anchor
+ * @param seq_anchor
+ * @param jit
+ * @param obj_path_code
+ * @param vm_name
+ * @param vm_name_len
+ * @param api_proto
+ * @return
  */
-int add_pluglet(const char *path_code, size_t add_mem_len, size_t shared_mem, int id_plugin, int type_plugglet,
-                uint32_t seq, uint8_t jit);
+int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t extra_mem, uint64_t shared_mem,
+                       int insertion_point_id, const char *insertion_point, size_t i_pt_name, anchor_t type_anchor,
+                       int seq_anchor, int jit,
+                       const char *obj_path_code, const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto);
 
-int plugin_is_registered(int plugin_id);
-
-int run_plugin_pre(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
-int run_plugin_post(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
-int run_plugin_replace(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
-int init_ubpf_inject_queue(void);
-
-int send_pluglet(const char *path, const char *plugin_name, short jit, int hook, unsigned int action,
-                 uint16_t extra_mem, uint16_t shared_mem, uint32_t seq, int msqid, int shared_fd);
-
-int rm_plugin(int id_plugin, int *err);
-
-int rm_plugin_str(const char *str, const char **err);
-
-int __add_pluglet_ptr(const uint8_t *bytecode, int id_plugin, int type_plugin, size_t len,
-                      size_t add_mem_len, size_t shared_mem, uint32_t seq, uint8_t jit,
-                      int *err);
-
-int __add_pluglet(const char *path_code, int id_plugin, int type_plugin, size_t add_mem_len, size_t shared_mem,
-                  uint32_t seq, uint8_t jit, int *err);
-
-int run_volatile_plugin(int plugin_id, void *args, size_t args_len, uint64_t *ret_val);
-
-int is_volatile_plugin(int plugin_id);
-
-int load_plugin_from_json(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir);
-
-int load_plugin_from_json_fn(const char *file_path, char *sysconfdir, size_t len_arg_sysconfdir, new_plug fn);
-
-size_t store_plugin(size_t size, const char *path, int shared_fd);
-
-void remove_xsi(void);
 
 void ubpf_terminate(void);
 
-int rm_pluglet(int plugin_id, int seq, int anchor);
-
-int send_rm_plugin(int msqid, const char *plugin_name);
-
-int send_rm_pluglet(int msqid, const char *plugin_name, uint32_t seq, int anchor);
-
-int send_begin_transaction(int msqid);
-
-int send_finish_transaction(int msqid);
-
-int init_shared_memory(char *shared_mem_name);
-
-plugin_info_t *get_plugin_info(void);
-
-int get_max_plugins(void);
-
-int get_msqid(void);
-
 int close_shared_memory(void);
+
+int str_insertion_point_to_int(manager_t *manager, const char *plugin_str);
+
+insertion_point_t *insertion_point(int id);
+
+const char *id_insertion_point_to_str(manager_t *manager, int id);
+
+insertion_point_t *get_insertion_point(manager_t *manager, int id);
+
+int is_plugin_registered(manager_t *manager, plugin_t *p);
+
+int register_plugin(manager_t *manager, plugin_t *plugin);
+
+int unregister_plugin(manager_t *manager, const char *name);
+
+int insertion_point_is_registered(manager_t *manager, insertion_point_t *point);
+
+int register_insertion_point(manager_t *manager, insertion_point_t *point);
+
+int context_is_registered(manager_t *manager, context_t *ctx);
+
+int register_context(manager_t *manager, context_t *ctx);
+
+int register_vm(manager_t *manager, vm_container_t *vm);
+
+int is_vm_registered(manager_t *manager, vm_container_t *vm);
+
+int is_vm_registered_by_name(manager_t *manager, const char *name);
+
+plugin_t *get_plugin_by_name(manager_t *manager, const char *name);
+
+int is_plugin_registered_by_name(manager_t *manager, const char *name);
+
+int insertion_point_is_registered_by_id(manager_t *manager, int id);
+
+int unregister_insertion_point(manager_t *manager, int id);
+
+void *readfile(const char *path, size_t maxlen, size_t *len);
+
+vm_container_t *unregister_vm(manager_t *manager, const char *name);
+
+insertion_point_t *get_insertion_point_by_id(manager_t *manager, int id);
+
+int remove_extension_code(const char *name);
+
+int remove_plugin(const char *name);
+
+int remove_insertion_point(int id);
 
 #endif //FRR_THESIS_PLUGINS_MANAGER_H

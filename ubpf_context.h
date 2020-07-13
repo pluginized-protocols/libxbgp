@@ -9,18 +9,9 @@
 #include "bpf_plugin.h"
 #include "context_hdr.h"
 
+context_t *new_context(void);
 
-typedef hashmap_t(short) map_allowed_ctx_t;
-
-context_t *new_context(plugin_t *p);
-
-int register_context(context_t *ctx);
-
-int unregister_context(context_t *ctx);
-
-int context_ok(context_t *ctx);
-
-void destroy_context(void);
+int free_context(context_t *ctx);
 
 
 #endif //FRR_UBPF_UBPF_CONTEXT_H

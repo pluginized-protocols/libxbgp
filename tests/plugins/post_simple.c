@@ -2,9 +2,9 @@
 // Created by twirtgen on 3/12/19.
 //
 
-#include "../../include/public_bpf.h"
+#include "../../include/bytecode_public.h"
 
-uint64_t main_post_simple(UNUSED bpf_full_args_t *args) {
+uint64_t main_post_simple() {
 
     int return_val;
 

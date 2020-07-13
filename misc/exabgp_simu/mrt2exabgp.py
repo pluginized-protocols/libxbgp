@@ -66,6 +66,7 @@ def print_api_prog_header():
 
 import sys
 import time
+import threading
 
 msgs = [''')
 
@@ -73,6 +74,19 @@ msgs = [''')
 def print_api_prog_footer():
     print('''\
 ]
+
+def stdin_reader():
+    while True:
+        try:
+            line = sys.stdin.readline().strip()
+
+            if 'shutdown' in line:
+                sys.exit(1)
+        except:
+            sys.exit(1)
+
+a = threading.Thread(target=stdin_reader, args=())
+a.start()
 
 while msgs:
     msg = msgs.pop(0)

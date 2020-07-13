@@ -2,7 +2,7 @@ import json
 
 
 def parse_cust_provider_relation():
-    cust_prov = []
+    cust_prov = dict()
 
     with open("./20200501.as-rel2.txt", "r") as f:
         for line in f:
@@ -13,18 +13,21 @@ def parse_cust_provider_relation():
             p = l_strip.split('|')
 
             if int(p[2]) == -1:
-                cust_prov.append((int(p[0]), int(p[1])))
+                prov = int(p[0])
+                if prov not in cust_prov:
+                    cust_prov[prov] = list()
+                cust_prov[prov].append(int(p[1]))
 
     return cust_prov
 
 
 def generate_json_conf():
-    cust_prov_list = []
+    cust_prov_list = dict()
     parse_info = parse_cust_provider_relation()
     formatted_json = {
         "conf": {
             "customer_provider": {
-                "type_arg": "list",
+                "type_arg": "dict",
                 "arg": cust_prov_list
             }
         }
@@ -32,15 +35,14 @@ def generate_json_conf():
 
     stat = 0
 
-    for prov, cust in parse_info:
+    for prov in parse_info:
         stat += 1
-        cust_prov_list.append({
+        cust_prov_list[prov] = {
             "type_arg": "list",
             "arg": [
-                {"type_arg": "int", "arg": prov},
-                {"type_arg": "int", "arg": cust}
+                {"type_arg": "int", "arg": cust} for cust in parse_info[prov]
             ]
-        })
+        }
 
     print("Total Relation %d" % stat)
 

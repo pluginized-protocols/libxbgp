@@ -73,7 +73,7 @@ struct conf_val *get_extra_from_key(const char *key);
 
 int get_global_info(const char *key, struct global_info *info);
 
-int get_info_lst_idx(struct global_info *info, int array_idx, struct global_info *value);
+int get_info_lst_idx(struct global_info *info, unsigned int array_idx, struct global_info *value);
 
 int get_info_dict(struct global_info *info, const char *key, struct global_info *value);
 

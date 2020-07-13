@@ -2,14 +2,14 @@
 // Created by twirtgen on 5/12/19.
 //
 
-#include "../../include/public_bpf.h"
+#include "../../include/bytecode_public.h"
 
-uint64_t main_macro_weird(bpf_full_args_t *args) {
+uint64_t main_macro_weird() {
 
-    int *a = bpf_get_args(0, args);
-    char *b = bpf_get_args(1, args);
-    uint32_t *c = bpf_get_args(2, args);
-    short *d = bpf_get_args(3, args);
+    int *a = get_arg(32);
+    char *b = get_arg(33);
+    uint32_t *c = get_arg(34);
+    short *d = get_arg(35);
 
     if (!a || !b || !c || !d) return 0;
 

@@ -109,7 +109,7 @@ int get_global_info(const char *key, struct global_info *info) {
     return 0;
 }
 
-int get_info_lst_idx(struct global_info *info, int array_idx, struct global_info *value) {
+int get_info_lst_idx(struct global_info *info, unsigned int array_idx, struct global_info *value) {
 
     struct conf_val *val;
 
@@ -429,7 +429,7 @@ int extra_conf_parse_delete_str(struct conf_val *val) {
 int extra_conf_parse_delete_list(struct conf_val *val) {
 
     struct conf_val *lst_elem;
-    int i;
+    unsigned int i;
 
     if (val->type != conf_val_type_list) return -1;
 

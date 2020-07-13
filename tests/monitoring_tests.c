@@ -5,7 +5,7 @@
 #include "monitoring_tests.h"
 
 
-#include <include/public.h>
+#include <include/ubpf_public.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,10 +32,10 @@ pid_t exporter_pid = -1;
 
 static proto_ext_fun_t funcs[] = {};
 
-static plugin_info_t plugins[] = {
-        {.plugin_str = "send_monitoring_data", .plugin_id = 1},
-        {.plugin_str = "send_a_lot_of_record", .plugin_id = 2},
-        {.plugin_str = "pultiple_type_record", .plugin_id = 3}
+static insertion_point_info_t plugins[] = {
+        {.insertion_point_str = "send_monitoring_data", .insertion_point_id = 1},
+        {.insertion_point_str = "send_a_lot_of_record", .insertion_point_id = 2},
+        {.insertion_point_str = "pultiple_type_record", .insertion_point_id = 3}
 };
 
 static int setup(void) {
@@ -127,28 +127,32 @@ void send_monitoring_record_test(void) {
     int status;
     int dummy_arg = 0;
     char path_pluglet[PATH_MAX];
-    bpf_full_args_t fargs;
+    args_t fargs;
+    insertion_point_t *point;
 
     struct timespec tv = {.tv_sec = 5, .tv_nsec = 0};
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
     snprintf(path_pluglet, PATH_MAX - 24, "%s/%s", plugin_folder_path, "send_monitoring_data.o");
 
-    bpf_args_t args[] = {
+    entry_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
+            entry_arg_null,
     };
-    new_argument(args, 1, 1, &fargs);
 
-    status = add_pluglet(path_pluglet, 8, 0,
-                         1, BPF_REPLACE, 0, 0);
+    status = add_extension_code("monitoring_example", 18, 64, 0, 1, "point", 5, BPF_REPLACE,
+                                0, 0, path_pluglet, "send_monit", 10, funcs);
+
+    fargs.args = args;
+    fargs.nargs = 1;
 
     CU_ASSERT_EQUAL(status, 0)
-    run_plugin_replace(1, &fargs, sizeof(bpf_full_args_t *), &ret_val);
+    point = insertion_point(1);
+    run_replace_function(point, &fargs, &ret_val);
     CU_ASSERT_EQUAL(ret_val, EXIT_SUCCESS)
-
     nanosleep(&tv, NULL);
 
-    rm_plugin(1, NULL);
+    remove_plugin("monitoring_example");
 }
 
 static void send_multiple_records_test(void) {
@@ -156,28 +160,32 @@ static void send_multiple_records_test(void) {
     int status;
     int dummy_arg = 0;
     char path_pluglet[PATH_MAX];
-    bpf_full_args_t fargs;
+    args_t fargs;
+    insertion_point_t *point;
 
     struct timespec tv = {.tv_sec = 5, .tv_nsec = 0};
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
     snprintf(path_pluglet, PATH_MAX - 24, "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
 
-    bpf_args_t args[] = {
+    entry_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
+            entry_arg_null
     };
-    new_argument(args, 3, 1, &fargs);
 
-    status = add_pluglet(path_pluglet, 8, 0,
-                         3, BPF_REPLACE, 0, 0);
+    fargs.nargs = 1;
+    fargs.args = args;
 
+    status = add_extension_code("multiple_monitoring", 19, 64, 0, 3, "point", 5, BPF_REPLACE,
+                                0, 0, path_pluglet, "multiple_send", 13, funcs);
     CU_ASSERT_EQUAL(status, 0)
-    run_plugin_replace(3, &fargs, sizeof(bpf_full_args_t *), &ret_val);
+    point = insertion_point(3);
+    run_replace_function(point, &fargs, &ret_val);
     CU_ASSERT_EQUAL(ret_val, EXIT_SUCCESS)
 
     nanosleep(&tv, NULL);
 
-    rm_plugin(3, NULL);
+    remove_plugin("multiple_monitoring");
 }
 
 static void send_multiple_records_type_test(void) {
@@ -185,28 +193,33 @@ static void send_multiple_records_type_test(void) {
     int status;
     int dummy_arg = 0;
     char path_pluglet[PATH_MAX];
-    bpf_full_args_t fargs;
+    args_t fargs;
+    insertion_point_t *point;
 
     struct timespec tv = {.tv_sec = 5, .tv_nsec = 0};
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
     snprintf(path_pluglet, PATH_MAX - 25, "%s/%s", plugin_folder_path, "multiple_type_record.o");
 
-    bpf_args_t args[] = {
+    entry_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
+            entry_arg_null
     };
-    new_argument(args, 1, 1, &fargs);
+    fargs.args = args;
+    fargs.nargs = 1;
 
-    status = add_pluglet(path_pluglet, 8, 0,
-                         2, BPF_REPLACE, 0, 0);
-
+    status = add_extension_code("multiple_record", 15, 64, 0, 2, "point", 5, BPF_REPLACE, 0, 0,
+                                path_pluglet, "the_vm_name", 11, funcs);
     CU_ASSERT_EQUAL(status, 0)
-    run_plugin_replace(2, &fargs, sizeof(bpf_full_args_t *), &ret_val);
+
+    point = insertion_point(2);
+
+    run_replace_function(point, &fargs, &ret_val);
     CU_ASSERT_EQUAL(ret_val, EXIT_SUCCESS)
 
     nanosleep(&tv, NULL);
 
-    rm_plugin(2, NULL);
+    remove_plugin("multiple");
 }
 
 int ubpf_monitoring_tests(const char *plugin_folder) {

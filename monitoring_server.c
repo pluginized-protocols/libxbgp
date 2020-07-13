@@ -263,7 +263,7 @@ int init_monitoring(const char *address, const char *port, int monit) {
     } else { // parent
         child_pid = pid;
         close(pipe_fd[0]);
-        set_write_fd(pipe_fd[1]);
+        //set_write_fd(pipe_fd[1]);
         return pipe_fd[1];
     }
 }
@@ -276,6 +276,7 @@ void turnoff_monitoring() {
     kill(child_pid, SIGINT);
     if (waitpid(child_pid, &status, 0) == -1) {
         perror("Can't wait process termination");
+        return;
     }
 
     if (!WIFEXITED(status)) {

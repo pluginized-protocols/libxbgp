@@ -4,9 +4,10 @@
 
 #include "next_replace_tests.h"
 #include <CUnit/Util.h>
-#include <include/public.h>
+#include <include/ubpf_public.h>
 #include <limits.h>
 #include <bpf_plugin.h>
+#include <plugins_manager.h>
 
 static char plugin_folder_path[PATH_MAX];
 static int return_value = -1;
@@ -25,13 +26,13 @@ static inline void reset_ret_val() {
     return_value = -1;
 }
 
-static void set_return_value(context_t *ctx, int a) {
+static void set_return_value(context_t *ctx __attribute__((unused)), int a) {
     return_value = a;
 }
 
-static plugin_info_t plugins[] = {
-        {.plugin_str = "replace_chain", .plugin_id = 1},
-        plugin_info_null
+static insertion_point_info_t insertion_points[] = {
+        {.insertion_point_str = "replace_chain", .insertion_point_id = 1},
+        insertion_point_info_null
 };
 
 static proto_ext_fun_t funcs[] = {
@@ -50,7 +51,7 @@ static int setup(void) {
 
     char path[PATH_MAX];
 
-    ret = init_plugin_manager(funcs, ".", 9, plugins,
+    ret = init_plugin_manager(funcs, ".", 9, insertion_points,
                               NULL, NULL, 0);
 
     if (ret != 0) return -1;
@@ -63,7 +64,10 @@ static int setup(void) {
         memset(path, 0, sizeof(char) * PATH_MAX);
         snprintf(path, PATH_MAX - 1, format_code_path(), plugin_folder_path, elf_files[i]);
 
-        if (add_pluglet(path, 512, 0, 1, BPF_REPLACE, 0, 0) != 0) {
+        if (add_extension_code("gros minet", 10, 512,
+                               0, 1, "replace_chain",
+                               13, BPF_REPLACE, i, 0, path, elf_files[i],
+                               strlen(elf_files[i]), funcs) != 0) {
             return -1;
         }
     }
@@ -83,22 +87,22 @@ static void test_replace_first_no_fallback(void) {
     int must_next = 0;
     int must_fallback = 0;
 
-    bpf_args_t args[] = {
+    entry_args_t args[] = {
             {.arg = &my_arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &must_fallback, .len=sizeof(int), .kind=kind_primitive, .type = 0},
+            {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 1},
+            {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 2},
+            {.arg = &must_fallback, .len=sizeof(int), .kind=kind_primitive, .type = 3},
+            entry_arg_null
     };
-
     reset_ret_val();
 
-    CALL_REPLACE_ONLY(1, args, 4, arg_check, {
+    CALL_REPLACE_ONLY(1, args, arg_check, {
+        fprintf(stderr, "%lu\n", VM_RETURN_VALUE);
         CU_FAIL_FATAL("The fallback code must not be executed");
     }, {
                           CU_ASSERT_EQUAL(VM_RETURN_VALUE, EXIT_SUCCESS);
                           CU_ASSERT_EQUAL(return_value, 42);
                       })
-
     reset_ret_val();
 }
 
@@ -108,16 +112,17 @@ static void test_replace_second_no_fallback(void) {
     int must_next = 1;
     int must_fallback = 0;
 
-    bpf_args_t args[] = {
+    entry_args_t args[] = {
             {.arg = &my_arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &must_fallback, .len=sizeof(int), .kind=kind_primitive, .type = 0},
+            {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 1},
+            {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 2},
+            {.arg = &must_fallback, .len=sizeof(int), .kind=kind_primitive, .type = 3},
+            entry_arg_null
     };
 
     reset_ret_val();
 
-    CALL_REPLACE_ONLY(1, args, 4, arg_check, {
+    CALL_REPLACE_ONLY(1, args, arg_check, {
         CU_FAIL_FATAL("The fallback code must not be executed");
     }, {
                           CU_ASSERT_EQUAL(VM_RETURN_VALUE, EXIT_SUCCESS);
@@ -134,16 +139,17 @@ static void test_replace_chain_fallback(void) {
     int must_next = 1;
     int must_fallback = 1;
 
-    bpf_args_t args[] = {
+    entry_args_t args[] = {
             {.arg = &my_arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 0},
-            {.arg = &must_fallback, .len=sizeof(int), .kind=kind_primitive, .type = 0},
+            {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 1},
+            {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 2},
+            {.arg = &must_fallback, .len=sizeof(int), .kind=kind_primitive, .type = 3},
+            entry_arg_null
     };
 
     reset_ret_val();
 
-    CALL_REPLACE_ONLY(1, args, 4, arg_check, {
+    CALL_REPLACE_ONLY(1, args, arg_check, {
         // THIS CODE MUST BE EXECUTED
         CU_ASSERT_TRUE(1)
         CU_ASSERT_EQUAL(return_value, -1)

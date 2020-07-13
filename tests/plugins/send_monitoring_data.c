@@ -2,11 +2,11 @@
 // Created by twirtgen on 7/01/20.
 //
 
-#include "../../include/public_bpf.h"
+#include "../../include/bytecode_public.h"
 
 #define TYPE_INT 1
 
-uint64_t send_monitoring_data(bpf_full_args_t *args) {
+uint64_t send_monitoring_data() {
 
     int data = 42;
     int ret_val;

@@ -125,7 +125,11 @@ void init_heap(heap_t *mem, void *heap, size_t len) {
 }
 
 void destroy_heap(heap_t *heap) {
-    map_deinit(&heap->shared_blocks);
+    map_shared_t *curr, *tmp;
+    HASH_ITER(hh, heap->shared_blocks, curr, tmp) {
+        HASH_DEL(heap->shared_blocks, curr);
+        free(curr);
+    }
 }
 
 void *ubpf_sbrk(heap_t *heap, size_t increment) {
@@ -267,16 +271,13 @@ void *ubpf_calloc(heap_t *heap, size_t nmemb, size_t size) {
 }
 
 void *ubpf_shmnew(heap_t *heap, key_t key, size_t size) {
-
-    uint8_t **block_map;
+    map_shared_t *shared;
     uint8_t *block;
 
     if (!heap || !heap->heap) return NULL;
+    HASH_FIND_INT(heap->shared_blocks, &key, shared);
 
-    block_map = map_get(&heap->shared_blocks, (const char *) &key);
-
-    if (block_map) return NULL; // key already assigned, this is so sad :/
-
+    if (shared) return NULL; // key already assigned, this is so sad :/
     block = alloc_mem(heap, size, SHARED);
 
     if (!block) {
@@ -284,42 +285,41 @@ void *ubpf_shmnew(heap_t *heap, key_t key, size_t size) {
         return NULL;
     }
 
-    if (map_set(&heap->shared_blocks, (const char *) &key, block) != 0) {
+    shared = calloc(sizeof(map_shared_t), 1);
+    if (!shared) {
         ubpf_free(heap, block);
         return NULL;
     }
+    shared->id = key;
+    shared->data = block;
 
+    HASH_ADD_INT(heap->shared_blocks, id, shared);
     return block;
 }
 
 void *ubpf_shmget(heap_t *heap, key_t key) {
 
-    uint8_t **mapped_block;
+    map_shared_t *shared;
 
     if (!heap || !heap->heap) return NULL;
 
-    mapped_block = map_get(&heap->shared_blocks, (const char *) &key);
+    HASH_FIND_INT(heap->shared_blocks, &key, shared);
 
-    if (!mapped_block) return NULL; // key not assigned in a shared block;
+    if (!shared) return NULL; // key not assigned in a shared block;
 
-    return *mapped_block;
+    return shared->data;
 }
 
 void ubpf_shmrm(heap_t *heap, key_t key) {
-
-    uint8_t **mapped_block;
+    map_shared_t *shared;
 
     if (!heap || !heap->heap) return;
+    HASH_FIND_INT(heap->shared_blocks, &key, shared);
+    if (!shared) return; // key not assigned in a shared block;
 
-    mapped_block = map_get(&heap->shared_blocks, (const char *) &key);
-
-    if (!mapped_block) return;
-
-    ubpf_free(heap, *mapped_block);
-
-    map_remove(&heap->shared_blocks, (const char *) &key);
+    ubpf_free(heap, shared->data);
+    HASH_DEL(heap->shared_blocks, shared);
 }
-
 
 
 ///* new functions *///
@@ -450,14 +450,13 @@ void *my_realloc(memory_pool_t *mp, void *ptr, unsigned int size) {
 
 void *my_shmnew(memory_pool_t *mp, key_t key, size_t size) {
 
-    uint8_t **block_map;
     uint8_t *block;
+    map_shared_t *shared;
 
     if (!mp) return NULL;
 
-    block_map = map_get(&mp->shared, (const char *) &key);
-
-    if (block_map) return NULL; // key already assigned, this is so sad :/
+    HASH_FIND_INT(mp->shared, &key, shared);
+    if (shared) return NULL;
 
     block = my_malloc(mp, size);
 
@@ -466,47 +465,53 @@ void *my_shmnew(memory_pool_t *mp, key_t key, size_t size) {
         return NULL;
     }
 
-    if (map_set(&mp->shared, (const char *) &key, block) != 0) {
+    shared = calloc(1, sizeof(map_shared_t));
+    if (!shared) {
+        fprintf(stderr, "Unable to allocated space for shared context\n");
         my_free(mp, block);
         return NULL;
     }
+
+    shared->id = key;
+    shared->data = block;
+
+    HASH_ADD_INT(mp->shared, id, shared);
 
     return block;
 }
 
 void *my_shmget(memory_pool_t *mp, key_t key) {
 
-    uint8_t **mapped_block;
+    map_shared_t *shared;
 
     if (!mp) return NULL;
 
-    mapped_block = map_get(&mp->shared, (const char *) &key);
+    HASH_FIND_INT(mp->shared, &key, shared);
+    if (!shared) return NULL; // key not assigned in a shared block;
 
-    if (!mapped_block) return NULL; // key not assigned in a shared block;
-
-    return *mapped_block;
+    return shared->data;
 }
 
 void my_shmrm(memory_pool_t *mp, key_t key) {
 
-    uint8_t **mapped_block;
+    map_shared_t *shared;
 
     if (!mp) return;
 
-    mapped_block = map_get(&mp->shared, (const char *) &key);
+    HASH_FIND_INT(mp->shared, &key, shared);
+    if (!shared) return; // key not assigned in a shared block;
 
-    if (!mapped_block) return;
+    my_free(mp, shared->data);
 
-    my_free(mp, *mapped_block);
-
-    map_remove(&mp->shared, (const char *) &key);
+    HASH_DEL(mp->shared, shared);
+    free(shared);
 }
 
 int init_memory_management(memory_pool_t *mem_pool, uint8_t *mem, size_t len) {
 
     if (!mem) return -1;
 
-    map_init(&mem_pool->shared);
+    mem_pool->shared = NULL;
     mem_pool->mem_start = mem;
     mem_pool->size_of_each_block = BLOCK_SIZE; /* TEST */
     mem_pool->num_of_blocks = len / BLOCK_SIZE;
@@ -518,7 +523,11 @@ int init_memory_management(memory_pool_t *mem_pool, uint8_t *mem, size_t len) {
 }
 
 void destroy_memory_management(heap_t *mp) {
-    map_deinit(&mp->shared_blocks);
+    map_shared_t *curr, *tmp;
+    HASH_ITER(hh, mp->shared_blocks, curr, tmp) {
+        HASH_DEL(mp->shared_blocks, curr);
+        free(curr);
+    }
 }
 
 /**

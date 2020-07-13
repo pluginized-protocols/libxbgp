@@ -6,7 +6,9 @@
 #define UBPF_TOOLS_CONTEXT_HDR_H
 
 
-typedef struct bytecode_context context_t;
+#include "plugin_arguments.h"
+
+typedef struct context context_t;
 typedef struct plugin plugin_t;
 
 
@@ -30,10 +32,17 @@ struct bytecode_context {
     void *args;    // pointer to the arguments of the plugin
     unsigned int size_args;
     uint64_t *return_val;
-
-#define LENGTH_CONTEXT_ERROR 50
-    char error[LENGTH_CONTEXT_ERROR]; // string with small indication of the error;
     int error_status;
+};
+
+struct context {
+    uint64_t *return_val;
+    int return_value_set;
+    int fallback;
+    args_t *args; // arguments passed to the VM
+    plugin_t *p;
+    struct insertion_point_entry *pop; // point of presence of this VM
+    struct vm_container *vm;
 };
 
 #endif //UBPF_TOOLS_CONTEXT_HDR_H

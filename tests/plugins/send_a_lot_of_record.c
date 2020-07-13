@@ -2,9 +2,9 @@
 // Created by twirtgen on 8/01/20.
 //
 
-#include "../../include/public_bpf.h"
+#include "../../include/bytecode_public.h"
 
-uint64_t big_test(bpf_full_args_t *args) {
+uint64_t big_test() {
 
     int i;
     int value = 1;

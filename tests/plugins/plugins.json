@@ -4,9 +4,9 @@
     "add_two_insert": {
       "extra_mem": 4,
       "shared_mem": 0,
-      "replace": {
-        "0": {
-          "path": "simple_test_api.o",
+      "obj_code_list": {
+        "simple_test_api": {
+          "obj": "simple_test_api.o",
           "jit": true
         }
       }
@@ -14,23 +14,38 @@
     "full_plugin": {
       "extra_mem": 64,
       "shared_mem": 64,
-      "pre": {
-        "10": {
-          "path": "pre_simple_ten.o"
+      "obj_code_list": {
+        "pre_simple_ten": {
+          "obj": "pre_simple_ten.o"
         },
-        "0": {
-          "path": "pre_simple_zero.o"
+        "pre_simple_zero": {
+          "obj": "pre_simple_zero.o"
+        },
+        "replace_simple": {
+          "obj": "replace_simple.o"
+        },
+        "post_simple": {
+          "obj": "post_simple.o"
         }
+      }
+    }
+  },
+  "insertion_points": {
+    "add_two_insert_ip": {
+      "replace": {
+        "0": "simple_test_api"
+      }
+    },
+    "full_plugin_ip": {
+      "pre": {
+        "10": "pre_simple_ten",
+        "0": "pre_simple_zero"
       },
       "replace": {
-        "0": {
-          "path": "replace_simple.o"
-        }
+        "2": "replace_simple"
       },
       "post": {
-        "25": {
-          "path": "post_simple.o"
-        }
+        "0": "post_simple"
       }
     }
   }

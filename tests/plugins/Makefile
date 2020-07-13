@@ -12,7 +12,7 @@ all: $(OBJ)
 
 %.o: %.c
 	@echo CC $<
-	@$(CC) $(CFLAGS) -Weverything -O2 -emit-llvm -c $< -o - | $(LLC) -march=bpf -filetype=obj -o $@
+	@$(CC) $(CFLAGS) -Weverything -Wno-missing-prototypes -O2 -emit-llvm -c $< -o - | $(LLC) -march=bpf -filetype=obj -o $@
 
 .PHONY: clean
 

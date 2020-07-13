@@ -6,22 +6,23 @@
 // Created by thomas on 8/05/20.
 //
 
-#include "../../include/public_bpf.h"
+#include "../../include/bytecode_public.h"
 
 // test_replace_first_no_fallback
 
 void set_return_value(int a);
 
-uint64_t replace_part_2(bpf_full_args_t *args) {
+uint64_t replace_part_2() {
 
-    int *a = bpf_get_args(0, args);
-    int *b = bpf_get_args(1, args);
+    int *a = get_arg(0);
+    int *b = get_arg(1);
 
-    int *must_fallback = bpf_get_args(3, args);
+    int *must_fallback = get_arg(3);
 
     int comp;
 
     if (!a || !b || !must_fallback) {
+        ebpf_print("Failed to retrieve args (p2)\n");
         return EXIT_FAILURE;
     }
 

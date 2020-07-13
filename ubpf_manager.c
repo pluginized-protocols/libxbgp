@@ -18,101 +18,13 @@
 #include <include/plugin_arguments.h>
 #include "ubpf_context.h"
 #include "hashmap.h"
+#include "insertion_point.h"
+#include "plugins_manager.h"
 #include <pthread.h>
 #include <include/ebpf_mod_struct.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
-
-
-static proto_ext_fun_t *proto_ext_fn = NULL;
-
-static pthread_mutex_t _vm_args;
-static pthread_mutex_t *vm_args = NULL;
-
-static map_args_bpf_t _args_ebpf;
-static map_args_bpf_t *args_ebpf = NULL;
-
-static uint16_t super_ntohs(context_t *ctx, uint16_t value) {
-    ((void) (ctx));
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return (((value & 0x00FFu) << 8u) |
-            ((value & 0xFF00u) >> 8u));
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return value;
-#else
-#    error unsupported endianness
-#endif
-}
-
-
-static uint32_t super_ntohl(context_t *ctx, uint32_t value) {
-    ((void) (ctx));
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return (((value & 0x000000FFu) << 24u) |
-            ((value & 0x0000FF00u) << 8u) |
-            ((value & 0x00FF0000u) >> 8u) |
-            ((value & 0xFF000000u) >> 24u));
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return value;
-#else
-#    error unsupported endianness
-#endif
-}
-
-static uint64_t super_ntohll(context_t *ctx, uint64_t value) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return (
-            ((u_int64_t) (super_ntohl(ctx, (int) ((value << 32u) >> 32u))) << 32u) |
-            (unsigned int) super_ntohl(ctx, ((int) (value >> 32u)))
-    );
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return value;
-#else
-#    error unsupported endianness
-#endif
-}
-
-static uint16_t super_htons(context_t *ctx __attribute__((unused)), uint16_t val) {
-#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
-
-    return (
-            (((unsigned short) (val) & 0x00FFu)) << 8u |
-            (((unsigned short) (val) & 0xFF00u) >> 8u)
-    );
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return val;
-#else
-#error unsupported endianness
-#endif
-}
-
-static uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val) {
-#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
-    return (
-            ((((unsigned long) (val) & 0x000000FFu)) << 24u) |
-            ((((unsigned long) (val) & 0x0000FF00u)) << 8u) |
-            ((((unsigned long) (val) & 0x00FF0000u)) >> 8u) |
-            ((((unsigned long) (val) & 0xFF000000u)) >> 24u)
-    );
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return val;
-#else
-#error unsupported endianness
-#endif
-}
-
-static uint64_t super_htonll(context_t *ctx, uint64_t val) {
-#if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
-    return (
-            ((((uint64_t) super_htonl(ctx, val)) << 32u) + super_htonl(ctx, (val) >> 32u))
-    );
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    return val;
-#else
-#error unsupported endianness
-#endif
-}
 
 
 int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn) {
@@ -134,8 +46,8 @@ static inline int base_register(vm_container_t *vmc) {
 
     // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO INFORM ILLEGAL MEM ACCESS
     if (ubpf_register(vmc->vm, 0x3F, "membound_fail", membound_fail) == -1) return 0;
-    // DO NOT TOUCH THIS FUNCTION, NEITER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE PLUGIN
-    if (vmc->ctx->type == BPF_REPLACE) {
+    // DO NOT TOUCH THIS FUNCTION, NEITER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE INSERTION POINT
+    if (vmc->ctx->pop->anchor == BPF_REPLACE) {
         if (ubpf_register(vmc->vm, 0x7F, "next", next) == -1) return 0;
     }
 
@@ -145,7 +57,6 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "get_time", get_time)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_print", ebpf_print)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_memcpy", ebpf_memcpy)) return 0;
-    if (!safe_ubpf_register(vmc, "set_error", set_error)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_memcmp", ebpf_memcmp)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_bvsnprintf", ebpf_bvsnprintf)) return 0;
 
@@ -165,13 +76,13 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "ebpf_htons", super_htons)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_htonl", super_htonl)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_htonll", super_htonll)) return 0;
-    if (!safe_ubpf_register(vmc, "sockunion_cmp", bpf_sockunion_cmp)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_inet_ntop", ebpf_inet_ntop)) return 0;
 
     /* custom msg send */
     if (!safe_ubpf_register(vmc, "send_ipc_msg", send_ipc_msg)) return 0;
 
     /* args related */
-    if (!safe_ubpf_register(vmc, "bpf_get_args", bpf_get_args)) return 0;
+    if (!safe_ubpf_register(vmc, "get_arg", get_arg)) return 0;
 
     /* maths */
     if (!safe_ubpf_register(vmc, "ebpf_sqrt", ebpf_sqrt)) return 0;
@@ -185,104 +96,8 @@ static inline int base_register(vm_container_t *vmc) {
     return 1;
 }
 
-int init_ubpf_manager(proto_ext_fun_t *fn) {
 
-    proto_ext_fn = fn;
-
-    if (!vm_args) {
-        if (pthread_mutex_init(&_vm_args, NULL) != 0) {
-            perror("Can't init mutex");
-            return -1;
-        }
-        vm_args = &_vm_args;
-    }
-
-    return 0;
-}
-
-int destroy_ubpf_manager() {
-    if (vm_args) {
-        pthread_mutex_destroy(vm_args);
-        memset(&_vm_args, 0, sizeof(pthread_mutex_t));
-        vm_args = NULL;
-    }
-
-    proto_ext_fn = NULL;
-    hashmap_destroy(args_ebpf);
-    args_ebpf = NULL;
-
-    return 0;
-}
-
-int vm_init(vm_container_t **vmc, context_t *ctx, uint8_t *args_mem, uint32_t seq,
-            size_t tot_extra, uint8_t jit) {
-    *vmc = malloc(sizeof(vm_container_t));
-
-    if (*vmc == NULL) {
-        perror("Unable to allocate memory for uBPF machine");
-        return 0;
-    }
-
-    (*vmc)->vm = ubpf_create();
-    (*vmc)->args = args_mem;
-    (*vmc)->num_ext_fun = 0;
-
-    if ((*vmc)->vm == NULL) {
-        fprintf(stderr, "Unable to create uBPF machine\n");
-        return 0;
-    }
-
-    if (ctx) {
-        if (tot_extra >= UINT32_MAX - 1) return 0; // heap too large exception
-        (*vmc)->ctx = ctx;
-    } else {
-        return 0; // every plugin must have a context
-    }
-
-    (*vmc)->seq = seq;
-    (*vmc)->total_mem = tot_extra;
-    (*vmc)->jit = jit;
-    (*vmc)->ctx_specific = NULL;
-
-    return 1;
-}
-
-
-int start_vm(vm_container_t *vmc) {
-
-    int i;
-
-    if (vmc == NULL) return 0;
-
-    // usable functions inside the virtual machine
-
-    if (!base_register(vmc)) {
-        fprintf(stderr, "Base registering functions failed\n");
-        ubpf_destroy(vmc->vm);
-        return 0;
-    }
-
-    for (i = 0; proto_ext_fn[i].fn != NULL && proto_ext_fn[i].name != NULL; i++) {
-        if (!safe_ubpf_register(vmc, proto_ext_fn[i].name, proto_ext_fn[i].fn)) {
-            ubpf_destroy(vmc->vm);
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-void shutdown_vm(vm_container_t *vmc) {
-
-    if (vmc == NULL) return;
-
-    ubpf_destroy(vmc->vm);
-    unregister_context(vmc->ctx);
-    free(vmc->ctx);
-    free(vmc);
-}
-
-int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
+static int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
 
     int elf, err;
     char *errmsg;
@@ -301,10 +116,10 @@ int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
         return 0;
     }
 
-    call_next_rewrite = vmc->ctx->type == BPF_REPLACE ? 1 : 0;
+    call_next_rewrite = vmc->ctx->pop->anchor == BPF_REPLACE ? 1 : 0;
 
     ok_len = (uint32_t) len;
-    start_mem = (uintptr_t) vmc->args;
+    start_mem = (uintptr_t) vmc->mem;
     ctx_id = (uintptr_t) vmc->ctx;
 
     if (elf) {
@@ -338,184 +153,131 @@ int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len) {
 
 }
 
-bpf_full_args_t *new_argument(bpf_args_t *args, int plugin_id, int nargs, bpf_full_args_t *fargs) {
+static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
 
-    assert(fargs != NULL);
+    int i;
 
-    fargs->args = args;
-    fargs->plugin_type = plugin_id;
-    fargs->nargs = nargs;
+    if (vmc == NULL) return 0;
 
-    if (pthread_mutex_lock(vm_args) != 0) {
-        perror("Mutex lock error");
-        exit(EXIT_FAILURE);
+    // usable functions inside the virtual machine
+
+    if (!base_register(vmc)) {
+        fprintf(stderr, "Base registering functions failed\n");
+        ubpf_destroy(vmc->vm);
+        return 0;
     }
 
-    if (args_ebpf == NULL) {
-        if (hashmap_new(&_args_ebpf, HASHMAP_INIT_SIZE) != 0) exit(EXIT_FAILURE);
-        args_ebpf = &_args_ebpf;
-    }
-
-    if (hashmap_put(args_ebpf, (uint64_t) fargs, fargs) != 0) {
-        return NULL;
-    }
-
-    if (pthread_mutex_unlock(vm_args) != 0) {
-        perror("Mutex unlock error");
-        exit(EXIT_FAILURE);
-    }
-
-    return fargs;
-}
-
-int unset_args(bpf_full_args_t *args) {
-    if (args_ebpf == NULL) return -1;
-
-    if (pthread_mutex_lock(vm_args) != 0) {
-        perror("Mutex lock error");
-        exit(EXIT_FAILURE);
-    }
-
-    hashmap_delete(args_ebpf, (uint64_t) args);
-
-    if (pthread_mutex_unlock(vm_args) != 0) {
-        perror("Mutex unlock error");
-        exit(EXIT_FAILURE);
-    }
-
-    return 0;
-}
-
-bpf_args_t *get_args(bpf_full_args_t *args) {
-
-    bpf_full_args_t *fa;
-
-    if (!(fa = valid_args(args))) return NULL;
-    return fa->args;
-}
-
-bpf_full_args_t *valid_args(bpf_full_args_t *args) {
-
-    bpf_full_args_t **fa = hashmap_get(args_ebpf, (uint64_t) args);
-
-    return fa != NULL ? *fa : NULL;
-
-}
-
-int run_injected_code(vm_container_t *vmc, void *mem, size_t mem_len, uint64_t *ret_val) {
-
-    uint64_t ret = 0;
-
-    vmc->ctx->args = mem; // bpf_full_args pointer
-    vmc->ctx->size_args = mem_len;
-    vmc->ctx->return_val = ret_val;
-
-    if (!must_fallback(vmc->ctx->p)) {
-        if (vmc->jit) { // NON INTERPRETED MODE
-            ret = vmc->fun(mem, mem_len);
-        } else {
-            ret = ubpf_exec(vmc->vm, mem, mem_len);
+    for (i = 0; api_proto[i].fn != NULL && api_proto[i].name != NULL; i++) {
+        if (!safe_ubpf_register(vmc, api_proto[i].name, api_proto[i].fn)) {
+            ubpf_destroy(vmc->vm);
+            return 0;
         }
     }
 
-    if (vmc->ctx->error_status) {
-        // fprintf(stderr, "Virtual error : %s\n", vmc->ctx->error);
-        vmc->ctx->error_status = 0; // reset error
+    return 1;
+}
+
+
+vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8_t jit,
+                       const char *name, size_t name_len, plugin_t *p,
+                       uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
+                       void (*on_delete)(void *)) {
+
+    vm_container_t *vm;
+
+    vm = calloc(1, sizeof(*vm) + (sizeof(char) * (name_len + 1)));
+    if (!vm) return NULL;
+
+
+    vm->vm = ubpf_create();
+    vm->mem = p->mem.block;
+    vm->total_mem = p->mem_len;
+    vm->num_ext_fun = 0;
+
+    if (vm->vm == NULL) {
+        fprintf(stderr, "Unable to create uBPF machine\n");
+        return 0;
     }
 
-    if (ret == UINT64_MAX && !must_fallback(vmc->ctx->p)) {
-        fprintf(stderr, "Plugin %s crashed (%s seq %d)\n",
-                id_plugin_to_str(vmc->ctx->p->plugin_id),
-                vmc->ctx->type == BPF_REPLACE ? "replace" :
-                vmc->ctx->type == BPF_PRE ? "pre" :
-                vmc->ctx->type == BPF_POST ? "post" : "unk",
-                vmc->seq);
+    vm->pop = new_insertion_point_entry(anchor, seq, point, vm);
+    vm->ctx = new_context();
+    vm->ctx->p = p;
+    vm->ctx->pop = vm->pop;
+    vm->ctx->vm = vm;
+
+
+    vm->p = p;
+    vm->jit = jit;
+    vm->on_delete = on_delete;
+
+    vm->vm_name_len = name_len;
+    strncpy(vm->vm_name, name, name_len);
+    vm->vm_name[name_len] = 0;
+
+    if (!start_vm(vm, api_proto)) return 0;
+    if (!inject_code_ptr(vm, obj_data, obj_len)) return 0;
+
+    return vm;
+}
+
+
+void shutdown_vm(vm_container_t *vmc) {
+    if (vmc == NULL) return;
+    free_context(vmc->ctx);
+    free_insertion_point_entry(vmc->pop);
+    ubpf_destroy(vmc->vm);
+    vmc->on_delete(vmc);
+    free(vmc);
+}
+
+int run_injected_code(vm_container_t *vmc, uint64_t *ret_val) {
+
+    uint64_t ret;
+    int this_fun_ret;
+
+    vmc->ctx->return_val = ret_val;
+
+    // arguments are accessed via helper functions
+    if (vmc->jit) { // NON INTERPRETED MODE
+        ret = vmc->fun(NULL, 0);
+    } else {
+        ret = ubpf_exec(vmc->vm, NULL, 0);
+    }
+
+    if (ret == UINT64_MAX) {
+        fprintf(stderr, "Bytecode %s of plugin %s crashed in %s (%s seq %d)\n",
+                vmc->vm_name,
+                vmc->p->name,
+                vmc->pop->point->name,
+                vmc->pop->anchor == BPF_REPLACE ? "replace" :
+                vmc->pop->anchor == BPF_PRE ? "pre" :
+                vmc->pop->anchor == BPF_POST ? "post" : "unk",
+                vmc->pop->seq);
     }
 
     // reset --> this VM is not in use for now
-    vmc->ctx->args = NULL;
 
     if (ret_val) {
-        if (vmc->ctx->type == BPF_REPLACE) {
-            if (!vmc->ctx->p->replace.ret_val_set) {
+        if (vmc->pop->anchor == BPF_REPLACE) {
+            if (!vmc->ctx->return_value_set) {
+                vmc->ctx->return_value_set = 1;
                 *ret_val = ret;
-                vmc->ctx->p->replace.ret_val_set = 1;
             }
         } else {
             *ret_val = ret;
         }
     }
     // flush heap is done just before returning
-    reset_bump(&vmc->ctx->p->mem.heap.mp);
+    reset_bump(&vmc->p->mem.heap.mp);
 
-    vmc->ctx->size_args = -1;
+    this_fun_ret = vmc->ctx->fallback ? -1 : 0;
 
-    if (vmc->ctx->type == BPF_REPLACE && vmc->ctx->seq == 0) {
-        vmc->ctx->p->replace.ret_val_set = 0;
-        // reset since seq 0 is always the first executed pluglet in the REPLACE hook
+    if (vmc->ctx->pop->anchor == BPF_REPLACE && vmc->hh_insertion_point.prev == 0) {
+        vmc->ctx->return_value_set = 0;
+        vmc->ctx->fallback = 0;
     }
 
     if (ret == UINT64_MAX) return -1;
 
-    return must_fallback(vmc->ctx->p) ? -1 : 0;
-}
-
-void *readfileOwnPtr(const char *path, size_t maxlen, size_t *len, uint8_t *data) {
-
-    char absolute_path[PATH_MAX];
-    const char *sel_path;
-
-    FILE *file;
-    if (!strcmp(path, "-")) {
-        file = stdin; //fdopen(STDIN_FILENO, "r");
-        sel_path = path;
-    } else {
-        memset(absolute_path, 0, PATH_MAX * sizeof(char));
-        realpath(path, absolute_path);
-        sel_path = absolute_path;
-        file = fopen(path, "r");
-    }
-
-    if (file == NULL) {
-        fprintf(stderr, "Failed to open %s: %s (uid %u)\n", sel_path, strerror(errno), getuid());
-        return NULL;
-    }
-
-    if (!data) {
-        data = calloc(maxlen, 1);
-        if (!data) {
-            perror("mem alloc failed");
-            return NULL;
-        }
-    } else {
-        memset(data, 0, maxlen);
-    }
-
-    size_t offset = 0;
-    size_t rv;
-    while ((rv = fread(data + offset, 1, maxlen - offset, file)) > 0) {
-        offset += rv;
-    }
-
-    if (ferror(file)) {
-        fprintf(stderr, "Failed to read %s: %s\n", sel_path, strerror(errno));
-        fclose(file);
-        free(data);
-        return NULL;
-    }
-
-    if (!feof(file)) {
-        fprintf(stderr, "Failed to read %s because it is too large (max %u bytes)\n",
-                sel_path, (unsigned) maxlen);
-        fclose(file);
-        free(data);
-        return NULL;
-    }
-
-    fclose(file);
-    if (len) {
-        *len = offset;
-    }
-    return data;
-
+    return this_fun_ret;
 }

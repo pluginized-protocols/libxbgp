@@ -26,21 +26,63 @@ LDLIBS += -ljson-c -pthread -lpthread -lrt
 LDLIBS += -lncurses -ltinfo
 LDLIBS += -lm 
 
-SRC = queue.c ubpf_manager.c map.c ubpf_context.c plugins_manager.c \
-      ubpf_vm/vm/ubpf_jit_x86_64.c ubpf_vm/vm/ubpf_loader.c ubpf_vm/vm/ubpf_vm.c bpf_plugin.c \
-      list.c ubpf_api.c shared_memory.c monitoring_server.c hashmap.c tree.c ubpf_misc.c \
-      ubpf_memory_pool.c plugin_extra_configuration.c
+# ./dynamic_injection.c
+# ./ebpf_injecter.c \
+# ./main_ipfix_collector.c \
+# ./main_ipfix_exporter.c \
+
+SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
+      ubpf_vm/vm/ubpf_loader.c \
+      ubpf_vm/vm/ubpf_vm.c \
+      ./bpf_plugin.c \
+      ./insertion_point.c \
+      ./list.c \
+      ./monitoring_server.c \
+      ./plugin_extra_configuration.c \
+      ./plugins_manager.c \
+      ./queue.c \
+      ./shared_memory.c \
+      ./static_injection.c \
+      ./tree.c \
+      ./ubpf_api.c \
+      ./ubpf_context.c \
+      ./ubpf_manager.c \
+      ./ubpf_memory_pool.c \
+      ./ubpf_misc.c
+
 
 SRC_TESTS = $(shell find ./tests -name "*.c" -not -path "./tests/plugins/*")
 HDR_TESTS = $(shell find ./tests -name "*.h")
 
-HDR = vm_macros.h include/ebpf_mod_struct.h include/plugin_arguments.h include/public.h include/monitoring_struct.h \
-      include/public_bpf.h include/tools_ubpf_api.h include/plugins_id.h \
-      ubpf_api.h shared_memory.h hashmap.h monitoring_server.h monitor_manager.h list.h \
-      ubpf_context.h ubpf_vm/vm/ebpf.h ubpf_vm/vm/inc/ubpf.h \
-      ubpf_vm/vm/ubpf_jit_x86_64.h ubpf_vm/vm/ubpf_int.h ubpf_misc.h bpf_plugin.h plugins_manager.h \
-      queue.h map.h memory_manager.h ubpf_manager.h tree.h ubpf_misc.h ubpf_memory_pool.h \
-      plugin_extra_configuration.h
+HDR = ./bpf_plugin.h \
+      ./dynamic_injection.h \
+      ./insertion_point.h \
+      ./list.h \
+      ./monitoring_server.h \
+      ./plugin_extra_configuration.h \
+      ./plugins_manager.h \
+      ./queue.h \
+      ./shared_memory.h \
+      ./static_injection.h \
+      ./tree.h \
+      ./ubpf_api.h \
+      ./ubpf_context.h \
+      ./ubpf_manager.h \
+      ./ubpf_memory_pool.h \
+      ./ubpf_misc.h \
+      ./uthash.h \
+      ./utlist.h \
+      include/bytecode_public.h \
+      include/context_hdr.h \
+      include/ebpf_mod_struct.h \
+      include/global_info_str.h \
+      include/monitoring_struct.h \
+      include/plugin_arguments.h \
+      include/tools_ubpf_api.h \
+      include/ubpf_mempool_hdr.h \
+      include/ubpf_prefix.h \
+      include/ubpf_public.h
+
 
 LIBUBPF_A = libubpf.a
 

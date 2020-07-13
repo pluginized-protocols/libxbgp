@@ -17,13 +17,15 @@ typedef struct mesg_buffer {
     char mesg_text[20];
 } ebpf_message_t;
 
-typedef struct plugin_info {
-    const char *plugin_str;
-    unsigned int plugin_id;
-} plugin_info_t;
+typedef struct insertion_point_info {
+    const char *insertion_point_str;
+    int insertion_point_id;
+} insertion_point_info_t;
 
-#define plugin_info_null {.plugin_str = NULL, .plugin_id = 0}
+#define insertion_point_info_null {.insertion_point_str = NULL, .insertion_point_id = 0}
 #define proto_ext_func_null {.name = NULL, .fn = NULL}
+
+#define is_insertion_point_info_null(info) (((info)->insertion_point_str == NULL) && ((info)->insertion_point_id == 0))
 
 
 #endif //FRR_UBPF_EBPF_MOD_STRUCT_H

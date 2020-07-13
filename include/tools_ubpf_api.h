@@ -66,6 +66,11 @@ struct bgp_route {
     uint32_t type; // CONNECTED, STATIC, IGP, BGP
 };
 
+struct ubpf_nexthop {
+    uint8_t route_type; // connected, static, kernel
+    uint64_t igp_metric;
+};
+
 /**
  * On PRE and POST mode, these are the only value
  * accepted by the manager.
@@ -79,22 +84,25 @@ enum RESERVED_RETURN_VAL {
     BPF_SUCCESS, // the uBPF code has successfully terminated. On PRE and POST, tells to the manager to return (other mode are skipped)
 };
 
-extern bpf_full_args_t *valid_args(bpf_full_args_t *args);
-
 #ifndef UNUSED
 #define UNUSED __attribute__((unused))
 #endif
 
-#define safe_args(args, position, type_arg) \
-(valid_args(args) && (args)->nargs > position && (args)->args[position].type == type_arg)
+#define api_args context_t *vm_ctx, args_t *args, int pos_arg
 
-#define get_arg(args, position, cast) \
-((cast) ((args)->args[position].arg))
-
-#define api_args context_t *vm_ctx, bpf_full_args_t *args, int pos_arg
-
-#define auto_get(type, cast) \
-safe_args(args, pos_arg, type) ? get_arg(args, pos_arg, cast) : NULL
-
+#define get_arg_from_type(ctx, type_arg) ({ \
+    int i; \
+    void *ret; \
+    args_t *fargs; \
+    ret = NULL; \
+    fargs = ctx->args; \
+    for (i = 0; i < fargs->nargs; i++) { \
+        if (fargs->args[i].type == type_arg) { \
+            ret = fargs->args[i].arg; \
+            break; \
+        } \
+    } \
+    ret; \
+})
 
 #endif //FRR_UBPF_TOOLS_UBPF_API_H

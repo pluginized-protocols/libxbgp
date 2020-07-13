@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <include/global_info_str.h>
+#include <include/ubpf_prefix.h>
 
 #define OFFSET_UNIX_EPOCH_TO_NTP 2208988800
 #define SOCKET_PATH "\0monitor_ubpf_plug.socket"
@@ -87,7 +88,7 @@ int send_ipc_msg(context_t *vm_ctx, ebpf_message_t *msg);
 
 int init_queue_ext_send(const char *working_dir);
 
-void *bpf_get_args(context_t *vm_ctx, unsigned int arg_nb, bpf_full_args_t *args);
+void *get_arg(context_t *vm_ctx, int type);
 
 int bpf_sockunion_cmp(context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2);
 
@@ -106,5 +107,19 @@ int get_extra_info_lst_idx(context_t *ctx, struct global_info *info, int arr_idx
 int get_extra_info_dict(context_t *ctx, struct global_info *info, const char *key, struct global_info *value);
 
 int get_extra_info(context_t *ctx, const char *key, struct global_info *info);
+
+int ebpf_inet_ntop(context_t *ctx, union ubpf_prefix *pfx, char *buf, size_t len);
+
+uint16_t super_ntohs(context_t *ctx, uint16_t value);
+
+uint32_t super_ntohl(context_t *ctx, uint32_t value);
+
+uint64_t super_ntohll(context_t *ctx, uint64_t value);
+
+uint16_t super_htons(context_t *ctx __attribute__((unused)), uint16_t val);
+
+uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val);
+
+uint64_t super_htonll(context_t *ctx, uint64_t val);
 
 #endif //FRR_THESIS_UBPF_API_H
