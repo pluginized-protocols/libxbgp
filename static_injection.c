@@ -227,6 +227,8 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
 int load_extension_code(const char *path, const char *extension_code_dir, proto_ext_fun_t *api_proto,
                         insertion_point_info_t *points_info) {
 
+    int ret_val;
+
     json_object *main_obj = json_object_from_file(path);
 
     json_object *insertion_point;
@@ -259,5 +261,7 @@ int load_extension_code(const char *path, const char *extension_code_dir, proto_
     if (!json_object_object_get_ex(main_obj, "plugins", &plugins)) return -1;
     if (!json_object_object_get_ex(main_obj, "insertion_points", &insertion_point)) return -1;
 
-    return parse_manifest(plugins, insertion_point, jit_all_val, obj_dir_str, api_proto, points_info);
+    ret_val = parse_manifest(plugins, insertion_point, jit_all_val, obj_dir_str, api_proto, points_info);
+    json_object_put(main_obj);
+    return ret_val;
 }

@@ -171,6 +171,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
 
     vm = new_vm(type_anchor, seq_anchor, point, jit, vm_name, vm_name_len, p, bytecode, bytecode_len, api_proto,
                 on_delete_vm);
+    free(bytecode);
     if (!vm) return -1;
     if (register_vm(&master, vm) != 0) return -1;
 
