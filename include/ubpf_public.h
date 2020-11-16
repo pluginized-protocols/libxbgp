@@ -9,11 +9,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <json-c/json_object.h>
-#include <insertion_point.h>
 #include "plugin_arguments.h"
 #include "ebpf_mod_struct.h"
 #include "context_hdr.h"
 #include "ubpf_mempool_hdr.h"
+
+
+typedef struct insertion_point insertion_point_t;
 
 extern int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir, size_t len,
@@ -30,6 +32,8 @@ extern int run_replace_function(insertion_point_t *p, args_t *args, uint64_t *re
 extern insertion_point_t *insertion_point(int id);
 
 extern void ubpf_terminate(void);
+
+extern int extra_info_from_json(const char *path, const char *key);
 
 
 /* manipulating memory of plugins in helper functions */
