@@ -1,4 +1,4 @@
 [submodule "context-mtsafe"]
 	path = ubpf_vm
-	url = https://bitbucket.org/twirtgen/ubpf.git
-	branch = context-mtsafe
+	url = https://github.com/pluginized-protocols/xbgp_ubpf_vm.git
+	branch = master
