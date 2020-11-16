@@ -1,0 +1,105 @@
+FROM ubuntu:20.04
+
+RUN apt-get update &&
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git \
+ cmake doxygen valgrind clang autoconf flex bison libreadline-dev \
+ automake libtool make texinfo pkg-config libpam0g-dev python3-pytest \
+ libc-ares-dev python3-dev libsystemd-dev python-ipaddress python3-sphinx \
+ install-info build-essential libsystemd-dev libsnmp-dev perl \
+ libcap-dev python2 libpcre3-dev libtool m4 debhelper devscripts \
+ iproute2
+
+WORKDIR /opt
+
+## Installing manual dependencies
+# 1. json-c
+RUN git clone https://github.com/json-c/json-c.git jsonc
+WORKDIR /opt/jsonc
+RUN git checkout json-c-0.15
+RUN mkdir build
+WORKDIR /opt/jsonc/build
+RUN cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  .. && make && make install
+
+WORKDIR /opt
+
+# 2. libyang
+RUN git clone https://github.com/CESNET/libyang libyang
+WORKDIR /opt/libyang
+RUN git checkout debian/libyang-0.16.105-2
+RUN mkdir build
+WORKDIR /opt/libyang/build
+RUN cmake -D CMAKE_BUILD_TYPE:String="Release" \
+  -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+  -DENABLE_LYD_PRIV=ON .. && \
+  make && make install
+
+
+# libxbgp
+WORKDIR /opt
+RUN git clone https://github.com/pluginized-protocols/libxbgp.git libxbgp
+WORKDIR /opt/libxbgp
+RUN git submodule update --init --recursive
+RUN make
+
+# xbgp_bird
+RUN git clone https://github.com/pluginized-protocols/xbgp_bird.git xbgp_bird
+WORKDIR /opt/xbgp_bird
+RUN git checkout xbgp_compliant
+RUN autoreconf -i && \
+  ./configure \
+  --prefix=/usr \
+  --sysconfdir=/etc/bird \
+  --localstatedir=/var \
+  --runstatedir=/run \
+  LIBUBPF=/opt/libxbgp \
+  HUBPF=/opt/libxbgp/include && \
+  make && make install
+
+# xbgp_frrouting
+# preparing dependencies for FRRouting
+RUN groupadd -r -g 92 frr
+RUN groupadd -r -g 85 frrvty
+RUN adduser --system --ingroup frr --home /var/run/frr/ \
+  --gecos "FRR suite" --shell /sbin/nologin frr
+RUN usermod -a -G frrvty frr
+
+WORKDIR /opt
+RUN git clone https://github.com/pluginized-protocols/xbgp_frr.git xbgp_frr
+WORKDIR /opt/xbgp_frr
+RUN git checkout stable/7.3-xbgp
+RUN ./bootstrap && ./configure \
+  --prefix=/usr \
+  --includedir=\${prefix}/include \
+  --enable-exampledir=\${prefix}/share/doc/frr/examples \
+  --bindir=\${prefix}/bin \
+  --sbindir=\${prefix}/lib/frr \
+  --libdir=\${prefix}/lib/frr \
+  --libexecdir=\${prefix}/lib/frr \
+  --localstatedir=/var/run/frr \
+  --sysconfdir=/etc/frr \
+  --with-moduledir=\${prefix}/lib/frr/modules \
+  --with-libyang-pluginsdir=\${prefix}/lib/frr/libyang_plugins \
+  --enable-configfile-mask=0640 \
+  --enable-logfile-mask=0640 \
+  --enable-snmp=agentx \
+  --enable-multipath=64 \
+  --enable-user=frr \
+  --enable-group=frr \
+  --enable-vty-group=frrvty \
+  --with-pkg-extra-version=-xbgp \
+  --enable-systemd=yes \
+  UBPF_LIB=/opt/libxbgp \
+  UBPF_INC=/opt/libxbgp/include && \
+  make && make install
+
+RUN install -m 775 -o frr -g frr -d /var/log/frr && \
+    install -m 775 -o frr -g frrvty -d /etc/frr && \
+    install -m 640 -o frr -g frrvty tools/etc/frr/vtysh.conf /etc/frr/vtysh.conf && \
+    install -m 640 -o frr -g frr tools/etc/frr/frr.conf /etc/frr/frr.conf && \
+    install -m 640 -o frr -g frr tools/etc/frr/daemons.conf /etc/frr/daemons.conf && \
+    install -m 640 -o frr -g frr tools/etc/frr/daemons /etc/frr/daemons
