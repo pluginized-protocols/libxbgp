@@ -100,9 +100,12 @@ RUN ./bootstrap.sh && ./configure \
 
 RUN install -m 775 -o frr -g frr -d /var/log/frr && \
     install -m 775 -o frr -g frrvty -d /etc/frr && \
+    install -m 755 -o frr -g frrvty -d /etc/frr/plugins && \
     install -m 640 -o frr -g frrvty tools/etc/frr/vtysh.conf /etc/frr/vtysh.conf && \
     install -m 640 -o frr -g frr tools/etc/frr/frr.conf /etc/frr/frr.conf && \
     install -m 640 -o frr -g frr tools/etc/frr/daemons.conf /etc/frr/daemons.conf && \
+    install -m 640 -o frr -g frr tools/etc/frr/manifest.json /etc/frr/plugins/manifest.json && \
+    install -m 640 -o frr -g frr tools/etc/frr/extra_conf.json /etc/frr/plugins/extra_conf.json && \
     install -m 640 -o frr -g frr tools/etc/frr/daemons /etc/frr/daemons
 
 # Plugins folder
