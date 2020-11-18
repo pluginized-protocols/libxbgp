@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 
-RUN apt-get update &&
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git \
@@ -9,7 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git \
  libc-ares-dev python3-dev libsystemd-dev python-ipaddress python3-sphinx \
  install-info build-essential libsystemd-dev libsnmp-dev perl \
  libcap-dev python2 libpcre3-dev libtool m4 debhelper devscripts \
- iproute2
+ iproute2 llvm
 
 WORKDIR /opt
 
@@ -47,6 +47,7 @@ RUN git submodule update --init --recursive
 RUN make
 
 # xbgp_bird
+WORKDIR /opt
 RUN git clone https://github.com/pluginized-protocols/xbgp_bird.git xbgp_bird
 WORKDIR /opt/xbgp_bird
 RUN git checkout xbgp_compliant
@@ -54,8 +55,8 @@ RUN autoreconf -i && \
   ./configure \
   --prefix=/usr \
   --sysconfdir=/etc/bird \
-  --localstatedir=/var \
-  --runstatedir=/run \
+  --localstatedir=/var/run/bird \
+  --runstatedir=/var/run/bird \
   LIBUBPF=/opt/libxbgp \
   HUBPF=/opt/libxbgp/include && \
   make && make install
@@ -72,7 +73,7 @@ WORKDIR /opt
 RUN git clone https://github.com/pluginized-protocols/xbgp_frr.git xbgp_frr
 WORKDIR /opt/xbgp_frr
 RUN git checkout stable/7.3-xbgp
-RUN ./bootstrap && ./configure \
+RUN ./bootstrap.sh && ./configure \
   --prefix=/usr \
   --includedir=\${prefix}/include \
   --enable-exampledir=\${prefix}/share/doc/frr/examples \
@@ -99,7 +100,20 @@ RUN ./bootstrap && ./configure \
 
 RUN install -m 775 -o frr -g frr -d /var/log/frr && \
     install -m 775 -o frr -g frrvty -d /etc/frr && \
+    install -m 755 -o frr -g frrvty -d /etc/frr/plugins && \
     install -m 640 -o frr -g frrvty tools/etc/frr/vtysh.conf /etc/frr/vtysh.conf && \
     install -m 640 -o frr -g frr tools/etc/frr/frr.conf /etc/frr/frr.conf && \
     install -m 640 -o frr -g frr tools/etc/frr/daemons.conf /etc/frr/daemons.conf && \
+    install -m 640 -o frr -g frr tools/etc/frr/manifest.json /etc/frr/plugins/manifest.json && \
+    install -m 640 -o frr -g frr tools/etc/frr/extra_conf.json /etc/frr/plugins/extra_conf.json && \
     install -m 640 -o frr -g frr tools/etc/frr/daemons /etc/frr/daemons
+
+# Plugins folder
+WORKDIR /opt
+RUN git clone https://github.com/pluginized-protocols/xbgp_plugins.git xbgp_plugins
+WORKDIR /opt/xbgp_plugins
+RUN make LIBXBGP=/opt/libxbgp/include
+
+
+WORKDIR /root
+CMD /bin/bash
