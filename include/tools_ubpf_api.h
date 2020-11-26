@@ -30,18 +30,19 @@ enum RESERVED_RETURN_VAL {
 #endif
 
 #define get_arg_from_type(ctx, type_arg) ({ \
-    int i; \
+    int _i; \
     void *ret; \
     args_t *fargs; \
     ret = NULL; \
     fargs = ctx->args; \
-    for (i = 0; i < fargs->nargs; i++) { \
-        if (fargs->args[i].type == type_arg) { \
-            ret = fargs->args[i].arg; \
+    for (_i = 0; _i < fargs->nargs; _i++) { \
+        if (fargs->args[_i].type == type_arg) { \
+            ret = fargs->args[_i].arg; \
             break; \
         } \
     } \
     ret; \
 })
+
 
 #endif //FRR_UBPF_TOOLS_UBPF_API_H
