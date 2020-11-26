@@ -23,7 +23,7 @@ typedef struct insertion_point_info {
 } insertion_point_info_t;
 
 #define insertion_point_info_null {.insertion_point_str = NULL, .insertion_point_id = 0}
-#define proto_ext_func_null {.name = NULL, .fn = NULL}
+#define proto_ext_func_null {.fn = NULL, .name = NULL}
 
 #define is_insertion_point_info_null(info) (((info)->insertion_point_str == NULL) && ((info)->insertion_point_id == 0))
 

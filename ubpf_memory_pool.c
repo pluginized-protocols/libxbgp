@@ -35,9 +35,13 @@ static inline void delete_mem_node(struct mem_node *mn) {
 struct mem_pool *new_mempool() {
 
     struct mem_pool *mp;
-    mp = calloc(1, sizeof(*mp));
-
+    mp = malloc(sizeof(*mp));
     if (!mp) return NULL;
+    mp->node = calloc(1, sizeof(struct mem_node));
+    if (!mp->node) {
+        free(mp);
+        return NULL;
+    }
     return mp;
 }
 

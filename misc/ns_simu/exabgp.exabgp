@@ -1,0 +1,30 @@
+process announce-routes {
+    run python3 ${conf.api_program};
+    encoder json;
+}
+
+neighbor ${conf.peer.ip_addr} {
+    router-id ${conf.local.router_id};
+    local-address ${conf.local.ip_addr};
+    local-as ${conf.local.asn};
+    peer-as ${conf.peer.asn};
+
+    passive false;
+    group-updates true;
+    auto-flush true;
+    adj-rib-in false;
+    adj-rib-out false;
+
+    family {
+        ipv4 unicast;
+        ipv6 unicast;
+    }
+
+    capability {
+        graceful-restart;
+    }
+
+    api {
+        processes [ announce-routes ];
+    }
+}
