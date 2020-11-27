@@ -17,10 +17,10 @@ function provision-iface () {
   fi
 
   if [ -n "${2}" ]; then
-    ${netns_str[1]} ip addr add "${2}" dev "${1}"
+    ${netns_str[0]} ip addr add "${2}" dev "${1}"
   fi
 
-  ${netns_str[1]} ip link set dev "${1}" up
+  ${netns_str[0]} ip link set dev "${1}" up
 }
 
 NETNS_NAME="frrouting"

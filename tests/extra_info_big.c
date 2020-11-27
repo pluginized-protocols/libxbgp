@@ -8,7 +8,6 @@
 #include <limits.h>
 #include <libgen.h>
 #include <plugin_extra_configuration.h>
-#include "../include/ubpf_prefix.h"
 
 #include "extra_info_big.h"
 
