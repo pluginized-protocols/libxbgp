@@ -10,7 +10,6 @@
 #include <sys/socket.h>
 #include "ebpf_mod_struct.h"
 #include "global_info_str.h"
-#include "ubpf_prefix.h"
 #include "plugin_arguments.h"
 #include "tools_ubpf_api.h"
 
@@ -91,6 +90,6 @@ extern int get_extra_info(const char *key, struct global_info *info);
 
 extern int get_extra_info_dict(struct global_info *info, const char *key, struct global_info *value);
 
-extern int ebpf_inet_ntop(union ubpf_prefix *pfx, char *buf, size_t len);
+extern int ebpf_inet_ntop(uint8_t *ipaddr, int type, char *buf, size_t len);
 
 #endif //FRR_UBPF_PUBLIC_BPF_H
