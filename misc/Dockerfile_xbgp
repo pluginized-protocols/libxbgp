@@ -64,7 +64,8 @@ RUN autoreconf -i && \
   --localstatedir=/var/run/bird \
   --runstatedir=/var/run/bird \
   LIBUBPF=/opt/libxbgp \
-  HUBPF=/opt/libxbgp/include && \
+  HUBPF=/opt/libxbgp/include \
+  XBGP=/opt/xbgp_plugins && \
   make && make install
 
 # xbgp_frrouting
