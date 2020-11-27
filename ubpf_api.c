@@ -847,11 +847,26 @@ int get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *i
     return get_global_info(key, info);
 }
 
-int ebpf_inet_ntop(context_t *ctx UNUSED, union ubpf_prefix *pfx, char *buf, size_t len) {
+int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, size_t len) {
 
-    void *ip_src = pfx->family == AF_INET ? (void *) &pfx->ip4_pfx.p : &pfx->ip6_pfx.p;
+    struct in_addr ipv4;
+    struct in6_addr ipv6;
+    void *ip;
 
-    if (!inet_ntop(pfx->family, ip_src, buf, len)) return -1;
+    switch (type) {
+        case AF_INET:
+            ipv4.s_addr = *(uint32_t *) ipaddr;
+            ip = &ipv4;
+            break;
+        case AF_INET6:
+            memcpy(&ipv6, ipaddr, sizeof(ipv6));
+            ip = &ipv6;
+            break;
+        default:
+            return -1;
+    }
+
+    if (!inet_ntop(type, ip, buf, len)) return -1;
 
     return 0;
 }

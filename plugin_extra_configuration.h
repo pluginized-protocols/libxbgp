@@ -7,10 +7,11 @@
 
 #include <json-c/json_object.h>
 #include <netinet/in.h>
-#include <include/ubpf_prefix.h>
 #include <include/global_info_str.h>
 #include "uthash.h"
 #include "utlist.h"
+
+#define MAX_STR_BUF_PFX 45
 
 enum type_val {
     conf_val_type_int = 0,
@@ -23,6 +24,18 @@ enum type_val {
     conf_val_type_dict,
     conf_val_type_string,
     conf_val_type_max,
+};
+
+struct prefix_ip6 {
+    int family;
+    int prefix_len;
+    struct in6_addr p;
+};
+
+struct prefix_ip4 {
+    int family;
+    int prefix_len;
+    struct in_addr p;
 };
 
 /*struct conf_lst {

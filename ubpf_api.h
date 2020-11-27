@@ -11,7 +11,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <include/global_info_str.h>
-#include <include/ubpf_prefix.h>
 
 #define OFFSET_UNIX_EPOCH_TO_NTP 2208988800
 #define SOCKET_PATH "\0monitor_ubpf_plug.socket"
@@ -108,7 +107,7 @@ int get_extra_info_dict(context_t *ctx, struct global_info *info, const char *ke
 
 int get_extra_info(context_t *ctx, const char *key, struct global_info *info);
 
-int ebpf_inet_ntop(context_t *ctx, union ubpf_prefix *pfx, char *buf, size_t len);
+int ebpf_inet_ntop(context_t *ctx, uint8_t *ipaddr, int type, char *buf, size_t len);
 
 uint16_t super_ntohs(context_t *ctx, uint16_t value);
 
