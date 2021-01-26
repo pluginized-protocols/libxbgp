@@ -1,0 +1,16 @@
+version: "3.8"
+networks:
+  xBGP_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
+        - subnet: "3001:2142:cafe::/64"
+
+services:
+  xbgp_rtr1:
+    build: Dockerfile_xbgp
+    networks:
+      - "xBGPNet"
+    ports:
+      - "179:179"

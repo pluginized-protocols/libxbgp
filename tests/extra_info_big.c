@@ -42,7 +42,7 @@ static void test_big_walk(void) {
     struct global_info current_int = {.type = 0, .hidden_ptr = NULL};
     struct global_info current_prefix = {.type = 0, .hidden_ptr = NULL};
 
-    union ubpf_prefix pfx;
+    struct prefix_ip6 pfx; // we don't care if it is IPv4
     uint64_t as;
 
     memset(&pfx, 0, sizeof(pfx));
@@ -57,7 +57,12 @@ static void test_big_walk(void) {
         CU_ASSERT_EQUAL_FATAL(get_info_lst_idx(&current_lst, 1, &current_prefix), 0);
 
         CU_ASSERT_EQUAL_FATAL(extra_info_copy_data(&current_int, &as, sizeof(as)), 0);
-        CU_ASSERT_EQUAL_FATAL(extra_info_copy_data(&current_prefix, &pfx, sizeof(pfx)), 0);
+
+        int into = extra_info_copy_data(&current_prefix, &pfx, sizeof(pfx));
+        if (into != 0) {
+            fprintf(stderr, "wow\n");
+        }
+        CU_ASSERT_EQUAL_FATAL(into, 0);
 
     }
 

@@ -2,6 +2,8 @@
 // Created by thomas on 4/11/18.
 //
 
+#include <libgen.h>
+#include <linux/limits.h>
 #include <sys/un.h>
 #include <include/plugin_arguments.h>
 #include "include/ebpf_mod_struct.h"
@@ -22,11 +24,14 @@
 
 #include "stdarg.h"
 #include "plugin_extra_configuration.h"
+#include "url_parser.h"
 
 #include <netinet/in.h>
 #include <float.h>
 #include <math.h>
 #include <errno.h>
+#include <wait.h>
+#include <sys/stat.h>
 
 
 static int write_fd = -1; // fd to talk to monitoring manager of this library
@@ -868,5 +873,118 @@ int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, 
 
     if (!inet_ntop(type, ip, buf, len)) return -1;
 
+    return 0;
+}
+
+
+#define safe_snprintf(offset, dst, maxlen, format, ...) ({      \
+    int __ret__ = 0;                                            \
+    int written_len__;                                          \
+    written_len__ = snprintf(dst, maxlen, format, __VA_ARGS__); \
+    if (written_len__ <= maxlen){                               \
+        __ret__ = 1;                                            \
+    }                                                           \
+    offset += written_len__;                                    \
+    dst += written_len__;                                       \
+    __ret__;                                                    \
+})
+
+static inline int build_src_rsync(struct parsed_url *url, char *buf, size_t len) {
+    unsigned int offset = 0;
+    char *str = buf;
+
+    if (url->username) {
+        if (!safe_snprintf(offset, str, len - offset, "%s", url->username)) { return -1; }
+    }
+
+    if (!url->host) { return -1; }
+
+    if (!safe_snprintf(offset, str, len - offset, url->username != NULL ? "@%s" : "%s", url->host)) { return -1; }
+
+    if (!url->path) { return -1; }
+
+    if (!safe_snprintf(offset, str, len - offset, ":%s", url->path)) { return -1; }
+
+    return 0;
+}
+
+int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
+    pid_t pid;
+    int ret, wstatus;
+    char src[PATH_MAX];
+    struct parsed_url *p_url;
+    char *id_file;
+    char ssh_info[PATH_MAX];
+    char *mod_path;
+    int prev_size;
+    int i;
+
+    p_url = parse_url(url);
+    if (!p_url) {
+        fprintf(stderr, "Unable to parse url %s\n", url);
+        return -1;
+    }
+
+    if (p_url->path[0] != '/') {
+        prev_size = strnlen(p_url->path, PATH_MAX);
+        mod_path = realloc(p_url->path, prev_size + 2); // 1 for the extra '/' + 1 for null byte at the end
+        if (mod_path == NULL) {
+            perror("realloc");
+            return -1;
+        }
+
+        for (i = prev_size; i > 0; i--) {
+            mod_path[i] = mod_path[i - 1];
+        }
+        mod_path[0] = '/';
+        mod_path[prev_size + 1] = 0;
+        p_url->path = mod_path;
+    }
+
+    memset(src, 0, sizeof(src));
+    memset(ssh_info, 0, sizeof(ssh_info));
+    if (build_src_rsync(p_url, src, PATH_MAX - 1) == -1) return -1;
+
+    id_file = getenv("UBPF_IDENTITY_FILE");
+    if (id_file) {
+        snprintf(ssh_info, PATH_MAX,
+                 "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", id_file);
+    } else {
+        snprintf(ssh_info, PATH_MAX,
+                 "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null");
+    }
+
+    // call rsync to fetch the file locally
+    pid = fork();
+
+    if (pid == -1) { // unable to fork
+        perror("Unable to fork");
+    } else if (pid == 0) { // in the child
+        char *const argv[] = {
+                "rsync", "--archive", "-hh",
+                "--partial", "--modify-window=2",
+                "-e", ssh_info,
+                src, dest,
+                NULL
+        };
+        close(STDERR_FILENO);
+        close(STDIN_FILENO);
+        if (execve("/usr/bin/rsync", argv, NULL) == -1) { exit(EXIT_FAILURE); }
+    }
+
+    ret = waitpid(pid, &wstatus, 0);
+    if (ret == -1) {
+        perror("waitpid failed");
+    }
+
+    if (WIFEXITED(wstatus)) {
+        if (WEXITSTATUS(wstatus) == EXIT_SUCCESS) {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (WIFSIGNALED(wstatus)) {
+        return -1;
+    }
     return 0;
 }

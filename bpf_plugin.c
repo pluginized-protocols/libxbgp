@@ -3,8 +3,6 @@
 //
 
 #include "bpf_plugin.h"
-#include "list.h"
-#include "hashmap.h"
 #include "ubpf_context.h"
 #include "insertion_point.h"
 #include "shared_memory.h"

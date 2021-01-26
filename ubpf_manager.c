@@ -2,7 +2,7 @@
 // Created by thomas on 26/10/18.
 //
 
-
+#include <stdint.h>
 #include "ubpf_manager.h"
 #include "ubpf_api.h"
 #include "ubpf_vm/vm/inc/ubpf.h"
@@ -17,7 +17,6 @@
 #include <time.h>
 #include <include/plugin_arguments.h>
 #include "ubpf_context.h"
-#include "hashmap.h"
 #include "insertion_point.h"
 #include "plugins_manager.h"
 #include <pthread.h>

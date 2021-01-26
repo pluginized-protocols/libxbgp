@@ -17,6 +17,7 @@
 #include <libgen.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <plugins_manager.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

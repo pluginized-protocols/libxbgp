@@ -5,6 +5,21 @@ if [ "$EUID" -ne 0 ]; then
   exit
 fi
 
+
+BR_NAME="br0"
+
+# namespace -> nb interfaces
+declare -A NB_IFACES
+
+# $1: ns name
+function inc_iface {
+    if [ ! "${NB_IFACES[$1]+isset}" ]; then
+        create-ns "$1"
+    fi
+    __ret="${1}-eth${NB_IFACES[$1]}"
+    ((++NB_IFACES[$1]))
+}
+
 ## $1 interface name
 ## $2 ip address
 ## $3 namespace
@@ -23,38 +38,116 @@ function provision-iface () {
   ${netns_str[0]} ip link set dev "${1}" up
 }
 
-NETNS_NAME="frrouting"
-BR_NAME="br0"
+## $1 namespace name
+function create-ns () {
+  NB_IFACES[$1]=0
+  ip netns add ${1}
+  provision-iface "lo" "" ${1}
+}
+
+## $1 veth interface name
+## $2 ns name
+function mv-ns () {
+  ip link set dev "$1" netns "$2"
+  ip netns exec "$2" ip link set dev "$1" up
+}
+
+## $1 iface name 1
+## $2 iface name 2
+function make-veth () {
+  ip link add dev "$1" type veth peer name "$2"
+}
+
+## $1 namespace 1
+## $2 namespace 2
+function make-link () {
+
+  inc_iface "$1"
+  local r1="$__ret"
+
+  inc_iface "$2"
+  local r2="$__ret"
+
+  # add veth
+  make-veth "$r1" "$r2"
+
+  # set one veth to the first netns
+  mv-ns "$r1" "$1"
+  # and do the same for the second netns
+  mv-ns "$r2" "$2"
+}
+
+# $1 bridge interface name
+function create-bridge () {
+  ip link add name "$1" type bridge
+  ip link set dev "$1" up
+}
+
+## $1 bridge name
+## $2 ns name
+## $3 iface name attached to the bridge
+## $4 iface name attached to the ns
+function ns-to-bridge () {
+
+  make-veth "$3" "$4"
+
+  mv-ns "$4" "$2"
+
+  if ! ip link show dev "$BR" &> /dev/null ; then
+    create-bridge "$1"
+  fi
+
+  ip link set "$3" master "$1"
+  ip link set "$3" up
+}
 
 
-# add network namespace
-ip netns add $NETNS_NAME
+#       +--------+
+#       | exabgp |
+#       +--------+
+#            |eth0 .2
+#            |
+#            |10.21.43.0/24
+#            |
+#          .2|eth1
+#      +-----------+  10.21.42.0/24  +------+
+#      | frrouting +-----------------+ bird |
+#      +-----------+eth0         eth0+------+
+#    .2 ebr0 |      .1             .2
+#            |
+#            | 10.21.44.0/24
+#            |
+#    .1 net0 |
+#     +-------------+
+#     | bridge host |
+#     +-------------+
 
-# create bridge interface
-ip link add name $BR_NAME type bridge
-provision-iface $BR_NAME "10.21.42.1/24"
+make-link "bird1" "bird2"
+
+provision-iface "bird1-eth0" "10.21.42.1/24" "bird1"
+provision-iface "bird2-eth0" "10.21.42.2/24" "bird2"
+
+exit 0
+
+# create and make links between namespaces
+make-link "frrouting" "bird"
+make-link "frrouting" "exabgp"
+
+ns-to-bridge "$BR_NAME" "frrouting" "frr-net0" "frrouting-ebr0"
 
 
-# add veth
-ip link add dev frr-net0 type veth peer name frr-eth0
-# and set one veth to the netns
-ip link set frr-eth0 netns $NETNS_NAME
-# put the remaining veth as part of br0
-ip link set frr-net0 master $BR_NAME
+# provision namespaces interfaces
+provision-iface "frrouting-eth0" "10.21.42.1/24" "frrouting"
+provision-iface "frrouting-eth1" "10.21.43.1/24" "frrouting"
+provision-iface "frrouting-ebr0" "10.21.44.2/24" "frrouting"
 
-# assign IP addr to the namespace and activate the interfaces
-provision-iface "frr-eth0" "10.21.42.4/24" $NETNS_NAME
-provision-iface "lo" "" $NETNS_NAME
+provision-iface  "frrouting-eth0" "c1a4:4ad:42::1/64" "frrouting"
+provision-iface  "frrouting-eth1" "c1a4:4ad:43::1/64" "frrouting"
 
+provision-iface "bird-eth0" "10.21.42.2/24" "bird"
+provision-iface "bird-eth0" "c1a4:4ad:42::2/64" "bird"
 
-# activate the other veth
-ip link set dev frr-net0 up
+provision-iface "exabgp-eth0" "10.21.43.2/24" "exabgp"
+provision-iface "exabgp-eth0" "c1a4:4ad:43::2/64" "exabgp"
 
-# create second network namespace
-ip netns add exabgp
-ip link add dev frr-eth1 type veth peer name exa-eth0
-ip link set frr-eth1 netns $NETNS_NAME
-ip link set exa-eth0 netns exabgp
-
-provision-iface "exa-eth0" "10.21.43.2/24" "exabgp"
-provision-iface "frr-eth1" "10.21.43.4/24" "$NETNS_NAME"
+provision-iface "$BR_NAME" "10.21.44.1/24"

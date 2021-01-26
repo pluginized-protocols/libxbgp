@@ -58,7 +58,10 @@ int main(int argc, char *argv[]) {
 
     }
 
-    if (!have_folder) return EXIT_FAILURE;
+    if (!have_folder) {
+        fprintf(stderr, "Must take -p parameter to locate the plugin folder test\n");
+        return EXIT_FAILURE;
+    }
 
 
     /* initialize the CUnit test registry */
