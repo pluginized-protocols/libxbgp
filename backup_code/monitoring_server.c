@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <stdatomic.h>
 #include <wait.h>
+#include <syslog.h>
 
 // 1MB
 #define MAX_BUFFER_SIZE 1048576

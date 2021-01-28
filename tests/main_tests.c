@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (extra_info_tests() != CUE_SUCCESS) ||
-        (extra_info_big_tests() != CUE_SUCCESS) ||
+        // (extra_info_big_tests() != CUE_SUCCESS) ||
         (ubpf_monitoring_tests(plugin_folder_path) != CUE_SUCCESS)) {
 
         fprintf(stderr, "%s\n", CU_get_error_msg());

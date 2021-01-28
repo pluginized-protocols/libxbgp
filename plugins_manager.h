@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <include/context_hdr.h>
 #include "insertion_point.h"
+#include "log.h"
 
 #define MAX_SIZE_PLUGIN 1048576
 #define MAX_SIZE_OBJ_CODE 1048576
@@ -85,7 +86,7 @@ typedef struct manager {
 int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len,
                     insertion_point_info_t *plugins_array,
-                    const char *monitoring_address, const char *monitoring_port, int require_monit);
+                    int dbg, struct log_config *logs);
 
 /**
  *

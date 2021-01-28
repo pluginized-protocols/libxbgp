@@ -16,11 +16,11 @@
 
 
 typedef struct insertion_point insertion_point_t;
+typedef struct log_config log_config_t;
 
 extern int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir, size_t len,
-                    insertion_point_info_t *insertion_points_array, const char *monitoring_address,
-                    const char *monitoring_port, int require_monit);
+                    insertion_point_info_t *insertion_points_array, int dbg, log_config_t *logs);
 
 
 extern int run_pre_functions(insertion_point_t *p, args_t *args, uint64_t *ret);

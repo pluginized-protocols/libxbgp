@@ -25,6 +25,7 @@
 #include "stdarg.h"
 #include "plugin_extra_configuration.h"
 #include "url_parser.h"
+#include "log.h"
 
 #include <netinet/in.h>
 #include <float.h>
@@ -32,9 +33,9 @@
 #include <errno.h>
 #include <wait.h>
 #include <sys/stat.h>
+#include <ffi.h>
 
 
-static int write_fd = -1; // fd to talk to monitoring manager of this library
 static int ebpf_msgid = -1;
 
 
@@ -180,32 +181,128 @@ static int send_all(int socket, const void *buffer, size_t length) {
     return 0;
 }
 
-static int packet_send(const void *data, size_t len, unsigned int type, int sock_fd) {
+int super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 
-    uint32_t _type = (uint32_t) type;
+    int i;
+    ffi_cif CIF;
+    ffi_type **types;
+    void **values;
 
-    if (len > UINT32_MAX) {
-        fprintf(stderr, "len failed\n");
-        return -1;
+    if (*msg < 1 || *msg > 8) {
+        // bad formatted msg, abort
+        return 0;
     }
 
-    if (send_all(sock_fd, &len, sizeof(uint32_t)) < 0)
-        return 0;
-    if (send_all(sock_fd, &_type, sizeof(uint32_t)) < 0)
-        return 0;
-    if (send_all(sock_fd, data, len) < 0)
-        return 0;
+    types = (ffi_type **) malloc((args->nb_args + 1) * sizeof(ffi_type *));
+    values = (void **) malloc((args->nb_args + 1) * sizeof(void *));
 
-    return 1;
-}
+    // msg parameter of log_msg
+    types[0] = &ffi_type_pointer;
+    values[0] = &msg;
 
-int send_to_monitor(UNUSED context_t *vm_ctx, const void *data, size_t len, unsigned int type) {
+    for (i = 0; i < args->nb_args; i++) {
+        switch (args->args[i].type) {
+            case VT_S8:
+                types[1 + i] = &ffi_type_sint8;
+                values[1 + i] = &args->args[i].val.s8;
+                break;
+            case VT_U8:
+                types[1 + i] = &ffi_type_uint8;
+                values[1 + i] = &args->args[i].val.u8;
+                break;
+            case VT_S16:
+                types[1 + i] = &ffi_type_sint16;
+                values[1 + i] = &args->args[i].val.s16;
+                break;
+            case VT_U16:
+                types[1 + i] = &ffi_type_uint16;
+                values[1 + i] = &args->args[i].val.u16;
+                break;
+            case VT_S32:
+                types[1 + i] = &ffi_type_sint32;
+                values[1 + i] = &args->args[i].val.s32;
+                break;
+            case VT_U32:
+                types[1 + i] = &ffi_type_uint32;
+                values[1 + i] = &args->args[i].val.u32;
+                break;
+            case VT_S64:
+                types[1 + i] = &ffi_type_sint64;
+                values[1 + i] = &args->args[i].val.s64;
+                break;
+            case VT_U64:
+                types[1 + i] = &ffi_type_sint64;
+                values[1 + i] = &args->args[i].val.u64;
+                break;
+            case VT_FLOAT:
+                types[1 + i] = &ffi_type_float;
+                values[1 + i] = &args->args[i].val.fvalue;
+                break;
+            case VT_DOUBLE:
+                types[1 + i] = &ffi_type_double;
+                values[1 + i] = &args->args[i].val.dvalue;
+                break;
+            case VT_LONGDOUBLE:
+                types[1 + i] = &ffi_type_longdouble;
+                values[1 + i] = &args->args[i].val.ldvalue;
+                break;
+            case VT_POINTER:
+                types[1 + i] = &ffi_type_pointer;
+                values[1 + i] = &args->args[i].val.s8;
+                break;
+            case VT_UCHAR:
+                types[1 + i] = &ffi_type_uchar;
+                values[1 + i] = &args->args[i].val.uchar;
+                break;
+            case VT_SCHAR:
+                types[1 + i] = &ffi_type_schar;
+                values[1 + i] = &args->args[i].val.schar;
+                break;
+            case VT_USHORT:
+                types[1 + i] = &ffi_type_ushort;
+                values[1 + i] = &args->args[i].val.ushort;
+                break;
+            case VT_SSHORT:
+                types[1 + i] = &ffi_type_sshort;
+                values[1 + i] = &args->args[i].val.sshort;
+                break;
+            case VT_UINT:
+                types[1 + i] = &ffi_type_uint;
+                values[1 + i] = &args->args[i].val.uint;
+                break;
+            case VT_SINT:
+                types[1 + i] = &ffi_type_sint;
+                values[1 + i] = &args->args[i].val.sint;
+                break;
+            case VT_SLONG:
+                types[1 + i] = &ffi_type_slong;
+                values[1 + i] = &args->args[i].val.slong;
+                break;
+            case VT_ULONG:
+                types[1 + i] = &ffi_type_ulong;
+                values[1 + i] = &args->args[i].val.ulong;
+                break;
+            case VT_ULLONG:
+                types[1 + i] = &ffi_type_uint64;
+                values[1 + i] = &args->args[i].val.ullong;
+                break;
+            case VT_SLLONG:
+                types[1 + i] = &ffi_type_sint64;
+                values[1 + i] = &args->args[i].val.sllong;
+                break;
+            default:
+                return 0;
+        }
+    }
 
-    if (type == 0) return 0;
+    if (ffi_prep_cif_var(&CIF, FFI_DEFAULT_ABI, 1,
+                         args->nb_args + 1, &ffi_type_void, types) == FFI_OK) {
+        ffi_call(&CIF, FFI_FN(log_msg), NULL, values);
 
-    if (write_fd == -1) return 0;
-    if (!packet_send(data, len, type, write_fd))
-        return 0;
+    }
+
+    free(types);
+    free(values);
 
     return 1;
 }

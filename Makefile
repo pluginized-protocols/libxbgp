@@ -22,7 +22,7 @@ LDFLAGS += -L/usr/local/lib
 LDFLAGS += -L.
 
 LDLIBS += -Wl,-Bstatic -lcunit -lubpf -Wl,-Bdynamic
-LDLIBS += -ljson-c -pthread -lpthread -lrt
+LDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
 LDLIBS += -lncurses -ltinfo
 LDLIBS += -lm 
 
@@ -38,7 +38,7 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./insertion_point.c \
       ./list.c \
       ./map.c \
-      ./monitoring_server.c \
+      ./log.c \
       ./plugin_extra_configuration.c \
       ./plugins_manager.c \
       ./queue.c \
@@ -76,6 +76,7 @@ HDR = ./bpf_plugin.h \
       ./utlist.h \
       ./map.h \
       ./url_parser.h \
+      ./log.h \
       include/bytecode_public.h \
       include/context_hdr.h \
       include/ebpf_mod_struct.h \
