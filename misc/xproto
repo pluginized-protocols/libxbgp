@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+if [[ $(id -u) -ne 0 ]] ; then
+  echo "Please run as root" ;
+  exit 1 ;
+fi
+
+
+function xbird_start() {
+  echo "Starting xBIRD"
+  /usr/bin/bird
+}
+
+function xfrr_start() {
+  echo "Start xFRR"
+  /usr/bin/frr start
+}
+
+function xbird_stop() {
+  echo "Stop xBIRD"
+  /usr/bin/birdc down
+}
+
+function xfrr_stop() {
+  echo "Stop xFRR"
+  /usr/bin/frr stop
+}
+
+function start() {
+  case "$1" in
+    "bird")
+        xbird_start
+        shift
+        ;;
+    "frr")
+        xfrr_start
+        shift
+        ;;
+    *)
+        echo "Unable to parse start command"
+        exit 1
+        shift
+        ;;
+  esac
+}
+
+function stop() {
+    case "$1" in
+    "bird")
+        xbird_stop
+        shift
+        ;;
+    "frr")
+        xfrr_stop
+        shift
+        ;;
+    *)
+        echo "Unable to parse stop command"
+        exit 1
+        shift
+        ;;
+  esac
+}
+
+function usage() {
+  echo "$1 [bird|frr] [start|stop]"
+}
+
+function to_lower() {
+  echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+
+# Main entry point
+while (( "$#" )); do
+  case "$1" in
+    "bird"|"frr")
+      if [ -n "$2" ] ; then
+        if [ "$(to_lower "$2")" == "stop" ] ; then
+          stop "$1"
+        elif [ "$(to_lower "$2")" == "start"  ] ; then
+          start "$1"
+        else
+          usage "$1"
+          exit 1
+        fi
+        shift 2
+      else
+        echo "Error: Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    *) #
+      usage "$0"
+      shift
+      ;;
+  esac
+done
