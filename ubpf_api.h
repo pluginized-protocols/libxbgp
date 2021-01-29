@@ -121,4 +121,8 @@ uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val);
 
 uint64_t super_htonll(context_t *ctx, uint64_t val);
 
+int fetch_file(context_t *ctx, char *url, char *dest);
+
+int super_log(context_t *vm_ctx, const char *msg, struct vargs *args);
+
 #endif //FRR_THESIS_UBPF_API_H

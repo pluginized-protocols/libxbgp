@@ -6,6 +6,7 @@
 #define FRR_UBPF_STACK_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define iterator_next(iterator) \
     ((iterator)->next((iterator)))

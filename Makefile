@@ -22,7 +22,7 @@ LDFLAGS += -L/usr/local/lib
 LDFLAGS += -L.
 
 LDLIBS += -Wl,-Bstatic -lcunit -lubpf -Wl,-Bdynamic
-LDLIBS += -ljson-c -pthread -lpthread -lrt
+LDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
 LDLIBS += -lncurses -ltinfo
 LDLIBS += -lm 
 
@@ -37,7 +37,8 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./bpf_plugin.c \
       ./insertion_point.c \
       ./list.c \
-      ./monitoring_server.c \
+      ./map.c \
+      ./log.c \
       ./plugin_extra_configuration.c \
       ./plugins_manager.c \
       ./queue.c \
@@ -48,7 +49,8 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./ubpf_context.c \
       ./ubpf_manager.c \
       ./ubpf_memory_pool.c \
-      ./ubpf_misc.c
+      ./ubpf_misc.c \
+      ./url_parser.c
 
 
 SRC_TESTS = $(shell find ./tests -name "*.c" -not -path "./tests/plugins/*")
@@ -72,6 +74,9 @@ HDR = ./bpf_plugin.h \
       ./ubpf_misc.h \
       ./uthash.h \
       ./utlist.h \
+      ./map.h \
+      ./url_parser.h \
+      ./log.h \
       include/bytecode_public.h \
       include/context_hdr.h \
       include/ebpf_mod_struct.h \

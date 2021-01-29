@@ -2,7 +2,7 @@
 // Created by thomas on 26/10/18.
 //
 
-
+#include <stdint.h>
 #include "ubpf_manager.h"
 #include "ubpf_api.h"
 #include "ubpf_vm/vm/inc/ubpf.h"
@@ -17,7 +17,6 @@
 #include <time.h>
 #include <include/plugin_arguments.h>
 #include "ubpf_context.h"
-#include "hashmap.h"
 #include "insertion_point.h"
 #include "plugins_manager.h"
 #include <pthread.h>
@@ -52,7 +51,7 @@ static inline int base_register(vm_container_t *vmc) {
     }
 
     /* helper from various things */
-    if (!safe_ubpf_register(vmc, "send_to_monitor", send_to_monitor)) return 0;
+    if (!safe_ubpf_register(vmc, "super_log", super_log)) return 0;
     if (!safe_ubpf_register(vmc, "clock", bpf_clock)) return 0;
     if (!safe_ubpf_register(vmc, "get_time", get_time)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_print", ebpf_print)) return 0;

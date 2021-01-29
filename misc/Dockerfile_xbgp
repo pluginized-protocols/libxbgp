@@ -116,6 +116,25 @@ RUN install -m 775 -o frr -g frr -d /var/log/frr && \
     install -m 640 -o frr -g frr tools/etc/frr/extra_conf.json /etc/frr/plugins/extra_conf.json && \
     install -m 640 -o frr -g frr tools/etc/frr/daemons /etc/frr/daemons
 
+# this helper is used to launch the protocol of your choice
+# Usage example :
+# ./xproto frr start # will launch frrouting
+#
+# USAGE: xproto [frr|bird] [start|stop]
+COPY ./xproto /usr/bin/xproto
+
+# This is an example
+# We now show how to load a plugin on FRR BGP at startup time
+
+# first you'll need a manifest that will contains pluginst to be loaded
+# We will use the one located at /opt/xbgp_plugins/hello_world/manifest.json
+RUN cp /opt/xbgp_plugins/hello_world/manifest.json /etc/frr/plugins/manifest.json
+
+# we add the compiled plugin to the same folder as the manifest
+RUN cp /opt/xbgp_plugins/hello_world/reject_route_attr_42.o /etc/frr/plugins
+
+
+
 
 WORKDIR /root
 CMD /bin/bash

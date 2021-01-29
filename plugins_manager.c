@@ -18,7 +18,7 @@
 #include "map.h"
 #include "bpf_plugin.h"
 #include "ubpf_api.h"
-#include "monitoring_server.h"
+#include "log.h"
 #include "ubpf_context.h"
 
 #include <stdio.h>
@@ -31,6 +31,8 @@
 
 static int is_init = 0;
 static manager_t master;
+
+static const char *syslog_name = "plugin_manager";
 
 
 static inline int full_write(int fd, const char *buf, size_t len) {
@@ -71,7 +73,7 @@ static void on_delete_vm(void *self) {
 int
 init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir, size_t len,
                     insertion_point_info_t *insertion_points_array,
-                    const char *monitoring_address, const char *monitoring_port, int require_monit) {
+                    int dbg, struct log_config *logs) {
 
     if (is_init) return 0;
     if (!var_state_dir) return -1;
@@ -81,14 +83,13 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir, size_
     master.point_info = insertion_points_array;
     master.helper_functions = api_proto;
 
-    // start monitor server
-    if (monitoring_address && monitoring_port) {
-        if (init_monitoring(monitoring_address, monitoring_port, require_monit) == -1) {
-            return -1;
-        }
-    }
+    // start logging manager
+    log_init(dbg, syslog_name, logs);
+
     // start plugin message listener
     // todo
+    // :fmoh:
+
     is_init = 1;
     return 0;
 }
@@ -120,7 +121,10 @@ static void flush_manager(manager_t *manager) {
 
 void ubpf_terminate() {
 
-    turnoff_monitoring();
+    is_init = 0;
+
+    // CLOSE logger
+    logs_close();
     // off listener thread TODO
 
     flush_manager(&master);

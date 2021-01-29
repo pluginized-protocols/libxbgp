@@ -36,7 +36,8 @@ def main(args):
     template = Template(filename=args.template)
     env_template = Template(filename=args.env)
 
-    session = json.loads(args.conf)
+    with open(args.conf) as f:
+        session = json.load(f)
 
     exabgp_config = Config({
         "api_program": os.path.abspath(args.program),
@@ -60,18 +61,16 @@ def main(args):
             f.write(tmpl.render(conf=tmpl_args))
 
 
-# {"local": {"ip_addr": "10.21.43.2","router_id": "10.21.43.2","asn": 65002},"peer": {"ip_addr": "10.21.43.4","router_id": "10.21.43.4","asn": 65004 }}
-
 if __name__ == '__main__':
     parser = ArgumentParser()
 
-    parser.add_argument('-P', '--program', type=str, help="Path to the ExaBGP program")
+    parser.add_argument('-P', '--program', type=str, help="Path to the ExaBGP api program")
     parser.add_argument('-t', '--template', type=str, required=False, default="exabgp.exabgp",
                         help="Template to generate the ExaBGP conf")
     parser.add_argument('-e', '--env', type=str, required=False, default="exabgp.env.mako",
                         help="Template to generate the ExaBGP environment variable")
     parser.add_argument('-c', '--conf', type=str, required=True,
-                        help="JSON formatted string containing the configuration of ExaBGP")
+                        help="JSON formatted file containing the configuration of ExaBGP")
     parser.add_argument('-o', '--output', type=str, required=True,
                         help="Directory to put generated configuration files")
     parser.add_argument('-p', '--prefix', type=str, required=False, default="",

@@ -100,8 +100,7 @@ static insertion_point_info_t plugins[] = {
 
 static int setup(void) {
 
-    return init_plugin_manager(funcs, ".", 9, plugins,
-                               NULL, NULL, 0);
+    return init_plugin_manager(funcs, ".", 9, plugins, 0, NULL);
 
 }
 

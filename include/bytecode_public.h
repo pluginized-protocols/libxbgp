@@ -92,4 +92,6 @@ extern int get_extra_info_dict(struct global_info *info, const char *key, struct
 
 extern int ebpf_inet_ntop(uint8_t *ipaddr, int type, char *buf, size_t len);
 
+extern int super_log(const char *msg, struct vargs *args);
+
 #endif //FRR_UBPF_PUBLIC_BPF_H

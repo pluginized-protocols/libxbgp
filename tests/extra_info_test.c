@@ -171,7 +171,7 @@ static void test_nested_dict(void) {
     struct global_info info_lst;
     struct global_info curr_val;
 
-    union ubpf_prefix pfx;
+    struct prefix_ip4 pfx;
 
     const char *ip4_str[] = {[0] = "192.168.56.0", [1] = "192.168.57.0"};
     struct in_addr ips[2];
@@ -190,8 +190,8 @@ static void test_nested_dict(void) {
         CU_ASSERT_EQUAL_FATAL(extra_info_copy_data(&curr_val, &pfx, sizeof(pfx)), 0)
 
         CU_ASSERT_EQUAL(pfx.family, AF_INET);
-        CU_ASSERT_EQUAL(pfx.ip4_pfx.p.s_addr, ips[i].s_addr)
-        CU_ASSERT_EQUAL(pfx.ip4_pfx.prefix_len, 24)
+        CU_ASSERT_EQUAL(pfx.p.s_addr, ips[i].s_addr)
+        CU_ASSERT_EQUAL(pfx.prefix_len, 24)
 
     }
 

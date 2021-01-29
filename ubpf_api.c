@@ -2,6 +2,8 @@
 // Created by thomas on 4/11/18.
 //
 
+#include <libgen.h>
+#include <linux/limits.h>
 #include <sys/un.h>
 #include <include/plugin_arguments.h>
 #include "include/ebpf_mod_struct.h"
@@ -22,14 +24,18 @@
 
 #include "stdarg.h"
 #include "plugin_extra_configuration.h"
+#include "url_parser.h"
+#include "log.h"
 
 #include <netinet/in.h>
 #include <float.h>
 #include <math.h>
 #include <errno.h>
+#include <wait.h>
+#include <sys/stat.h>
+#include <ffi.h>
 
 
-static int write_fd = -1; // fd to talk to monitoring manager of this library
 static int ebpf_msgid = -1;
 
 
@@ -175,32 +181,128 @@ static int send_all(int socket, const void *buffer, size_t length) {
     return 0;
 }
 
-static int packet_send(const void *data, size_t len, unsigned int type, int sock_fd) {
+int super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 
-    uint32_t _type = (uint32_t) type;
+    int i;
+    ffi_cif CIF;
+    ffi_type **types;
+    void **values;
 
-    if (len > UINT32_MAX) {
-        fprintf(stderr, "len failed\n");
-        return -1;
+    if (*msg < 1 || *msg > 8) {
+        // bad formatted msg, abort
+        return 0;
     }
 
-    if (send_all(sock_fd, &len, sizeof(uint32_t)) < 0)
-        return 0;
-    if (send_all(sock_fd, &_type, sizeof(uint32_t)) < 0)
-        return 0;
-    if (send_all(sock_fd, data, len) < 0)
-        return 0;
+    types = (ffi_type **) malloc((args->nb_args + 1) * sizeof(ffi_type *));
+    values = (void **) malloc((args->nb_args + 1) * sizeof(void *));
 
-    return 1;
-}
+    // msg parameter of log_msg
+    types[0] = &ffi_type_pointer;
+    values[0] = &msg;
 
-int send_to_monitor(UNUSED context_t *vm_ctx, const void *data, size_t len, unsigned int type) {
+    for (i = 0; i < args->nb_args; i++) {
+        switch (args->args[i].type) {
+            case VT_S8:
+                types[1 + i] = &ffi_type_sint8;
+                values[1 + i] = &args->args[i].val.s8;
+                break;
+            case VT_U8:
+                types[1 + i] = &ffi_type_uint8;
+                values[1 + i] = &args->args[i].val.u8;
+                break;
+            case VT_S16:
+                types[1 + i] = &ffi_type_sint16;
+                values[1 + i] = &args->args[i].val.s16;
+                break;
+            case VT_U16:
+                types[1 + i] = &ffi_type_uint16;
+                values[1 + i] = &args->args[i].val.u16;
+                break;
+            case VT_S32:
+                types[1 + i] = &ffi_type_sint32;
+                values[1 + i] = &args->args[i].val.s32;
+                break;
+            case VT_U32:
+                types[1 + i] = &ffi_type_uint32;
+                values[1 + i] = &args->args[i].val.u32;
+                break;
+            case VT_S64:
+                types[1 + i] = &ffi_type_sint64;
+                values[1 + i] = &args->args[i].val.s64;
+                break;
+            case VT_U64:
+                types[1 + i] = &ffi_type_sint64;
+                values[1 + i] = &args->args[i].val.u64;
+                break;
+            case VT_FLOAT:
+                types[1 + i] = &ffi_type_float;
+                values[1 + i] = &args->args[i].val.fvalue;
+                break;
+            case VT_DOUBLE:
+                types[1 + i] = &ffi_type_double;
+                values[1 + i] = &args->args[i].val.dvalue;
+                break;
+            case VT_LONGDOUBLE:
+                types[1 + i] = &ffi_type_longdouble;
+                values[1 + i] = &args->args[i].val.ldvalue;
+                break;
+            case VT_POINTER:
+                types[1 + i] = &ffi_type_pointer;
+                values[1 + i] = &args->args[i].val.s8;
+                break;
+            case VT_UCHAR:
+                types[1 + i] = &ffi_type_uchar;
+                values[1 + i] = &args->args[i].val.uchar;
+                break;
+            case VT_SCHAR:
+                types[1 + i] = &ffi_type_schar;
+                values[1 + i] = &args->args[i].val.schar;
+                break;
+            case VT_USHORT:
+                types[1 + i] = &ffi_type_ushort;
+                values[1 + i] = &args->args[i].val.ushort;
+                break;
+            case VT_SSHORT:
+                types[1 + i] = &ffi_type_sshort;
+                values[1 + i] = &args->args[i].val.sshort;
+                break;
+            case VT_UINT:
+                types[1 + i] = &ffi_type_uint;
+                values[1 + i] = &args->args[i].val.uint;
+                break;
+            case VT_SINT:
+                types[1 + i] = &ffi_type_sint;
+                values[1 + i] = &args->args[i].val.sint;
+                break;
+            case VT_SLONG:
+                types[1 + i] = &ffi_type_slong;
+                values[1 + i] = &args->args[i].val.slong;
+                break;
+            case VT_ULONG:
+                types[1 + i] = &ffi_type_ulong;
+                values[1 + i] = &args->args[i].val.ulong;
+                break;
+            case VT_ULLONG:
+                types[1 + i] = &ffi_type_uint64;
+                values[1 + i] = &args->args[i].val.ullong;
+                break;
+            case VT_SLLONG:
+                types[1 + i] = &ffi_type_sint64;
+                values[1 + i] = &args->args[i].val.sllong;
+                break;
+            default:
+                return 0;
+        }
+    }
 
-    if (type == 0) return 0;
+    if (ffi_prep_cif_var(&CIF, FFI_DEFAULT_ABI, 1,
+                         args->nb_args + 1, &ffi_type_void, types) == FFI_OK) {
+        ffi_call(&CIF, FFI_FN(log_msg), NULL, values);
 
-    if (write_fd == -1) return 0;
-    if (!packet_send(data, len, type, write_fd))
-        return 0;
+    }
+
+    free(types);
+    free(values);
 
     return 1;
 }
@@ -868,5 +970,118 @@ int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, 
 
     if (!inet_ntop(type, ip, buf, len)) return -1;
 
+    return 0;
+}
+
+
+#define safe_snprintf(offset, dst, maxlen, format, ...) ({      \
+    int __ret__ = 0;                                            \
+    int written_len__;                                          \
+    written_len__ = snprintf(dst, maxlen, format, __VA_ARGS__); \
+    if (written_len__ <= maxlen){                               \
+        __ret__ = 1;                                            \
+    }                                                           \
+    offset += written_len__;                                    \
+    dst += written_len__;                                       \
+    __ret__;                                                    \
+})
+
+static inline int build_src_rsync(struct parsed_url *url, char *buf, size_t len) {
+    unsigned int offset = 0;
+    char *str = buf;
+
+    if (url->username) {
+        if (!safe_snprintf(offset, str, len - offset, "%s", url->username)) { return -1; }
+    }
+
+    if (!url->host) { return -1; }
+
+    if (!safe_snprintf(offset, str, len - offset, url->username != NULL ? "@%s" : "%s", url->host)) { return -1; }
+
+    if (!url->path) { return -1; }
+
+    if (!safe_snprintf(offset, str, len - offset, ":%s", url->path)) { return -1; }
+
+    return 0;
+}
+
+int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
+    pid_t pid;
+    int ret, wstatus;
+    char src[PATH_MAX];
+    struct parsed_url *p_url;
+    char *id_file;
+    char ssh_info[PATH_MAX];
+    char *mod_path;
+    int prev_size;
+    int i;
+
+    p_url = parse_url(url);
+    if (!p_url) {
+        fprintf(stderr, "Unable to parse url %s\n", url);
+        return -1;
+    }
+
+    if (p_url->path[0] != '/') {
+        prev_size = strnlen(p_url->path, PATH_MAX);
+        mod_path = realloc(p_url->path, prev_size + 2); // 1 for the extra '/' + 1 for null byte at the end
+        if (mod_path == NULL) {
+            perror("realloc");
+            return -1;
+        }
+
+        for (i = prev_size; i > 0; i--) {
+            mod_path[i] = mod_path[i - 1];
+        }
+        mod_path[0] = '/';
+        mod_path[prev_size + 1] = 0;
+        p_url->path = mod_path;
+    }
+
+    memset(src, 0, sizeof(src));
+    memset(ssh_info, 0, sizeof(ssh_info));
+    if (build_src_rsync(p_url, src, PATH_MAX - 1) == -1) return -1;
+
+    id_file = getenv("UBPF_IDENTITY_FILE");
+    if (id_file) {
+        snprintf(ssh_info, PATH_MAX,
+                 "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", id_file);
+    } else {
+        snprintf(ssh_info, PATH_MAX,
+                 "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null");
+    }
+
+    // call rsync to fetch the file locally
+    pid = fork();
+
+    if (pid == -1) { // unable to fork
+        perror("Unable to fork");
+    } else if (pid == 0) { // in the child
+        char *const argv[] = {
+                "rsync", "--archive", "-hh",
+                "--partial", "--modify-window=2",
+                "-e", ssh_info,
+                src, dest,
+                NULL
+        };
+        close(STDERR_FILENO);
+        close(STDIN_FILENO);
+        if (execve("/usr/bin/rsync", argv, NULL) == -1) { exit(EXIT_FAILURE); }
+    }
+
+    ret = waitpid(pid, &wstatus, 0);
+    if (ret == -1) {
+        perror("waitpid failed");
+    }
+
+    if (WIFEXITED(wstatus)) {
+        if (WEXITSTATUS(wstatus) == EXIT_SUCCESS) {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (WIFSIGNALED(wstatus)) {
+        return -1;
+    }
     return 0;
 }

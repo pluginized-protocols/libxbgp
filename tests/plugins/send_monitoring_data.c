@@ -4,13 +4,19 @@
 
 #include "../../include/bytecode_public.h"
 
-#define TYPE_INT 1
-
 uint64_t send_monitoring_data() {
 
     int data = 42;
     int ret_val;
 
-    ret_val = send_to_monitor(&data, sizeof(int), TYPE_INT) ? EXIT_SUCCESS : EXIT_FAILURE;
+    struct vargs vargs = {
+            .nb_args = 1,
+            .args = (struct vtype[]) {
+                    {.val = {.sint = data}, .type = VT_SINT}
+            }
+    };
+
+    ret_val = super_log(L_INFO "I send the value %d", &vargs) ? EXIT_SUCCESS : EXIT_FAILURE;
+
     return ret_val;
 }

@@ -51,8 +51,7 @@ static int setup(void) {
 
     char path[PATH_MAX];
 
-    ret = init_plugin_manager(funcs, ".", 9, insertion_points,
-                              NULL, NULL, 0);
+    ret = init_plugin_manager(funcs, ".", 9, insertion_points, 0, NULL);
 
     if (ret != 0) return -1;
 
