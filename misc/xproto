@@ -8,22 +8,22 @@ fi
 
 function xbird_start() {
   echo "Starting xBIRD"
-  /usr/bin/bird
+  /usr/sbin/bird
 }
 
 function xfrr_start() {
   echo "Start xFRR"
-  /usr/bin/frr start
+  /usr/lib/frr/frr start
 }
 
 function xbird_stop() {
   echo "Stop xBIRD"
-  /usr/bin/birdc down
+  /usr/sbin/birdc down
 }
 
 function xfrr_stop() {
   echo "Stop xFRR"
-  /usr/bin/frr stop
+  /usr/lib/frr/frr stop
 }
 
 function start() {
