@@ -9,7 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git \
  libc-ares-dev python3-dev libsystemd-dev python-ipaddress python3-sphinx \
  install-info build-essential libsystemd-dev libsnmp-dev perl \
  libcap-dev python2 libpcre3-dev libtool m4 debhelper devscripts \
- iproute2 llvm
+ iproute2 llvm libffi-dev
 
 WORKDIR /opt
 
