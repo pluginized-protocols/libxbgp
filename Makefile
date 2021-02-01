@@ -1,5 +1,7 @@
 CC = gcc
 AR = ar
+# CFLAGS += -march=native -mtune=native
+# CFLAGS += -O2
 CFLAGS += -O0 -g3
 CFLAGS += -std=gnu11
 CFLAGS += -Wall
