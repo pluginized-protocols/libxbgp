@@ -9,18 +9,8 @@ uint64_t big_test() {
     int i;
     int value = 1;
 
-    struct vargs vargs;
-
     for (i = 0; i < 42; i++) {
-
-        vargs = (struct vargs) {
-                .nb_args = 1,
-                .args = (struct vtype[]) {
-                        {.val = {.sint = i}, .type = VT_SINT}
-                }
-        };
-
-        if (!super_log(L_INFO "I send the value %d", &vargs)) return EXIT_FAILURE;
+        if (!log_msg(L_INFO "I send the value %d", LOG_INT(i))) return EXIT_FAILURE;
         value++;
     }
     return EXIT_SUCCESS;
