@@ -128,7 +128,7 @@ COPY ./xproto /usr/bin/xproto
 
 # first you'll need a manifest that will contains pluginst to be loaded
 # We will use the one located at /opt/xbgp_plugins/hello_world/manifest.json
-RUN cp /opt/xbgp_plugins/hello_world/manifest.json /etc/frr/plugins/manifest.json
+RUN cp /opt/xbgp_plugins/hello_world/manifest.json /etc/frr/plugins/manifest.conf
 
 # we add the compiled plugin to the same folder as the manifest
 RUN cp /opt/xbgp_plugins/hello_world/reject_route_attr_42.o /etc/frr/plugins

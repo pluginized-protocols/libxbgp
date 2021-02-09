@@ -71,8 +71,8 @@ typedef struct manager {
     plugin_t *plugin_table;
     insertion_point_t *insertion_point_table;
 
-    char var_state_path[PATH_MAX];
-    pthread_t receiver; // communication socket blah blah blah
+    char var_state_path[PATH_MAX]; /* path to the folder where this manager will store temporary files */
+
 
 } manager_t;
 
