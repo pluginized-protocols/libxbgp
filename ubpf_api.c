@@ -26,6 +26,7 @@
 #include "plugin_extra_configuration.h"
 #include "url_parser.h"
 #include "log.h"
+#include "plugin_socket.h"
 
 #include <netinet/in.h>
 #include <float.h>
@@ -973,6 +974,33 @@ int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, 
     return 0;
 }
 
+int ebpf_inet_pton(context_t *ctx, int af, const char *src, void *dst, size_t buf_len) {
+    int s;
+    int min_len;
+    unsigned char buf[sizeof(struct in6_addr)];
+
+    switch (af) {
+        case AF_INET:
+            min_len = sizeof(struct in_addr);
+            break;
+        case AF_INET6:
+            min_len = sizeof(struct in6_addr);
+            break;
+        default:
+            return -1;
+    }
+
+    if (buf_len < min_len) return -1;
+
+    s = inet_pton(af, src, buf);
+
+    if (s <= 0) {
+        return -1;
+    }
+    memcpy(dst, buf, min_len);
+    return 0;
+}
+
 
 #define safe_snprintf(offset, dst, maxlen, format, ...) ({      \
     int __ret__ = 0;                                            \
@@ -1084,4 +1112,21 @@ int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
         return -1;
     }
     return 0;
+}
+
+
+int sk_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
+    return ctx_open(proto, af, addr, len);
+}
+
+int sk_write(UNUSED context_t *ctx, int sfd, const void *buf, size_t len) {
+    return ctx_write(sfd, buf, len);
+}
+
+int sk_read(UNUSED context_t *ctx, int sfd, void *buf, size_t len) {
+    return ctx_read(sfd, buf, len);
+}
+
+int sk_close(UNUSED context_t *ctx, int sfd) {
+    return ctx_close(sfd);
 }

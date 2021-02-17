@@ -52,7 +52,8 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./ubpf_manager.c \
       ./ubpf_memory_pool.c \
       ./ubpf_misc.c \
-      ./url_parser.c
+      ./url_parser.c \
+      ./plugin_socket.c
 
 
 SRC_TESTS = $(shell find ./tests -name "*.c" -not -path "./tests/plugins/*")
@@ -79,6 +80,7 @@ HDR = ./bpf_plugin.h \
       ./map.h \
       ./url_parser.h \
       ./log.h \
+      ./plugin_socket.h \
       include/bytecode_public.h \
       include/context_hdr.h \
       include/ebpf_mod_struct.h \

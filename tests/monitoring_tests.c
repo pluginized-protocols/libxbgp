@@ -34,7 +34,8 @@ static proto_ext_fun_t funcs[] = {};
 static insertion_point_info_t plugins[] = {
         {.insertion_point_str = "send_monitoring_data", .insertion_point_id = 1},
         {.insertion_point_str = "send_a_lot_of_record", .insertion_point_id = 2},
-        {.insertion_point_str = "pultiple_type_record", .insertion_point_id = 3}
+        {.insertion_point_str = "pultiple_type_record", .insertion_point_id = 3},
+        insertion_point_info_null
 };
 
 static int setup(void) {

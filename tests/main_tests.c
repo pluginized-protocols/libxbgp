@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 
 #include "tree_test.h"
@@ -21,9 +22,34 @@
 #include "next_replace_tests.h"
 #include "extra_info_test.h"
 #include "extra_info_big.h"
+#include "socket_tests.h"
+
+
+static int stderr_to_dev_null(void) {
+    int dev_null = open("/dev/null", O_WRONLY);
+    if (dev_null < 0) {
+        perror("Failed to open /dev/null");
+        return -1;
+    }
+
+    if (close(STDERR_FILENO) == -1) {
+        perror("Unable to close stderr");
+        return -1;
+    }
+
+    if (dup(dev_null) == -1) {
+        perror("dup /dev/null");
+        return -1;
+    }
+
+    if (close(dev_null) == -1) {
+        perror("Unable to close dev_null fd");
+    }
+
+    return 0;
+}
 
 int main(int argc, char *argv[]) {
-
     int c;
     int option_index = 0;
 
@@ -63,6 +89,10 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    if (stderr_to_dev_null() == -1) {
+        return EXIT_FAILURE;
+    }
+
 
     /* initialize the CUnit test registry */
     if (CUE_SUCCESS != CU_initialize_registry())
@@ -71,7 +101,7 @@ int main(int argc, char *argv[]) {
     if ((internal_tests() != CUE_SUCCESS) ||
         (tree_tests() != CUE_SUCCESS) ||
         (list_tests() != CUE_SUCCESS) ||
-        // (hashmap_tests() != CUE_SUCCESS) ||
+        (test_socket_api(plugin_folder_path) != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||
