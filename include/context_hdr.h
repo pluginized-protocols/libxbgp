@@ -7,6 +7,7 @@
 
 
 #include "plugin_arguments.h"
+#include "ebpf_mod_struct.h"
 
 typedef struct context context_t;
 typedef struct plugin plugin_t;
@@ -43,6 +44,10 @@ struct context {
     plugin_t *p;
     struct insertion_point_entry *pop; // point of presence of this VM
     struct vm_container *vm;
+
+    insertion_point_info_t *insertion_point_info;
+    proto_ext_fun_t *ext_api;
+
 };
 
 #endif //UBPF_TOOLS_CONTEXT_HDR_H

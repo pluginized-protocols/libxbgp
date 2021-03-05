@@ -27,6 +27,7 @@
 #include "url_parser.h"
 #include "log.h"
 #include "plugin_socket.h"
+#include "static_injection.h"
 
 #include <netinet/in.h>
 #include <float.h>
@@ -1129,4 +1130,60 @@ int sk_read(UNUSED context_t *ctx, int sfd, void *buf, size_t len) {
 
 int sk_close(UNUSED context_t *ctx, int sfd) {
     return ctx_close(sfd);
+}
+
+
+struct inject_pluglet_args {
+    struct {
+        const uint8_t *bytecode;
+        size_t len;
+    } elf;
+
+    struct {
+        int extra;
+        int shared;
+    } mem;
+
+    const char *plugin_name;
+    size_t plugin_name_len;
+
+    const char *insertion_point_name;
+    size_t insertion_point_name_len;
+
+    const char *this_vm_name;
+    size_t this_vm_name_len;
+
+    int jit;
+    int anchor;
+    int seq;
+};
+
+int inject_pluglet(context_t *ctx, struct inject_pluglet_args *arg) {
+    int insertion_point_id;
+    int anchor_id;
+
+    if (!arg) return -1;
+
+    // begin check if the request is valid
+    insertion_point_id =
+            str_to_id_insertion_point(ctx->insertion_point_info,
+                                      arg->insertion_point_name,
+                                      arg->insertion_point_name_len);
+    switch (arg->anchor) {
+        case BPF_PRE:
+        case BPF_REPLACE:
+        case BPF_POST:
+            anchor_id = arg->anchor;
+            break;
+        default:
+            return -1;
+    }
+
+    if (insertion_point_id == -1) return -1;
+    if (arg->seq <= 0) return -1;
+
+
+    // end check request
+    //add_extension_code(arg)
+
 }

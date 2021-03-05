@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
+#include "utils_tests.h"
 
 static const char *bytecode_dir = NULL;
 
@@ -25,7 +26,6 @@ static pid_t tcp_server = -1;
 
 static int setup(void) {
     char final_path[PATH_MAX];
-
     struct timespec tp = {.tv_sec = 1, .tv_nsec = 0};
 
     tcp_server = fork();
@@ -40,10 +40,9 @@ static int setup(void) {
         memset(final_path, 0, sizeof(final_path));
         snprintf(final_path, sizeof(final_path), "%s/exporter_example.py", bytecode_dir);
 
+        devnull_all_stdstream();
         if (execve(final_path, argv, NULL) == -1) {
-            fprintf(stdout, "Execve failed %s\n", strerror(errno));
             log_msg(L_ERR "Execve failed %s\n", strerror(errno));
-            perror("execve");
             exit(1);
         }
     }
@@ -59,8 +58,6 @@ static int setup(void) {
         perror("Error with tcp_server");
         return -1;
     }
-
-
     return init_plugin_manager(funcs, ".", 1, plugins, 0, NULL);
 }
 
@@ -93,7 +90,7 @@ static void tcp_communication_plugin(void) {
     status = add_extension_code("example_tcp", 11, 128,
                                 0, 1, "tcp_socket_test",
                                 15, BPF_REPLACE, 0, 0,
-                                path_pluglet, "super_vm", 8, funcs);
+                                path_pluglet, 0, "super_vm", 8, funcs);
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
     pt = insertion_point(1);

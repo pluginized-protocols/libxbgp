@@ -23,31 +23,49 @@
 #include "extra_info_test.h"
 #include "extra_info_big.h"
 #include "socket_tests.h"
+#include "utils_tests.h"
 
+int std_stream_to_file(int std_stream, const char *file) {
+    switch (std_stream) {
+        case STDIN_FILENO:
+        case STDERR_FILENO:
+        case STDOUT_FILENO:
+            break;
+        default:
+            return -1;
+    }
 
-static int stderr_to_dev_null(void) {
-    int dev_null = open("/dev/null", O_WRONLY);
+    fsync(std_stream);
+
+    int dev_null = open(file, O_WRONLY);
     if (dev_null < 0) {
-        perror("Failed to open /dev/null");
+        fprintf(stderr, "Failed to open %s: %s", file, strerror(errno));
         return -1;
     }
 
-    if (close(STDERR_FILENO) == -1) {
-        perror("Unable to close stderr");
+    if (close(std_stream) == -1) {
+        perror("Unable to close stream");
         return -1;
     }
 
     if (dup(dev_null) == -1) {
-        perror("dup /dev/null");
+        fprintf(stderr, "dup %s: %s", file, strerror(errno));
         return -1;
     }
 
     if (close(dev_null) == -1) {
+        fprintf(stderr, "Unable to close dev_null %s fd: %s", file, strerror(errno));
         perror("Unable to close dev_null fd");
     }
 
     return 0;
 }
+
+
+static inline int stderr_to_dev_null(void) {
+    return std_stream_to_file(STDERR_FILENO, "/dev/null");
+}
+
 
 int main(int argc, char *argv[]) {
     int c;

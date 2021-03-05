@@ -117,6 +117,7 @@ void delete_mempool(struct mem_pool *mp) {
 
 struct mem_node_it *new_memnode_iterator(struct mem_node *node) {
     struct mem_node_it *it;
+    if (node == NULL) return NULL;
     it = malloc(sizeof(*it));
     if (!it) return NULL;
     it->node = node;

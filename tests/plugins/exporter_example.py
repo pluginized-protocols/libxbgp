@@ -6,9 +6,15 @@ import select
 NETWORK_ORDER = 'big'
 
 
-def make_the_super_calculation(sk: socket):
+def make_the_super_calculation(skp: (socket, (str, str))):
     # fetch the 32-bits integer from the plugin
-    data = sk.recv(4)
+    sk = skp[0]
+
+    try:
+        data = sk.recv(4)
+    except ConnectionError as e:
+        print("peer [%s]:%s has been disconnected (%s)" % (skp[1][0], skp[1][1], e.strerror))
+        return
 
     if len(data) == 0:
         return
@@ -28,6 +34,7 @@ def main():
 
     def unregister_fd(skfd):
         poll_man.unregister(skfd)
+        fd_socket[skfd][0].close()
         del fd_socket[skfd]
 
     poll_man = select.poll()
@@ -43,17 +50,20 @@ def main():
     while True:
         fd_event = poll_man.poll()
         for sfd, evt in fd_event:
-            print(sfd, evt)
             if sfd == server.fileno():
                 conn, addr = server.accept()
-                poll_man.register(conn.fileno(), select.POLLIN | select.POLLHUP)
+                poll_man.register(conn.fileno(), select.POLLIN | select.POLLHUP | select.POLLERR)
                 print("Connected to [%s]:%d" % (addr[0], addr[1]))
 
                 # adding new socket to our DB
-                fd_socket[conn.fileno()] = conn
+                fd_socket[conn.fileno()] = (conn, addr)
 
-            elif evt == select.POLLHUP:
-                print("Hang up !")
+            elif evt & select.POLLHUP:
+                print("[%s]:%s has hung up !" % (fd_socket[sfd][1][0], fd_socket[sfd][1][1]))
+                unregister_fd(sfd)
+            elif evt & select.POLLERR:
+                print("Socket error for peer [%s]:%s. Abort connection" %
+                      (fd_socket[sfd][1][0], fd_socket[sfd][1][1]))
                 unregister_fd(sfd)
             else:
                 make_the_super_calculation(fd_socket[sfd])

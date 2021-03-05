@@ -4,30 +4,21 @@
 
 #include "plugins_manager.h"
 
-#include <sys/msg.h>
-#include <sys/shm.h>
-#include <ubpf_misc.h>
-#include <assert.h>
-#include <json-c/json_object.h>
+
 #include <stdint.h>
 #include <stdlib.h>
-#include <json-c/json.h>
-#include <pthread.h>
 #include <errno.h>
 #include "ubpf_manager.h"
 #include "map.h"
 #include "bpf_plugin.h"
-#include "ubpf_api.h"
 #include "log.h"
 #include "ubpf_context.h"
 
 #include <stdio.h>
+#include <elf.h>
 
 #include <linux/limits.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#include <sys/mman.h>
-#include <fcntl.h>
 
 static int is_init = 0;
 static manager_t master;
@@ -134,7 +125,9 @@ void ubpf_terminate() {
 int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t extra_mem, uint64_t shared_mem,
                        int insertion_point_id, const char *insertion_point, size_t i_pt_name, anchor_t type_anchor,
                        int seq_anchor, int jit,
-                       const char *obj_path_code, const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto) {
+                       const char *obj_path_code,
+                       size_t len_obj_path_code,
+                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto) {
 
     uint8_t *bytecode;
     size_t bytecode_len;
@@ -143,7 +136,16 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
     insertion_point_t *point;
 
     /* 0. Read ELF/Obj file */
-    bytecode = readfile(obj_path_code, MAX_SIZE_PLUGIN, &bytecode_len);
+
+    // check by the magic number if it is a path or an ELF buffer
+    if (memcmp(obj_path_code, ELFMAG, SELFMAG) != 0) {
+        // ELF MAGIC does not match, this is file based
+        bytecode = readfile(obj_path_code, MAX_SIZE_PLUGIN, &bytecode_len);
+    } else {
+        bytecode = obj_path_code;
+        bytecode_len = len_obj_path_code;
+    }
+
 
     /* 1. Get Plugin */
 
@@ -336,6 +338,9 @@ int unregister_insertion_point(manager_t *manager, int id) {
     return 0;
 }
 
+insertion_point_info_t *get_insertion_point_info() {
+    return master.point_info;
+}
 
 int str_insertion_point_to_int(manager_t *manager, const char *plugin_str) {
     insertion_point_t *point, *tmp;

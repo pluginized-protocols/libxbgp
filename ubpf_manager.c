@@ -207,6 +207,8 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
     vm->ctx->p = p;
     vm->ctx->pop = vm->pop;
     vm->ctx->vm = vm;
+    vm->ctx->ext_api = api_proto;
+    vm->ctx->insertion_point_info = get_insertion_point_info();
 
 
     vm->p = p;
