@@ -131,7 +131,7 @@ void test_add_plugin(void) {
 
     status = add_extension_code("add_two_insert", 14, 8,
                                 0, 1, "add_two_insert_ip", 17,
-                                BPF_REPLACE, 0, 0, path_pluglet,
+                                BPF_REPLACE, 0, 0, path_pluglet, 0,
                                 "simple_test_api", 15, funcs);
 
     CU_ASSERT_EQUAL(status, 0);
@@ -201,7 +201,7 @@ static void test_macro_function(void) {
 
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 3, "macro_test", 10,
-                                BPF_REPLACE, 0, 0, path_pluglet,
+                                BPF_REPLACE, 0, 0, path_pluglet, 0,
                                 "fun_vm", 6, funcs);
 
     CU_ASSERT_EQUAL(status, 0)
@@ -228,7 +228,7 @@ static void macro_void_example_with_set(void) {
 
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 1, "add_two_insert_ip",
-                                17, BPF_REPLACE, 0, 0, path_pluglet,
+                                17, BPF_REPLACE, 0, 0, path_pluglet, 0,
                                 "super_vm", 8, funcs);
     CU_ASSERT_EQUAL(status, 0);
 
@@ -237,7 +237,7 @@ static void macro_void_example_with_set(void) {
 
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 1, "add_two_insert_ip",
-                                6, BPF_POST, 0, 0, path_pluglet,
+                                6, BPF_POST, 0, 0, path_pluglet, 0,
                                 "super_vm_post", 13, funcs);
     CU_ASSERT_EQUAL(status, 0);
 

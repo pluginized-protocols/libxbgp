@@ -45,7 +45,7 @@ static inline int base_register(vm_container_t *vmc) {
 
     // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO INFORM ILLEGAL MEM ACCESS
     if (ubpf_register(vmc->vm, 0x3F, "membound_fail", membound_fail) == -1) return 0;
-    // DO NOT TOUCH THIS FUNCTION, NEITER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE INSERTION POINT
+    // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE INSERTION POINT
     if (vmc->ctx->pop->anchor == BPF_REPLACE) {
         if (ubpf_register(vmc->vm, 0x7F, "next", next) == -1) return 0;
     }
@@ -76,9 +76,7 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "ebpf_htonl", super_htonl)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_htonll", super_htonll)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_inet_ntop", ebpf_inet_ntop)) return 0;
-
-    /* custom msg send */
-    if (!safe_ubpf_register(vmc, "send_ipc_msg", send_ipc_msg)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_inet_pton", ebpf_inet_pton)) return 0;
 
     /* args related */
     if (!safe_ubpf_register(vmc, "get_arg", get_arg)) return 0;
@@ -91,6 +89,12 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "get_extra_info_lst_idx", get_extra_info_lst_idx)) return 0;
     if (!safe_ubpf_register(vmc, "get_extra_info_dict", get_extra_info_dict)) return 0;
     if (!safe_ubpf_register(vmc, "get_extra_info", get_extra_info)) return 0;
+
+    /* socket API, to fetch data from somewhere */
+    if (!safe_ubpf_register(vmc, "sk_open", sk_open)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_write", sk_write)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_read", sk_read)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_close", sk_close)) return 0;
 
     return 1;
 }
@@ -203,6 +207,8 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
     vm->ctx->p = p;
     vm->ctx->pop = vm->pop;
     vm->ctx->vm = vm;
+    vm->ctx->ext_api = api_proto;
+    vm->ctx->insertion_point_info = get_insertion_point_info();
 
 
     vm->p = p;

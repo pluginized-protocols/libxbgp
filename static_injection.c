@@ -19,7 +19,7 @@ struct insertion_json {
     int seq;
 };
 
-static inline int str_anchor_to_enum(const char *anchor_str, anchor_t *anchor) {
+int str_anchor_to_enum(const char *anchor_str, anchor_t *anchor) {
     anchor_t anchor_;
     anchor_ = strncmp("replace", anchor_str, 7) == 0 ? BPF_REPLACE :
               strncmp("post", anchor_str, 4) == 0 ? BPF_POST :
@@ -30,7 +30,7 @@ static inline int str_anchor_to_enum(const char *anchor_str, anchor_t *anchor) {
     return 0;
 }
 
-static inline int str_to_id_insertion_point(insertion_point_info_t *info, const char *str, size_t len) {
+int str_to_id_insertion_point(insertion_point_info_t *info, const char *str, size_t len) {
     int i;
     for (i = 0; !is_insertion_point_info_null(info + i); i++) {
         if (strncmp(str, info[i].insertion_point_str, len) == 0) {
@@ -214,7 +214,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
 
             if (add_extension_code(plugin_str, strlen(plugin_str), extra_mem_val,
                                    shared_mem_val, insertion_point_id, info.name_insertion,
-                                   info.name_insertion_len, info.anchor, info.seq, jit_val, obj_path, vm_str,
+                                   info.name_insertion_len, info.anchor, info.seq, jit_val, obj_path, 0, vm_str,
                                    strlen(vm_str), api_proto) != 0) {
                 return -1;
             }

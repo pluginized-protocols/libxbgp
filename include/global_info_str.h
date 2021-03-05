@@ -16,6 +16,16 @@
 #define L_BUG "\011"            /* BIRD bugs */
 
 
+typedef enum SOCKET_INTERFACE sk_type_t;
+
+enum SOCKET_INTERFACE {
+    PLUGIN_SOCKET_MIN,
+    PLUGIN_SOCKET_QUIC,
+    PLUGIN_SOCKET_TCP,
+    PLUGIN_SOCKET_UDP,
+    PLUGIN_SOCKET_MAX
+};
+
 struct global_info {
     void *hidden_ptr;
     int type;

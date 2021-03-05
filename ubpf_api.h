@@ -6,6 +6,7 @@
 #define FRR_THESIS_UBPF_API_H
 
 #include "ubpf_manager.h"
+#include "plugin_socket.h"
 #include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -109,6 +110,8 @@ int get_extra_info(context_t *ctx, const char *key, struct global_info *info);
 
 int ebpf_inet_ntop(context_t *ctx, uint8_t *ipaddr, int type, char *buf, size_t len);
 
+int ebpf_inet_pton(context_t *ctx, int af, const char *src, void *dst, size_t buf_len);
+
 uint16_t super_ntohs(context_t *ctx, uint16_t value);
 
 uint32_t super_ntohl(context_t *ctx, uint32_t value);
@@ -124,5 +127,13 @@ uint64_t super_htonll(context_t *ctx, uint64_t val);
 int fetch_file(context_t *ctx, char *url, char *dest);
 
 int super_log(context_t *vm_ctx, const char *msg, struct vargs *args);
+
+int sk_open(context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len);
+
+int sk_write(context_t *ctx, int sfd, const void *buf, size_t len);
+
+int sk_read(context_t *ctx, int sfd, void *buf, size_t len);
+
+int sk_close(context_t *ctx, int sfd);
 
 #endif //FRR_THESIS_UBPF_API_H

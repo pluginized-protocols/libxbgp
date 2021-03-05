@@ -128,6 +128,16 @@ extern int get_extra_info_dict(struct global_info *info, const char *key, struct
 
 extern int ebpf_inet_ntop(uint8_t *ipaddr, int type, char *buf, size_t len);
 
+int ebpf_inet_pton(int af, const char *src, void *dst, size_t buf_len);
+
 extern int super_log(const char *msg, struct vargs *args);
+
+extern int sk_open(sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len);
+
+extern int sk_write(int sfd, const void *buf, size_t len);
+
+extern int sk_read(int sfd, void *buf, size_t len);
+
+extern int sk_close(int sfd);
 
 #endif //FRR_UBPF_PUBLIC_BPF_H
