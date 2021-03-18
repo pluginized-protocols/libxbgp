@@ -247,7 +247,7 @@ static void test_fetch_file_api_fun(void) {
     unlink(name_tmp);
 }
 
-int internal_tests(void) {
+CU_ErrorCode internal_tests(void) {
     CU_pSuite pSuite = NULL;
 
     pSuite = CU_add_suite("internal_test_suite", setup, teardown);

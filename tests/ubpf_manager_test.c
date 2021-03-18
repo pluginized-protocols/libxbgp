@@ -26,7 +26,7 @@ enum custom_user_type {
     INT_EXAMPLE = 0,
 };
 
-static unsigned int plugin_set_post = -1;
+static int plugin_set_post = 0;
 
 static char plugin_folder_path[PATH_MAX - NAME_MAX - 1];
 
@@ -85,10 +85,10 @@ static void post_function_call(context_t *ctx) {
 
 
 static proto_ext_fun_t funcs[] = {
-        {.name = "add_two", .fn = add_two},
-        {.name = "set_int_example", .fn = set_int_example},
-        {.name = "post_function_call", .fn = post_function_call},
-        {NULL}
+        {.name = "add_two", .fn = add_two, .attributes = HELPER_ATTR_NONE},
+        {.name = "set_int_example", .fn = set_int_example, .attributes = HELPER_ATTR_NONE},
+        {.name = "post_function_call", .fn = post_function_call, .attributes = HELPER_ATTR_NONE},
+        proto_ext_func_null
 };
 
 static insertion_point_info_t plugins[] = {
@@ -132,7 +132,7 @@ void test_add_plugin(void) {
     status = add_extension_code("add_two_insert", 14, 8,
                                 0, 1, "add_two_insert_ip", 17,
                                 BPF_REPLACE, 0, 0, path_pluglet, 0,
-                                "simple_test_api", 15, funcs);
+                                "simple_test_api", 15, funcs, 0);
 
     CU_ASSERT_EQUAL(status, 0);
     point = insertion_point(1);
@@ -202,7 +202,7 @@ static void test_macro_function(void) {
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 3, "macro_test", 10,
                                 BPF_REPLACE, 0, 0, path_pluglet, 0,
-                                "fun_vm", 6, funcs);
+                                "fun_vm", 6, funcs, 0);
 
     CU_ASSERT_EQUAL(status, 0)
     return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
@@ -229,7 +229,7 @@ static void macro_void_example_with_set(void) {
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 1, "add_two_insert_ip",
                                 17, BPF_REPLACE, 0, 0, path_pluglet, 0,
-                                "super_vm", 8, funcs);
+                                "super_vm", 8, funcs, 0);
     CU_ASSERT_EQUAL(status, 0);
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
@@ -238,7 +238,7 @@ static void macro_void_example_with_set(void) {
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 1, "add_two_insert_ip",
                                 6, BPF_POST, 0, 0, path_pluglet, 0,
-                                "super_vm_post", 13, funcs);
+                                "super_vm_post", 13, funcs, 0);
     CU_ASSERT_EQUAL(status, 0);
 
     my_function_void(&my_arg_to_be_modified);
@@ -252,10 +252,10 @@ static void macro_void_example_with_set(void) {
     CU_ASSERT_EQUAL(remove_plugin("my_plugin"), 0);
 }
 
-int ubpf_manager_tests(const char *plugin_folder) {
+CU_ErrorCode ubpf_manager_tests(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
-    memset(plugin_folder_path, 0, PATH_MAX * sizeof(char));
+    memset(plugin_folder_path, 0, sizeof(plugin_folder_path));
     realpath(plugin_folder, plugin_folder_path);
     // ...
     pSuite = CU_add_suite("ubpf_manager_test_suite", setup, teardown);

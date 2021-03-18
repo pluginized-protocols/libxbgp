@@ -16,7 +16,12 @@
       "shared_mem": 64,
       "obj_code_list": {
         "pre_simple_ten": {
-          "obj": "pre_simple_ten.o"
+          "obj": "pre_simple_ten.o",
+          "permissions": [
+            "read",
+            "write",
+            "usr_ptr"
+          ]
         },
         "pre_simple_zero": {
           "obj": "pre_simple_zero.o"

@@ -14,7 +14,7 @@
 #include <assert.h>
 
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len) {
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permissions) {
 
     size_t total_allowed_mem;
     uint8_t *super_block;
@@ -36,6 +36,7 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
     p->vms = NULL;
     memcpy(p->name, name, name_len);
     p->str_len = name_len;
+    p->permissions = permissions;
 
     p->mem_len = total_allowed_mem;
     super_block = malloc(total_allowed_mem);

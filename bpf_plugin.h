@@ -42,6 +42,9 @@ typedef struct plugin {
 
     UT_hash_handle hh;
 
+    /**/
+    int permissions; // "ANDROID like" permissions
+
     size_t str_len;
     char name[0];
 
@@ -54,7 +57,7 @@ int must_fallback(plugin_t *p);
 
 void post_plugin_exec(plugin_t *p);
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len);
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permission);
 
 int init_plugin_transaction(plugin_t *p);
 

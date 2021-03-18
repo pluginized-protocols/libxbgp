@@ -71,7 +71,9 @@ int run_injected_code(vm_container_t *vmc, uint64_t *ret_val);
 
 void start_ubpf_plugin_listener(proto_ext_fun_t *fn);
 
-int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn);
+int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn, int fn_permissions);
+
+int check_perms(int fun_perms, int plugin_perms);
 
 
 #endif //FRR_THESIS_UBPF_MANAGER_H

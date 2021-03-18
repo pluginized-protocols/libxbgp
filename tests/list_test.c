@@ -71,7 +71,7 @@ static void test_ititerator_list(void) {
 }
 
 
-int list_tests(void) {
+CU_ErrorCode list_tests(void) {
     CU_pSuite pSuite = NULL;
 
     pSuite = CU_add_suite("list_tests_suite", setup, teardown);

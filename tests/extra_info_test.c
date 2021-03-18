@@ -199,7 +199,7 @@ static void test_nested_dict(void) {
 
 }
 
-int extra_info_tests(void) {
+CU_ErrorCode extra_info_tests(void) {
     CU_pSuite pSuite = NULL;
 
     pSuite = CU_add_suite("extra_info_tests_suite", setup, teardown);

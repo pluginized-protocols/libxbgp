@@ -5,6 +5,6 @@
 #ifndef UBPF_TOOLS_LIST_TEST_H
 #define UBPF_TOOLS_LIST_TEST_H
 
-int list_tests(void);
+CU_ErrorCode list_tests(void);
 
 #endif //UBPF_TOOLS_LIST_TEST_H

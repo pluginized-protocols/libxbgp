@@ -6,6 +6,6 @@
 #define UBPF_TOOLS_INTERNAL_TESTS_H
 
 
-int internal_tests(void);
+CU_ErrorCode internal_tests(void);
 
 #endif //UBPF_TOOLS_INTERNAL_TESTS_H

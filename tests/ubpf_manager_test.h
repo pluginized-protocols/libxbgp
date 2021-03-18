@@ -11,6 +11,6 @@ int add_two(context_t *ctx, int a);
 
 void test_add_plugin(void);
 
-int ubpf_manager_tests(const char *plugin_folder_path);
+CU_ErrorCode ubpf_manager_tests(const char *plugin_folder_path);
 
 #endif //UBPF_TOOLS_UBPF_MANAGER_TEST_H

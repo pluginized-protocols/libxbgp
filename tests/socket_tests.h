@@ -5,6 +5,8 @@
 #ifndef UBPF_TOOLS_SOCKET_TESTS_H
 #define UBPF_TOOLS_SOCKET_TESTS_H
 
-int test_socket_api(const char *plugin_folder);
+#include <CUnit/CUnit.h>
+
+CU_ErrorCode test_socket_api(const char *plugin_folder);
 
 #endif //UBPF_TOOLS_SOCKET_TESTS_H

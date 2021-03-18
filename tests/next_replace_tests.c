@@ -66,7 +66,7 @@ static int setup(void) {
         if (add_extension_code("gros minet", 10, 512,
                                0, 1, "replace_chain",
                                13, BPF_REPLACE, i, 0, path, 0, elf_files[i],
-                               strlen(elf_files[i]), funcs) != 0) {
+                               strlen(elf_files[i]), funcs, 0) != 0) {
             return -1;
         }
     }
@@ -162,7 +162,7 @@ static void test_replace_chain_fallback(void) {
 
 }
 
-int next_replace_tests(const char *plugin_folder) {
+CU_ErrorCode next_replace_tests(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
     memset(plugin_folder_path, 0, PATH_MAX * sizeof(char));

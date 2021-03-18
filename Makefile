@@ -1,5 +1,9 @@
 CC = gcc
 AR = ar
+
+GOTOCC = goto-gcc
+GOTOINSTRUMENT = goto-instrument
+
 # CFLAGS += -march=native -mtune=native
 # CFLAGS += -O2
 CFLAGS += -O0 -g3
@@ -26,7 +30,11 @@ LDFLAGS += -L.
 LDLIBS += -Wl,-Bstatic -lcunit -lubpf -Wl,-Bdynamic
 LDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
 LDLIBS += -lncurses -ltinfo
-LDLIBS += -lm 
+LDLIBS += -lm
+
+GOTOLDLIBS  = -Wl,-Bstatic -lcunit -Wl,-Bdynamic
+GOTOLDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
+GOTOLDLIBS += -lncurses -ltinfo -lm
 
 # ./dynamic_injection.c
 # ./ebpf_injecter.c \
@@ -94,17 +102,48 @@ HDR = ./bpf_plugin.h \
 
 
 LIBUBPF_A = libubpf.a
+GOTO_CBMC = goto_xbgp
+GOTO_CBMC_INSTRUMENT = goto_xbgp_instr
 
 OBJ = $(SRC:.c=.o)
 OBJ_TESTS = $(SRC_TESTS:.c=.o)
+GOTOOBJ=$(SRC:.c=.gbo)
+GOTOOBJ_TESTS=$(SRC_TESTS:.c=.gbo)
+
+GOTO_CHECKS  = --pointer-check
+GOTO_CHECKS += --memory-leak-check
+GOTO_CHECKS += --bounds-check
+GOTO_CHECKS += --signed-overflow-check
+GOTO_CHECKS += --pointer-overflow-check
+GOTO_CHECKS += --unsigned-overflow-check
+GOTO_CHECKS += --conversion-check
+GOTO_CHECKS += --undefined-shift-check
+GOTO_CHECKS += --float-overflow-check
+GOTO_CHECKS += --nan-check
+# GOTO_CHECKS += --enum-range-check # to hard to deal with enum range check issue #5808 https://github.com/diffblue/cbmc/pull/5808
+GOTO_CHECKS += --pointer-primitive-check
+# GOTO_CHECKS += --uninitialized-check   # cbmc failed to generate annotation
 
 all: libubpf.a
 
 check: lib_tests
 
+$(GOTO_CBMC): $(GOTOOBJ) $(GOTOOBJ_TESTS)
+	@echo GOTO-LD $@
+	@$(GOTOCC) $(LDFLAGS) $(TARGET_ARCH) $^ $(LOADLIBES) $(GOTOLDLIBS) -o $@
+
+$(GOTO_CBMC_INSTRUMENT): $(GOTO_CBMC)
+	@echo GOTO-INSTRUMENT $<
+	@$(GOTOINSTRUMENT) $< $@ $(GOTO_CHECKS)
+
+
 %.o: %.c %.h
 	@echo CC $@
 	@$(CC) $(CFLAGS) -c -o $@ $<
+
+%.gbo: %.c
+	@echo GOTO-CC $@
+	@$(GOTOCC) $(CFLAGS) -c $< -o $@
 
 $(LIBUBPF_A): $(OBJ)
 	@echo AR $@
@@ -121,4 +160,4 @@ lib_tests: $(LIBUBPF_A) $(OBJ_TESTS)
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ) $(OBJ_TESTS) $(LIBUBPF_A)
+	rm -f $(OBJ) $(OBJ_TESTS) $(LIBUBPF_A) $(GOTOOBJ) $(GOTOOBJ_TESTS) $(GOTO_CBMC)
