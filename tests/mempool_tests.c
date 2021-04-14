@@ -208,7 +208,7 @@ static void test_iterator_whole_mempool(void) {
 }
 
 
-int mem_pool_tests(void) {
+CU_ErrorCode mem_pool_tests(void) {
 
     CU_pSuite pSuite = NULL;
 

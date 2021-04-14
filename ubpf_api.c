@@ -183,7 +183,7 @@ static int send_all(int socket, const void *buffer, size_t length) {
     return 0;
 }
 
-int super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
+int __super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 
     int i;
     ffi_cif CIF;
@@ -309,25 +309,25 @@ int super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
     return 1;
 }
 
-void *ctx_malloc(context_t *vm_ctx, size_t size) {
+void *__ctx_malloc(context_t *vm_ctx, size_t size) {
     return bump_alloc(&vm_ctx->p->mem.heap.mp, size);
 }
 
-void *ctx_calloc(context_t *vm_ctx, size_t nmemb, size_t size) {
+void *__ctx_calloc(context_t *vm_ctx, size_t nmemb, size_t size) {
     return bump_calloc(&vm_ctx->p->mem.heap.mp, nmemb, size);
 }
 
-void *ctx_realloc(UNUSED context_t *vm_ctx, UNUSED void *ptr, UNUSED size_t size) {
+void *__ctx_realloc(UNUSED context_t *vm_ctx, UNUSED void *ptr, UNUSED size_t size) {
     return NULL; // we don't do that here
 }
 
-void ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
+void __ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
     // bump alloc is a stack like alloc --> everything is removed after
     // the plugin call
     // my_free(&vm_ctx->p->heap.mp, ptr);
 }
 
-void *ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
+void *__ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
     void *addr;
     addr = ubpf_shmnew(&vm_ctx->p->mem.shared_heap.smp, key, size);
     if (addr)
@@ -335,15 +335,15 @@ void *ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
     return addr;
 }
 
-void *ctx_shmget(context_t *vm_ctx, key_t key) {
+void *__ctx_shmget(context_t *vm_ctx, key_t key) {
     return ubpf_shmget(&vm_ctx->p->mem.shared_heap.smp, key);
 }
 
-void ctx_shmrm(context_t *vm_ctx, key_t key) {
+void __ctx_shmrm(context_t *vm_ctx, key_t key) {
     ubpf_shmrm(&vm_ctx->p->mem.shared_heap.smp, key);
 }
 
-int get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
+int __get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
 
     memset(spec, 0, sizeof(*spec));
 
@@ -355,12 +355,12 @@ int get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
     return 0;
 }
 
-clock_t bpf_clock(UNUSED context_t *vm_ctx) {
+clock_t __bpf_clock(UNUSED context_t *vm_ctx) {
     return clock();
 }
 
 
-void ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
+void __ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
 
     va_list vars;
     va_start(vars, format);
@@ -369,7 +369,7 @@ void ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
 
 }
 
-int next(context_t *vm_ctx) {
+int __next(context_t *vm_ctx) {
     return run_replace_next_replace_function(vm_ctx);
 }
 
@@ -481,7 +481,7 @@ number(char *str, uint64_t num, uint base, int size, int precision, int type, in
     return str;
 }
 
-int ebpf_bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
+int __ebpf_bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
     int curr_args;
     int len, i;
     uint64_t num;
@@ -768,7 +768,7 @@ typedef int word;        /* "word" used for optimal copy speed */
  * This is the routine that actually implements
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
-void *ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size_t length) {
+void *__ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size_t length) {
     char *dst = dst0;
     const char *src = src0;
     size_t t;
@@ -837,7 +837,7 @@ void *ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size_t
 }
 
 
-void *get_arg(context_t *vm_ctx, int type) {
+void *__get_arg(context_t *vm_ctx, int type) {
     int i;
     uint8_t *ret_arg;
     // fprintf(stderr, "Ptr ctx at %s call --> %p\n", __FUNCTION__, vm_ctx);
@@ -913,7 +913,7 @@ void membound_fail(context_t *ctx __attribute__((unused)), uint64_t val, uint64_
 }
 
 
-uint64_t ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned int precision) {
+uint64_t __ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned int precision) {
 
     double s_half;
     double s;
@@ -928,30 +928,30 @@ uint64_t ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned 
     return res;
 }
 
-int ebpf_memcmp(context_t *ctx UNUSED, const void *s1, const void *s2, size_t n) {
+int __ebpf_memcmp(context_t *ctx UNUSED, const void *s1, const void *s2, size_t n) {
 
     return memcmp(s1, s2, n);
 
 }
 
-int get_extra_info_value(context_t *ctx UNUSED, struct global_info *info, void *buf, size_t len_buf) {
+int __get_extra_info_value(context_t *ctx UNUSED, struct global_info *info, void *buf, size_t len_buf) {
     return extra_info_copy_data(info, buf, len_buf);
 }
 
-int get_extra_info_lst_idx(context_t *ctx UNUSED, struct global_info *info, int arr_idx, struct global_info *value) {
+int __get_extra_info_lst_idx(context_t *ctx UNUSED, struct global_info *info, int arr_idx, struct global_info *value) {
     return get_info_lst_idx(info, arr_idx, value);
 }
 
-int get_extra_info_dict(context_t *ctx UNUSED, struct global_info *info, const char *key, struct global_info *value) {
+int __get_extra_info_dict(context_t *ctx UNUSED, struct global_info *info, const char *key, struct global_info *value) {
     if (!key) return -1;
     return get_info_dict(info, key, value);
 }
 
-int get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
+int __get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
     return get_global_info(key, info);
 }
 
-int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, size_t len) {
+int __ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, size_t len) {
 
     struct in_addr ipv4;
     struct in6_addr ipv6;
@@ -975,7 +975,7 @@ int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, 
     return 0;
 }
 
-int ebpf_inet_pton(context_t *ctx, int af, const char *src, void *dst, size_t buf_len) {
+int __ebpf_inet_pton(context_t *ctx, int af, const char *src, void *dst, size_t buf_len) {
     int s;
     int min_len;
     unsigned char buf[sizeof(struct in6_addr)];
@@ -1116,19 +1116,19 @@ int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
 }
 
 
-int sk_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
+int __sk_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
     return ctx_open(proto, af, addr, len);
 }
 
-int sk_write(UNUSED context_t *ctx, int sfd, const void *buf, size_t len) {
+int __sk_write(UNUSED context_t *ctx, int sfd, const void *buf, size_t len) {
     return ctx_write(sfd, buf, len);
 }
 
-int sk_read(UNUSED context_t *ctx, int sfd, void *buf, size_t len) {
+int __sk_read(UNUSED context_t *ctx, int sfd, void *buf, size_t len) {
     return ctx_read(sfd, buf, len);
 }
 
-int sk_close(UNUSED context_t *ctx, int sfd) {
+int __sk_close(UNUSED context_t *ctx, int sfd) {
     return ctx_close(sfd);
 }
 

@@ -26,7 +26,24 @@
 #include <stdlib.h>
 
 
-int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn) {
+/* check permission */
+int check_perms(int fun_perms, int plugin_perms) {
+    int fun_masked;
+    int plugin_masked;
+
+    fun_masked = fun_perms & HELPER_ATTR_MASK;
+    plugin_masked = plugin_perms & HELPER_ATTR_MASK;
+    return (fun_masked & plugin_masked) == fun_masked;
+}
+
+int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn, int permissions) {
+
+    if (!check_perms(permissions, vmc->p->permissions)) {
+        // this is not an error. We simply don't load the
+        // function inside the VM since the plugin does not
+        // have sufficient rights to call the external function
+        return 1;
+    }
 
     if (vmc->num_ext_fun >= 128) {
         fprintf(stderr, "Number of external functions overflows\n");
@@ -47,54 +64,54 @@ static inline int base_register(vm_container_t *vmc) {
     if (ubpf_register(vmc->vm, 0x3F, "membound_fail", membound_fail) == -1) return 0;
     // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE INSERTION POINT
     if (vmc->ctx->pop->anchor == BPF_REPLACE) {
-        if (ubpf_register(vmc->vm, 0x7F, "next", next) == -1) return 0;
+        if (ubpf_register(vmc->vm, 0x7F, "next", __next) == -1) return 0;
     }
 
     /* helper from various things */
-    if (!safe_ubpf_register(vmc, "super_log", super_log)) return 0;
-    if (!safe_ubpf_register(vmc, "clock", bpf_clock)) return 0;
-    if (!safe_ubpf_register(vmc, "get_time", get_time)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_print", ebpf_print)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_memcpy", ebpf_memcpy)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_memcmp", ebpf_memcmp)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_bvsnprintf", ebpf_bvsnprintf)) return 0;
+    if (!safe_ubpf_register(vmc, "super_log", __super_log, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "clock", __bpf_clock, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "get_time", __get_time, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_print", __ebpf_print, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_memcpy", __ebpf_memcpy, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_memcmp", __ebpf_memcmp, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_bvsnprintf", __ebpf_bvsnprintf, HELPER_ATTR_NONE)) return 0;
 
     /* memory related*/
-    if (!safe_ubpf_register(vmc, "ctx_malloc", ctx_malloc)) return 0;
-    if (!safe_ubpf_register(vmc, "ctx_calloc", ctx_calloc)) return 0;
-    if (!safe_ubpf_register(vmc, "ctx_realloc", ctx_realloc)) return 0;
-    if (!safe_ubpf_register(vmc, "ctx_free", ctx_free)) return 0;
-    if (!safe_ubpf_register(vmc, "ctx_shmnew", ctx_shmnew)) return 0;
-    if (!safe_ubpf_register(vmc, "ctx_shmget", ctx_shmget)) return 0;
-    if (!safe_ubpf_register(vmc, "ctx_shmrm", ctx_shmrm)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_malloc", __ctx_malloc, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_calloc", __ctx_calloc, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_realloc", __ctx_realloc, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_free", __ctx_free, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_shmnew", __ctx_shmnew, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_shmget", __ctx_shmget, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ctx_shmrm", __ctx_shmrm, HELPER_ATTR_NONE)) return 0;
 
     /* manipulating IP addresses */
-    if (!safe_ubpf_register(vmc, "ebpf_ntohs", super_ntohs)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_ntohl", super_ntohl)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_ntohll", super_ntohll)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_htons", super_htons)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_htonl", super_htonl)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_htonll", super_htonll)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_inet_ntop", ebpf_inet_ntop)) return 0;
-    if (!safe_ubpf_register(vmc, "ebpf_inet_pton", ebpf_inet_pton)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_ntohs", super_ntohs, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_ntohl", super_ntohl, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_ntohll", super_ntohll, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_htons", super_htons, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_htonl", super_htonl, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_htonll", super_htonll, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_inet_ntop", __ebpf_inet_ntop, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_inet_pton", __ebpf_inet_pton, HELPER_ATTR_NONE)) return 0;
 
     /* args related */
-    if (!safe_ubpf_register(vmc, "get_arg", get_arg)) return 0;
+    if (!safe_ubpf_register(vmc, "get_arg", __get_arg, HELPER_ATTR_NONE)) return 0;
 
     /* maths */
-    if (!safe_ubpf_register(vmc, "ebpf_sqrt", ebpf_sqrt)) return 0;
+    if (!safe_ubpf_register(vmc, "ebpf_sqrt", __ebpf_sqrt, HELPER_ATTR_NONE)) return 0;
 
     /* getting global info from manifest */
-    if (!safe_ubpf_register(vmc, "get_extra_info_value", get_extra_info_value)) return 0;
-    if (!safe_ubpf_register(vmc, "get_extra_info_lst_idx", get_extra_info_lst_idx)) return 0;
-    if (!safe_ubpf_register(vmc, "get_extra_info_dict", get_extra_info_dict)) return 0;
-    if (!safe_ubpf_register(vmc, "get_extra_info", get_extra_info)) return 0;
+    if (!safe_ubpf_register(vmc, "get_extra_info_value", __get_extra_info_value, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "get_extra_info_lst_idx", __get_extra_info_lst_idx, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "get_extra_info_dict", __get_extra_info_dict, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "get_extra_info", __get_extra_info, HELPER_ATTR_NONE)) return 0;
 
     /* socket API, to fetch data from somewhere */
-    if (!safe_ubpf_register(vmc, "sk_open", sk_open)) return 0;
-    if (!safe_ubpf_register(vmc, "sk_write", sk_write)) return 0;
-    if (!safe_ubpf_register(vmc, "sk_read", sk_read)) return 0;
-    if (!safe_ubpf_register(vmc, "sk_close", sk_close)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_open", __sk_open, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_write", __sk_write, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_read", __sk_read, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "sk_close", __sk_close, HELPER_ATTR_NONE)) return 0;
 
     return 1;
 }
@@ -170,8 +187,8 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
         return 0;
     }
 
-    for (i = 0; api_proto[i].fn != NULL && api_proto[i].name != NULL; i++) {
-        if (!safe_ubpf_register(vmc, api_proto[i].name, api_proto[i].fn)) {
+    for (i = 0; !proto_ext_func_is_null(&api_proto[i]); i++) {
+        if (!safe_ubpf_register(vmc, api_proto[i].name, api_proto[i].fn, api_proto[i].attributes)) {
             ubpf_destroy(vmc->vm);
             return 0;
         }

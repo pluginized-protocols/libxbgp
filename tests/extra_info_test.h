@@ -5,6 +5,6 @@
 #ifndef UBPF_TOOLS_EXTRA_INFO_TEST_H
 #define UBPF_TOOLS_EXTRA_INFO_TEST_H
 
-int extra_info_tests(void);
+CU_ErrorCode extra_info_tests(void);
 
 #endif //UBPF_TOOLS_EXTRA_INFO_TEST_H

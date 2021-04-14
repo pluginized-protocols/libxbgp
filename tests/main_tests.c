@@ -24,6 +24,9 @@
 #include "extra_info_big.h"
 #include "socket_tests.h"
 #include "utils_tests.h"
+#include "permissions_test.h"
+
+#define MIN(a, b) (((a) > (b)) ? (b) : (a))
 
 int std_stream_to_file(int std_stream, const char *file) {
     switch (std_stream) {
@@ -71,9 +74,8 @@ int main(int argc, char *argv[]) {
     int c;
     int option_index = 0;
 
-    char plugin_folder_path[PATH_MAX];
+    char *plugin_folder_path;
     int have_folder = 0;
-    memset(plugin_folder_path, 0, PATH_MAX * sizeof(char));
 
 
     static struct option long_options[] = {
@@ -92,7 +94,7 @@ int main(int argc, char *argv[]) {
                 if (have_folder) {
                     return EXIT_FAILURE;
                 }
-                strncpy(plugin_folder_path, optarg, PATH_MAX - 1);
+                plugin_folder_path = optarg;
                 printf("%s\n", plugin_folder_path);
                 have_folder = 1;
                 break;
@@ -123,6 +125,7 @@ int main(int argc, char *argv[]) {
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||
+        (test_permissions_plugins(plugin_folder_path) != CUE_SUCCESS) ||
         (extra_info_tests() != CUE_SUCCESS) ||
         (extra_info_big_tests() != CUE_SUCCESS) ||
         (ubpf_monitoring_tests(plugin_folder_path) != CUE_SUCCESS)) {

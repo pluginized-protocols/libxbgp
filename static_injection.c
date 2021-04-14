@@ -11,6 +11,9 @@
 #include <json-c/json.h>
 #include <stdio.h>
 #include <limits.h>
+#include <assert.h>
+#include <ctype.h>
+#include <stddef.h>
 
 struct insertion_json {
     size_t name_insertion_len;
@@ -49,7 +52,8 @@ static int join_path(const char *in1, const char *in2, char *out, size_t out_len
     snprintf(tmp_buf, PATH_MAX, "%s/%s", in1, in2);
     if (!realpath(tmp_buf, out)) return -1;
 
-    if ((final_len = strnlen(out, out_len)) >= out_len) return -1;
+    assert(out_len <= PATH_MAX);
+    if ((final_len = strnlen(out, PATH_MAX)) >= out_len) return -1;
     return final_len;
 }
 
@@ -133,11 +137,70 @@ get_insertion_point_for_vm(json_object *insertions_point, const char *vm_name, s
     return -1;
 }
 
+static int to_lower(const char *src, size_t src_len, char *dst, size_t dst_len) {
+    unsigned int i;
+    if (dst_len < src_len) return -1;
+
+    for (i = 0; i < src_len && src[i]; i++) {
+        dst[i] = tolower(src[i]);
+    }
+    if (i < dst_len) dst[i] = 0;
+    return 0;
+}
+
+#define MAX(A, B) (((A) > (B)) ? (A) : (B))
+
+static int parse_permissions_pluglet(json_object *permission) {
+    int len;
+    int i, j;
+    int final_perm;
+    const char *perm;
+    char lower_perm_str[16];
+    size_t len_perm;
+    json_object *curr_obj;
+    int match = 0;
+
+    final_perm = 0;
+    len = json_object_array_length(permission);
+
+    for (i = 0; i < len; i++) {
+        curr_obj = json_object_array_get_idx(permission, i);
+        if (curr_obj == NULL) return -1;
+
+        len_perm = json_object_get_string_len(curr_obj);
+        perm = json_object_get_string(curr_obj);
+
+        if (perm == NULL) return -1;
+
+        for (j = 0; !valid_perm_is_null(&valid_perms[j]) && !match; j++) {
+            memset(lower_perm_str, 0, sizeof(lower_perm_str));
+            if (to_lower(perm, len_perm, lower_perm_str, sizeof(lower_perm_str)) != 0) {
+                return -1;
+            }
+
+            if (strncmp(valid_perms[j].perm_str, lower_perm_str, MAX(valid_perms[j].len_perm, len_perm)) == 0) {
+                final_perm |= valid_perms[j].perm;
+                match = 1;
+            }
+        }
+
+        if (!match) {
+            fprintf(stderr, "No permission matches \"%s\". Please change your pluglet permissions\n", perm);
+            return -1;
+        } else {
+            // reset match for
+            match = 0;
+        }
+    }
+    return final_perm;
+}
+
 
 static int parse_manifest(json_object *plugins, json_object *insertion_point,
                           int default_jit, const char *obj_dir, proto_ext_fun_t *api_proto,
                           insertion_point_info_t *points_info) {
     int jit_val;
+    int permissions;
 
     int64_t extra_mem_val = 0;
     int64_t shared_mem_val = 0;
@@ -160,6 +223,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
     struct json_object *curr_code_obj;
     struct json_object *name_obj;
     struct json_object *jit;
+    struct json_object *permissions_pluglet;
 
     const char *plugin_str;
     const char *vm_str;
@@ -212,10 +276,21 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
 
             insertion_point_id = str_to_id_insertion_point(points_info, info.name_insertion, info.name_insertion_len);
 
-            if (add_extension_code(plugin_str, strlen(plugin_str), extra_mem_val,
+            if (json_object_object_get_ex(curr_code_obj, "permissions", &permissions_pluglet)) {
+                permissions = parse_permissions_pluglet(permissions_pluglet);
+                if (permissions == -1) {
+                    fprintf(stderr, "Unable to read permission of pluglet\n");
+                    return -1;
+                }
+
+            } else {
+                permissions = 0;
+            }
+
+            if (add_extension_code(plugin_str, strnlen(plugin_str, NAME_MAX), extra_mem_val,
                                    shared_mem_val, insertion_point_id, info.name_insertion,
                                    info.name_insertion_len, info.anchor, info.seq, jit_val, obj_path, 0, vm_str,
-                                   strlen(vm_str), api_proto) != 0) {
+                                   strnlen(vm_str, NAME_MAX), api_proto, permissions) != 0) {
                 return -1;
             }
         }

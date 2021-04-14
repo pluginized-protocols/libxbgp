@@ -22,7 +22,7 @@
 #define __NUMARGS_SPRINTF(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
 
 #define ubpf_sprintf(str, size, format, ...)\
-ebpf_bvsnprintf(NULL, str, size, format, (uintptr_t[]) {__NUMARGS_SPRINTF(__VA_ARGS__), ##__VA_ARGS__ })
+__ebpf_bvsnprintf(NULL, str, size, format, (uintptr_t[]) {__NUMARGS_SPRINTF(__VA_ARGS__), ##__VA_ARGS__ })
 
 
 static int setup(void) {
@@ -247,7 +247,7 @@ static void test_fetch_file_api_fun(void) {
     unlink(name_tmp);
 }
 
-int internal_tests(void) {
+CU_ErrorCode internal_tests(void) {
     CU_pSuite pSuite = NULL;
 
     pSuite = CU_add_suite("internal_test_suite", setup, teardown);

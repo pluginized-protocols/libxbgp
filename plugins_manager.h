@@ -110,7 +110,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
                        int insertion_point_id, const char *insertion_point, size_t i_pt_name, anchor_t type_anchor,
                        int seq_anchor, int jit,
                        const char *obj_path_code, size_t len_obj_path_code,
-                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto);
+                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission);
 
 
 void ubpf_terminate(void);

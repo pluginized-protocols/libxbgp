@@ -19,6 +19,8 @@
 
 #include <linux/limits.h>
 #include <unistd.h>
+#include <assert.h>
+#include <sys/mman.h>
 
 static int is_init = 0;
 static manager_t master;
@@ -70,7 +72,7 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir, size_
     if (!var_state_dir) return -1;
 
     memset(&master, 0, sizeof(master));
-    strncpy(master.var_state_path, var_state_dir, len);
+    strncpy(master.var_state_path, var_state_dir, sizeof(master.var_state_path) - 1);
     master.point_info = insertion_points_array;
     master.helper_functions = api_proto;
 
@@ -127,7 +129,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
                        int seq_anchor, int jit,
                        const char *obj_path_code,
                        size_t len_obj_path_code,
-                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto) {
+                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission) {
 
     uint8_t *bytecode;
     size_t bytecode_len;
@@ -151,7 +153,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
 
     p = get_plugin_by_name(&master, plugin_name);
     if (!p) {
-        p = init_plugin(extra_mem, shared_mem, plugin_name, plugin_name_len);
+        p = init_plugin(extra_mem, shared_mem, plugin_name, plugin_name_len, permission);
         if (!p) return -1;
         if (register_plugin(&master, p) != 0) return -1;
     }
@@ -372,16 +374,48 @@ inline insertion_point_t *insertion_point(int id) {
     return get_insertion_point(&master, id);
 }
 
+
+static inline unsigned long file_size(FILE *file) {
+    long size;
+    long offset;
+
+    offset = ftell(file);
+    if (offset < 0) {
+        perror("ftell curr offset");
+        return 0;
+    }
+
+    if (fseek(file, 0, SEEK_END) != 0) { // seek to end of file
+        perror("fseek END");
+        return 0;
+    };
+
+    size = ftell(file); // get current file pointer
+
+    if (size == -1) {
+        perror("ftell");
+        return 0;
+    }
+
+    if (fseek(file, offset, SEEK_SET) != 0) { // seek back to the previous offset of file
+        perror("fseek SET");
+    }
+
+    return size;
+}
+
 void *readfile(const char *path, size_t maxlen, size_t *len) {
 
     uint8_t *data;
+    uint8_t *src_data;
     char absolute_path[PATH_MAX];
     const char *sel_path;
+    unsigned long size;
 
     FILE *file;
     if (!strcmp(path, "-")) {
-        file = stdin; //fdopen(STDIN_FILENO, "r");
-        sel_path = path;
+        fprintf(stderr, "Stdin is not supported !\n");
+        return NULL;
     } else {
         memset(absolute_path, 0, PATH_MAX * sizeof(char));
         realpath(path, absolute_path);
@@ -394,37 +428,33 @@ void *readfile(const char *path, size_t maxlen, size_t *len) {
         return NULL;
     }
 
-    data = calloc(maxlen, 1);
+    size = file_size(file);
+    if (size == 0) {
+        return NULL;
+    } else if (size > maxlen) {
+        fprintf(stderr, "File too big: %ld. Maximum allowed %zu\n", size, maxlen);
+        return NULL;
+    }
+
+    data = calloc(size, 1);
     if (!data) {
         perror("mem alloc failed");
         return NULL;
     }
 
-    size_t offset = 0;
-    size_t rv;
-    while ((rv = fread(data + offset, 1, maxlen - offset, file)) > 0) {
-        offset += rv;
-    }
-
-    if (ferror(file)) {
-        fprintf(stderr, "Failed to read %s: %s\n", sel_path, strerror(errno));
-        fclose(file);
-        free(data);
+    // open mmap
+    src_data = mmap(0, size, PROT_READ, MAP_PRIVATE, fileno(file), 0);
+    if (src_data == MAP_FAILED) {
+        perror("mmap");
         return NULL;
     }
+    memcpy(data, src_data, size);
 
-    if (!feof(file)) {
-        fprintf(stderr, "Failed to read %s because it is too large (max %u bytes)\n",
-                sel_path, (unsigned) maxlen);
-        fclose(file);
-        free(data);
-        return NULL;
-    }
 
+    munmap(src_data, size);
     fclose(file);
     if (len) {
-        *len = offset;
+        *len = size;
     }
     return data;
-
 }

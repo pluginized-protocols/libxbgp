@@ -183,7 +183,7 @@ log_commit(int class, buffer *buf) {
                 }
 
                 if (l->limit) {
-                    off_t msg_len = strlen(tbuf) + strlen(class_names[class]) +
+                    off_t msg_len = strnlen(tbuf, sizeof(tbuf)) + strnlen(class_names[class], 5) +
                                     (buf->pos - buf->start) + 5;
 
                     if (l->pos < 0)
@@ -270,7 +270,7 @@ default_log_list(int stderr_dbg, const char **syslog_name) {
 
     // config syslog
     static struct log_config lc_syslog = {
-            .mask = ~0,
+            .mask = ~0u,
     };
     DL_APPEND(log_list, &lc_syslog);
     *syslog_name = ubpf_tools_name;
@@ -280,7 +280,7 @@ default_log_list(int stderr_dbg, const char **syslog_name) {
     if (stderr_dbg) {
         static struct log_config lc_stderr;
         lc_stderr = (struct log_config) {
-                .mask = ~0,
+                .mask = ~0u,
                 .terminal_flag = 1,
                 .fh = stderr
         };

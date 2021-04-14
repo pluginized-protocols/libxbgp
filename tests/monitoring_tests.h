@@ -5,8 +5,10 @@
 #ifndef UBPF_TOOLS_MONITORING_TESTS_H
 #define UBPF_TOOLS_MONITORING_TESTS_H
 
+#include <CUnit/CUnit.h>
+
 void send_monitoring_record_test(void);
 
-int ubpf_monitoring_tests(const char *plugin_folder);
+CU_ErrorCode ubpf_monitoring_tests(const char *plugin_folder);
 
 #endif //UBPF_TOOLS_MONITORING_TESTS_H
