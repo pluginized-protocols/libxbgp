@@ -37,7 +37,7 @@ extern int extra_info_from_json(const char *path, const char *key);
 
 
 /* manipulating memory of plugins in helper functions */
-extern void *ctx_malloc(context_t *vm_ctx, size_t size);
+extern void *__ctx_malloc(context_t *vm_ctx, size_t size);
 
 extern int load_extension_code(const char *path, const char *extension_code_dir, proto_ext_fun_t *api_proto,
                                insertion_point_info_t *points_info);

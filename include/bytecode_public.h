@@ -22,28 +22,28 @@ ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__),
 
 #define NUMARGS_LOGMSG(...) (sizeof((struct vtype[]){__VA_ARGS__}) / sizeof(struct vtype))
 
-#define LOG_S8(i) {.val = {.s8 = i}, .type = VT_S8}
-#define LOG_U8(i) {.val = {.u8 = i}, .type = VT_U8}
-#define LOG_S16(i) {.val = {.s16 = i}, .type = VT_S16}
-#define LOG_U16(i) {.val = {.u16 = i}, .type = VT_U16}
-#define LOG_S32(i) {.val = {.s32 = i}, .type = VT_S32}
-#define LOG_U32(i) {.val = {.u32 = i}, .type = VT_U32}
-#define LOG_S64(i) {.val = {.s64 = i}, .type = VT_S64}
-#define LOG_U64(i) {.val = {.u64 = i}, .type = VT_U64}
-#define LOG_FLOAT(i) {.val = {.fvalue = i}, .type = VT_FLOAT}
-#define LOG_DOUBLE(i) {.val = {.dvalue = i}, .type = VT_DOUBLE}
-#define LOG_LDOUBLE(i) {.val = {.ldvalue = i}, .type = VT_LONGDOUBLE}
-#define LOG_PTR(i) {.val = {.pvalue = (void *)i}, .type = VT_POINTER}
-#define LOG_SCHAR(i) {.val = {.schar = i}, .type = VT_SCHAR}
-#define LOG_UCHAR(i) {.val = {.uchar = i}, .type = VT_UCHAR}
-#define LOG_SSHORT(i) {.val = {.sshort = i}, .type = VT_SSHORT}
-#define LOG_USHORT(i) {.val = {.ushort = i}, .type = VT_USHORT}
-#define LOG_INT(i) {.val = {.sint = i}, .type = VT_SINT}
-#define LOG_UINT(i) {.val = {.uint = i}, .type = VT_UINT}
-#define LOG_SLONG(i) {.val = {.slong = i}, .type = VT_SLONG}
-#define LOG_ULONG(i) {.val = {.ulong = i}, .type = VT_ULONG}
-#define LOG_SLLONG(i) {.val = {.sllong = i}, .type = VT_SLLONG}
-#define LOG_ULLONG(i) {.val = {.ullong = i}, .type = VT_ULLONG}
+#define LOG_S8(i) {.val = {.s8 = (i)}, .type = VT_S8}
+#define LOG_U8(i) {.val = {.u8 = (i)}, .type = VT_U8}
+#define LOG_S16(i) {.val = {.s16 = (i)}, .type = VT_S16}
+#define LOG_U16(i) {.val = {.u16 = (i)}, .type = VT_U16}
+#define LOG_S32(i) {.val = {.s32 = (i)}, .type = VT_S32}
+#define LOG_U32(i) {.val = {.u32 = (i)}, .type = VT_U32}
+#define LOG_S64(i) {.val = {.s64 = (i)}, .type = VT_S64}
+#define LOG_U64(i) {.val = {.u64 = (i)}, .type = VT_U64}
+#define LOG_FLOAT(i) {.val = {.fvalue = (i)}, .type = VT_FLOAT}
+#define LOG_DOUBLE(i) {.val = {.dvalue = (i)}, .type = VT_DOUBLE}
+#define LOG_LDOUBLE(i) {.val = {.ldvalue = (i)}, .type = VT_LONGDOUBLE}
+#define LOG_PTR(i) {.val = {.pvalue = (void *)(i)}, .type = VT_POINTER}
+#define LOG_SCHAR(i) {.val = {.schar = (i)}, .type = VT_SCHAR}
+#define LOG_UCHAR(i) {.val = {.uchar = (i)}, .type = VT_UCHAR}
+#define LOG_SSHORT(i) {.val = {.sshort = (i)}, .type = VT_SSHORT}
+#define LOG_USHORT(i) {.val = {.ushort = (i)}, .type = VT_USHORT}
+#define LOG_INT(i) {.val = {.sint = (i)}, .type = VT_SINT}
+#define LOG_UINT(i) {.val = {.uint = (i)}, .type = VT_UINT}
+#define LOG_SLONG(i) {.val = {.slong = (i)}, .type = VT_SLONG}
+#define LOG_ULONG(i) {.val = {.ulong = (i)}, .type = VT_ULONG}
+#define LOG_SLLONG(i) {.val = {.sllong = (i)}, .type = VT_SLLONG}
+#define LOG_ULLONG(i) {.val = {.ullong = (i)}, .type = VT_ULLONG}
 
 #define log_msg(format, ...) ({                       \
       struct vargs __vargs__ = {                      \

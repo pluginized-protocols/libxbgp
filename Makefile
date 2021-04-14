@@ -17,6 +17,7 @@ CFLAGS += -Wmissing-prototypes
 CFLAGS += -Wmissing-declarations
 CFLAGS += -Wpointer-arith
 CFLAGS += -Wbad-function-cast
+CFLAGS += -ffunction-sections -fdata-sections
 
 CFLAGS += -Iubpf_vm/vm/inc
 CFLAGS += -Iinclude
@@ -26,6 +27,7 @@ CFLAGS += -I/usr/include/json-c
 
 LDFLAGS += -L/usr/local/lib
 LDFLAGS += -L.
+LDFLAGS += -Wl,--gc-sections
 
 LDLIBS += -Wl,-Bstatic -lcunit -lubpf -Wl,-Bdynamic
 LDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
@@ -120,7 +122,7 @@ GOTO_CHECKS += --conversion-check
 GOTO_CHECKS += --undefined-shift-check
 GOTO_CHECKS += --float-overflow-check
 GOTO_CHECKS += --nan-check
-# GOTO_CHECKS += --enum-range-check # to hard to deal with enum range check issue #5808 https://github.com/diffblue/cbmc/pull/5808
+# GOTO_CHECKS += --enum-range-check # too hard to deal with enum range check issue #5808 https://github.com/diffblue/cbmc/pull/5808
 GOTO_CHECKS += --pointer-primitive-check
 # GOTO_CHECKS += --uninitialized-check   # cbmc failed to generate annotation
 
@@ -135,6 +137,11 @@ $(GOTO_CBMC): $(GOTOOBJ) $(GOTOOBJ_TESTS)
 $(GOTO_CBMC_INSTRUMENT): $(GOTO_CBMC)
 	@echo GOTO-INSTRUMENT $<
 	@$(GOTOINSTRUMENT) $< $@ $(GOTO_CHECKS)
+
+libxbgp_goto.a: $(GOTOOBJ)
+	@echo AR-GOTO $@
+	@$(AR) rcs $@ $^
+	@ranlib $@
 
 
 %.o: %.c %.h
