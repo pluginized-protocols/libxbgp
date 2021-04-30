@@ -1,0 +1,39 @@
+{
+  "jit_all": false,
+  "plugins": {
+    "plugin_1": {
+      "extra_mem": 8,
+      "shared_mem": 0,
+      "obj_code_list": {
+        "code_1": {
+          "obj": "invalid_rw.o",
+          "add_memcheck": true,
+          "jit": true
+        }
+      }
+    },
+    "plugin_2": {
+      "extra_mem": 8,
+      "shared_mem": 0,
+      "obj_code_list": {
+        "code_2": {
+          "obj": "invalid_rw.o",
+          "add_memcheck": false,
+          "jit": true
+        }
+      }
+    }
+  },
+  "insertion_points": {
+    "insertion_1": {
+      "replace": {
+        "0": "code_1"
+      }
+    },
+    "insertion_2": {
+      "replace": {
+        "0": "code_2"
+      }
+    }
+  }
+}

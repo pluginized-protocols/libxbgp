@@ -7,7 +7,7 @@
 #include "plugins_manager.h"
 
 
-char plugin_dir[PATH_MAX];
+char plugin_dir[PATH_MAX - NAME_MAX];
 
 
 uint64_t perm_none(void);
@@ -79,7 +79,7 @@ uint64_t perm_all() {
 
 
 static int setup(void) {
-    return init_plugin_manager(funcs, ".", 9, insertions_point, 0, NULL);
+    return init_plugin_manager(funcs, ".", insertions_point, 0, NULL);
 }
 
 static int teardown(void) {
@@ -118,7 +118,7 @@ static void permissions_test(void) {
             {.name = "plugin_perm_all.o", .should_fail = 0, .perms = HELPER_ATTR_MASK},
     };
 
-    for (int i = 0; i < sizeof(michel) / sizeof(michel[0]); i++) {
+    for (size_t i = 0; i < sizeof(michel) / sizeof(michel[0]); i++) {
         memset(path, 0, sizeof(path));
         snprintf(path, sizeof(path), "%s/permissions/%s", plugin_dir, michel[i].name);
 
@@ -126,7 +126,7 @@ static void permissions_test(void) {
         status = add_extension_code("perm_test", 14, 8,
                                     0, 1, "default_point", 13,
                                     BPF_REPLACE, 0, 0, path, 0,
-                                    "super_test", 10, funcs, michel[i].perms);
+                                    "super_test", 10, funcs, michel[i].perms, 1);
 
 
         CU_ASSERT_EQUAL(status, michel[i].should_fail ? -1 : 0);

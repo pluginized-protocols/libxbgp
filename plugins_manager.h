@@ -84,7 +84,7 @@ typedef struct manager {
  *         0 otherwise
  */
 int
-init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir, size_t len,
+init_plugin_manager(proto_ext_fun_t *api_proto, const char *process_vty_dir,
                     insertion_point_info_t *plugins_array,
                     int dbg, struct log_config *logs);
 
@@ -110,7 +110,8 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
                        int insertion_point_id, const char *insertion_point, size_t i_pt_name, anchor_t type_anchor,
                        int seq_anchor, int jit,
                        const char *obj_path_code, size_t len_obj_path_code,
-                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission);
+                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission,
+                       int add_memcheck_insts);
 
 
 void ubpf_terminate(void);
@@ -165,6 +166,6 @@ int remove_plugin(const char *name);
 
 int remove_insertion_point(int id);
 
-insertion_point_info_t *get_insertion_point_info();
+insertion_point_info_t *get_insertion_point_info(void);
 
 #endif //FRR_THESIS_PLUGINS_MANAGER_H

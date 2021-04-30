@@ -17,17 +17,14 @@
 #define valid_perm_null {.perm_str = NULL, .perm = 0, .len_perm = 0}
 #define valid_perm_is_null(a) (((a)->perm_str == NULL) && ((a)->perm = 0) && ((a)->len_perm = 0))
 
-static struct {
+struct perms {
     const char *perm_str;
     int perm;
     size_t len_perm;
-} valid_perms[] = {
-        {.perm_str = "none", .perm = HELPER_ATTR_NONE, .len_perm = 4},
-        {.perm_str = "usr_ptr", .perm = HELPER_ATTR_USR_PTR, .len_perm = 7},
-        {.perm_str = "read", .perm = HELPER_ATTR_READ, .len_perm = 4},
-        {.perm_str = "write", .perm = HELPER_ATTR_WRITE, .len_perm = 5},
-        valid_perm_null
 };
+
+extern struct perms valid_perms[];
+
 
 #define valid_perms_len (sizeof(valid_perms)/sizeof(valid_perms[0]))
 

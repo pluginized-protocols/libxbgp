@@ -4,7 +4,7 @@ LLC = llc
 CFLAGS += -I../../include
 CFLAGS += -I../..
 CFLAGS += -fno-stack-protector
-CFLAGS += -Weverything
+CFLAGS += -Wall -Wextra
 CFLAGS += -Wno-pedantic
 
 SRC=$(shell find . -name '*.c')

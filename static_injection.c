@@ -22,6 +22,14 @@ struct insertion_json {
     int seq;
 };
 
+struct perms valid_perms[] = {
+        {.perm_str = "none", .perm = HELPER_ATTR_NONE, .len_perm = 4},
+        {.perm_str = "usr_ptr", .perm = HELPER_ATTR_USR_PTR, .len_perm = 7},
+        {.perm_str = "read", .perm = HELPER_ATTR_READ, .len_perm = 4},
+        {.perm_str = "write", .perm = HELPER_ATTR_WRITE, .len_perm = 5},
+        valid_perm_null
+};
+
 int str_anchor_to_enum(const char *anchor_str, anchor_t *anchor) {
     anchor_t anchor_;
     anchor_ = strncmp("replace", anchor_str, 7) == 0 ? BPF_REPLACE :
@@ -201,6 +209,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
                           insertion_point_info_t *points_info) {
     int jit_val;
     int permissions;
+    int add_memcheck_insts;
 
     int64_t extra_mem_val = 0;
     int64_t shared_mem_val = 0;
@@ -224,6 +233,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
     struct json_object *name_obj;
     struct json_object *jit;
     struct json_object *permissions_pluglet;
+    struct json_object *memcheck_add;
 
     const char *plugin_str;
     const char *vm_str;
@@ -287,10 +297,16 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
                 permissions = 0;
             }
 
+            if (json_object_object_get_ex(curr_code_obj, "add_memcheck", &memcheck_add)) {
+                add_memcheck_insts = json_object_get_boolean(memcheck_add);
+            } else {
+                add_memcheck_insts = 1; // by default, we add runtime checks
+            }
+
             if (add_extension_code(plugin_str, strnlen(plugin_str, NAME_MAX), extra_mem_val,
                                    shared_mem_val, insertion_point_id, info.name_insertion,
                                    info.name_insertion_len, info.anchor, info.seq, jit_val, obj_path, 0, vm_str,
-                                   strnlen(vm_str, NAME_MAX), api_proto, permissions) != 0) {
+                                   strnlen(vm_str, NAME_MAX), api_proto, permissions, add_memcheck_insts) != 0) {
                 return -1;
             }
         }

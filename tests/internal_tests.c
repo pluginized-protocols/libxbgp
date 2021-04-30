@@ -55,7 +55,7 @@ static void test_my_snprintf_string(void) {
     char buf[30];
     memset(buf, 0, sizeof(char) * 30);
 
-    bytes_written = ubpf_sprintf(buf, 29, "Hello %s!", name);
+    bytes_written = ubpf_sprintf(buf, 29, "Hello %s!", (uintptr_t) name);
 
     CU_ASSERT_EQUAL(bytes_written, 13);
     CU_ASSERT_NSTRING_EQUAL(buf, expected_output, 14);
@@ -71,7 +71,7 @@ static void test_my_snprintf_mix(void) {
     char buf[40];
     memset(buf, 0, sizeof(char) * 40);
 
-    bytes_written = ubpf_sprintf(buf, 39, "Hello %s! Big number is %d", name, big_number);
+    bytes_written = ubpf_sprintf(buf, 39, "Hello %s! Big number is %d", (uintptr_t) name, big_number);
 
     CU_ASSERT_EQUAL(bytes_written, 34);
     CU_ASSERT_NSTRING_EQUAL(buf, expected_output, 35);
@@ -86,7 +86,7 @@ static void test_my_snprintf_overflow(void) {
     const char *string = "This is a long string";
     memset(buf, 0, sizeof(char) * 30);
 
-    bytes_written = ubpf_sprintf(buf, 30, "Hello World! %s", string);
+    bytes_written = ubpf_sprintf(buf, 30, "Hello World! %s", (uintptr_t) string);
 
     CU_ASSERT_EQUAL(bytes_written, -1);
     CU_ASSERT_NSTRING_EQUAL(buf, expected_output, 30);
@@ -113,14 +113,15 @@ static void test_my_snprintf_ptr(void) {
     memset(expected_buf, 0, sizeof(char) * 30);
 
     expected_bytes_written = snprintf(expected_buf, 30, "%p", &test_ptr);
-    bytes_written = ubpf_sprintf(buf, 30, "%p", &test_ptr);
+    bytes_written = ubpf_sprintf(buf, 30, "%p", (uintptr_t) &test_ptr);
 
+    CU_ASSERT_NOT_EQUAL(bytes_written, 0);
     CU_ASSERT_NSTRING_EQUAL(skip_trailing_zeroes(buf), skip_trailing_zeroes(expected_buf), expected_bytes_written);
 
 }
 
 
-char *get_dir_path(char *dir, size_t len) {
+static char *get_dir_path(char *dir, size_t len) {
     char this_file_path[PATH_MAX];
     char real_path_this_file[PATH_MAX];
     memcpy(this_file_path, __FILE__, sizeof(this_file_path));
@@ -145,7 +146,7 @@ static inline void id_file(char *buf, size_t len) {
 
     get_dir_path(tmp_dir_buf, sizeof(tmp_dir_buf));
 
-    snprintf(buf, PATH_MAX, "%s/id_test", tmp_dir_buf);
+    snprintf(buf, len, "%s/id_test", tmp_dir_buf);
 
     realpath(tmp_buf, buf);
 }

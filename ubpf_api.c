@@ -38,7 +38,7 @@
 #include <ffi.h>
 
 
-static int ebpf_msgid = -1;
+
 
 
 uint16_t super_ntohs(context_t *ctx, uint16_t value) {
@@ -122,66 +122,6 @@ uint64_t super_htonll(context_t *ctx, uint64_t val) {
 #endif
 }
 
-
-int init_queue_ext_send(const char *working_dir) {
-    key_t key;
-    int msgid;
-
-    // ftok to generate unique key
-    key = ftok(working_dir, 65);
-    if (key == -1) {
-        perror("ftok ebpf msg export error");
-        return -1;
-    }
-    // msgget creates a message queue
-    // and returns identifier
-    msgid = msgget(key, 0666u | (unsigned int) IPC_CREAT);
-
-    if (msgid < 0) {
-        perror("msget error create");
-        return -1;
-    }
-
-    ebpf_msgid = msgid;
-    return msgid;
-}
-
-void rm_ipc() {
-
-    if (ebpf_msgid != -1) msgctl(ebpf_msgid, IPC_RMID, NULL);
-
-}
-
-int send_ipc_msg(UNUSED context_t *ctx, ebpf_message_t *msg) {
-
-    if (ebpf_msgid == -1) {
-        fprintf(stderr, "MSGID ERROR not init at main\n");
-        return -1;
-    }
-
-    if (msgsnd(ebpf_msgid, msg, sizeof(ebpf_message_t), 0) == -1) {
-        perror("msgsnd fail (ebpf)");
-        return -1;
-    }
-
-    return 0;
-
-}
-
-static int send_all(int socket, const void *buffer, size_t length) {
-    ssize_t n;
-    const char *p = buffer;
-    while (length > 0) {
-        n = write(socket, p, length);
-        if (n <= 0) {
-            perror("Send failed");
-            return -1;
-        }
-        p += n;
-        length -= n;
-    }
-    return 0;
-}
 
 int __super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 
@@ -859,7 +799,7 @@ void *__get_arg(context_t *vm_ctx, int type) {
 }
 
 
-static int in6addr_cmp(const struct in6_addr *addr1,
+/*static int in6addr_cmp(const struct in6_addr *addr1,
                        const struct in6_addr *addr2) {
     size_t i;
     const uint8_t *p1, *p2;
@@ -874,38 +814,7 @@ static int in6addr_cmp(const struct in6_addr *addr1,
             return -1;
     }
     return 0;
-}
-
-
-int bpf_sockunion_cmp(UNUSED context_t *vm_ctx, const struct sockaddr *su1, const struct sockaddr *su2) {
-    uint32_t ipsu1;
-    uint32_t ipsu2;
-
-    if (su1->sa_family > su2->sa_family) {
-        return 1;
-    }
-    if (su1->sa_family < su2->sa_family) {
-        return -1;
-    }
-
-    if (su1->sa_family == AF_INET) {
-
-        ipsu1 = ntohl(((const struct sockaddr_in *) su1)->sin_addr.s_addr);
-        ipsu2 = ntohl(((const struct sockaddr_in *) su2)->sin_addr.s_addr);
-
-        if (ipsu1 == ipsu2)
-            return 0;
-        if (ipsu1 > ipsu2)
-            return 1;
-        else
-            return -1;
-    }
-    if (su1->sa_family == AF_INET6) {
-        return in6addr_cmp(&((const struct sockaddr_in6 *) su1)->sin6_addr,
-                           &((const struct sockaddr_in6 *) su2)->sin6_addr);
-    }
-    return 0;
-}
+}*/
 
 void membound_fail(context_t *ctx __attribute__((unused)), uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr) {
     fprintf(stderr, "Out of bound access with val 0x%lx, start of mem is 0x%lx, top of stack is 0x%lx\n", val, mem_ptr,
@@ -975,9 +884,9 @@ int __ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf
     return 0;
 }
 
-int __ebpf_inet_pton(context_t *ctx, int af, const char *src, void *dst, size_t buf_len) {
+int __ebpf_inet_pton(UNUSED context_t *ctx, int af, const char *src, void *dst, size_t buf_len) {
     int s;
-    int min_len;
+    size_t min_len;
     unsigned char buf[sizeof(struct in6_addr)];
 
     switch (af) {
@@ -1005,7 +914,7 @@ int __ebpf_inet_pton(context_t *ctx, int af, const char *src, void *dst, size_t 
 
 #define safe_snprintf(offset, dst, maxlen, format, ...) ({      \
     int __ret__ = 0;                                            \
-    int written_len__;                                          \
+    unsigned int written_len__;                                 \
     written_len__ = snprintf(dst, maxlen, format, __VA_ARGS__); \
     if (written_len__ <= maxlen){                               \
         __ret__ = 1;                                            \
@@ -1086,7 +995,7 @@ int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
     if (pid == -1) { // unable to fork
         perror("Unable to fork");
     } else if (pid == 0) { // in the child
-        char *const argv[] = {
+        const char *const argv[] = {
                 "rsync", "--archive", "-hh",
                 "--partial", "--modify-window=2",
                 "-e", ssh_info,
@@ -1186,4 +1095,5 @@ int inject_pluglet(context_t *ctx, struct inject_pluglet_args *arg) {
     // end check request
     //add_extension_code(arg)
 
+    return -1;
 }

@@ -27,7 +27,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-static char plugin_folder_path[PATH_MAX];
+static char plugin_folder_path[PATH_MAX - NAME_MAX];
 
 static proto_ext_fun_t funcs[] = {};
 
@@ -52,7 +52,7 @@ static int setup(void) {
     add_log_entry(&conf, log_tmp_name, MASK_ALL);
 
     // the logger should write to syslog, stderr and the temporary file;
-    return init_plugin_manager(funcs, ".", 1, plugins, 1, conf);
+    return init_plugin_manager(funcs, ".", plugins, 1, conf);
 }
 
 static int teardown(void) {
@@ -69,8 +69,8 @@ void send_monitoring_record_test(void) {
     args_t fargs;
     insertion_point_t *point;
 
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 24, "%s/%s", plugin_folder_path, "send_monitoring_data.o");
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "send_monitoring_data.o");
 
     entry_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -78,7 +78,7 @@ void send_monitoring_record_test(void) {
     };
 
     status = add_extension_code("monitoring_example", 18, 64, 0, 1, "point", 5, BPF_REPLACE,
-                                0, 0, path_pluglet, 0, "send_monit", 10, funcs, 0);
+                                0, 0, path_pluglet, 0, "send_monit", 10, funcs, 0, 1);
 
     fargs.args = args;
     fargs.nargs = 1;
@@ -99,8 +99,8 @@ static void send_multiple_records_test(void) {
     args_t fargs;
     insertion_point_t *point;
 
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 24, "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
 
     entry_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -111,7 +111,7 @@ static void send_multiple_records_test(void) {
     fargs.args = args;
 
     status = add_extension_code("multiple_monitoring", 19, 64, 0, 3, "point", 5, BPF_REPLACE,
-                                0, 0, path_pluglet, 0, "multiple_send", 13, funcs, 0);
+                                0, 0, path_pluglet, 0, "multiple_send", 13, funcs, 0, 1);
     CU_ASSERT_EQUAL(status, 0)
     point = insertion_point(3);
     run_replace_function(point, &fargs, &ret_val);
@@ -129,7 +129,7 @@ static void send_multiple_records_type_test(void) {
     insertion_point_t *point;
 
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 25, "%s/%s", plugin_folder_path, "multiple_type_record.o");
+    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "multiple_type_record.o");
 
     entry_args_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -139,7 +139,7 @@ static void send_multiple_records_type_test(void) {
     fargs.nargs = 1;
 
     status = add_extension_code("multiple_record", 15, 64, 0, 2, "point", 5, BPF_REPLACE, 0, 0,
-                                path_pluglet, 0, "the_vm_name", 11, funcs, 0);
+                                path_pluglet, 0, "the_vm_name", 11, funcs, 0, 1);
     CU_ASSERT_EQUAL(status, 0)
 
     point = insertion_point(2);
@@ -153,7 +153,7 @@ static void send_multiple_records_type_test(void) {
 CU_ErrorCode ubpf_monitoring_tests(const char *plugin_folder) {
 
     CU_pSuite pSuite = NULL;
-    memset(plugin_folder_path, 0, PATH_MAX * sizeof(char));
+    memset(plugin_folder_path, 0, sizeof(plugin_folder_path));
     realpath(plugin_folder, plugin_folder_path);
 
     pSuite = CU_add_suite("ubpf_monitoring_tests_suite", setup, teardown);

@@ -52,7 +52,7 @@ static void test_parse_extra_info(void) {
 
 static void test_list_iter(void) {
 
-    int i, j;
+    unsigned int i, j;
     struct conf_val *val;
     struct conf_val *curr_val;
     uint8_t seen[2];
@@ -88,7 +88,7 @@ static void test_list_iter(void) {
 }
 
 static void test_nested_list(void) {
-    int g, h, i;
+    unsigned int g, h, i;
     struct conf_val *val;
     struct conf_val *curr_val, *nested_curr_val;
 
