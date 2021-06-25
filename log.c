@@ -242,7 +242,7 @@ vlog(int class, const char *msg, va_list args) {
  * It is essentially a sequence of log_reset(), logn() and log_commit().
  */
 void
-log_msg(const char *msg, ...) {
+msg_log(const char *msg, ...) {
     int class = 1;
     va_list args;
 

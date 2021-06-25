@@ -239,7 +239,7 @@ int __super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 
     if (ffi_prep_cif_var(&CIF, FFI_DEFAULT_ABI, 1,
                          args->nb_args + 1, &ffi_type_void, types) == FFI_OK) {
-        ffi_call(&CIF, FFI_FN(log_msg), NULL, values);
+        ffi_call(&CIF, FFI_FN(msg_log), NULL, values);
 
     }
 

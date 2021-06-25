@@ -98,7 +98,7 @@ void log_init(int dbg, const char *new_syslog_name, struct log_config *extra_log
  * @param msg
  * @param ... format
  */
-void log_msg(const char *msg, ...);
+void msg_log(const char *msg, ...);
 
 /**
  * Close the logger

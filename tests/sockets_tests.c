@@ -42,7 +42,7 @@ static int setup(void) {
 
         devnull_all_stdstream();
         if (execve(final_path, argv, NULL) == -1) {
-            log_msg(L_ERR "Execve failed %s\n", strerror(errno));
+            msg_log(L_ERR "Execve failed %s\n", strerror(errno));
             exit(1);
         }
     }

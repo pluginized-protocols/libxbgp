@@ -47,7 +47,6 @@ struct context {
 
     insertion_point_info_t *insertion_point_info;
     proto_ext_fun_t *ext_api;
-
 };
 
 #endif //UBPF_TOOLS_CONTEXT_HDR_H
