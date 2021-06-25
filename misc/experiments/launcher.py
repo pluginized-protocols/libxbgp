@@ -58,7 +58,7 @@ class Daemon(CLIProcess):
 class Zebra(Daemon):
     DAEMONS = {
         'path': "{bin_path}",
-        'args': "-f {config} -z"
+        'args': "-f {config} -i/tmp/zebra.pid -z /tmp/zebra.api"
     }
 
 
@@ -121,7 +121,7 @@ class TSHARK(CLIProcess):
         return ' '.join((self.exe['path'],
                          self.exe['args'].format(
                              outdir=self._outdir,
-                             interfaces=self._interface,
+                             interfaces=self._interfaces,
                              outfile=self._prefix_file,
                              exp_nb=self._exp_nb)))
 
@@ -369,7 +369,7 @@ if __name__ == '__main__':
                         required=True, dest='interface')
     parser.add_argument("-o", "--output-dir",
                         required=True, dest='output_dir')
-    parser.add_argument("-n", "--nb-experiments",
+    parser.add_argument("-n", "--nb-experiments", type=int,
                         default=10, dest='nb_experiments')
     parser.add_argument("-p", "--prefix-experiments",
                         required=True, dest='prefix_experiments')

@@ -21,7 +21,14 @@ protocol kernel {
 	ipv4 {			# Connect protocol to IPv4 table by channel
 	      export all;	# Export to protocol. default is export none
 	};
-	ipv6 { export all; };
+	learn;
+}
+
+protocol kernel {
+    ipv6 {
+        export all;
+    };
+    learn;
 }
 
 %for a in acls:
