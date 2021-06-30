@@ -43,10 +43,10 @@ def config_dut(config_path, dut_suite):
 
     n1_neigh_conf.add_process("injecter", "python3 /the/file ;")
 
-    block_all = con.new_acl_filter('block', 'ipv4')
-    perm_all = con.new_acl_filter('all', 'ipv4')
-    block_all6 = con.new_acl_filter('block6', 'ipv6')
-    perm_all6 = con.new_acl_filter('all6', 'ipv6')
+    block_all = con.new_acl_filter('route_block', 'ipv4')
+    perm_all = con.new_acl_filter('route_all', 'ipv4')
+    block_all6 = con.new_acl_filter('route_block6', 'ipv6')
+    perm_all6 = con.new_acl_filter('route_all6', 'ipv6')
 
     block_all.deny_all()
     perm_all.permit_all()

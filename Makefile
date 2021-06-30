@@ -63,7 +63,8 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./ubpf_memory_pool.c \
       ./ubpf_misc.c \
       ./url_parser.c \
-      ./plugin_socket.c
+      ./plugin_socket.c \
+      ./evt_plugins.c
 
 
 SRC_TESTS = $(shell find ./tests -name "*.c" -not -path "./tests/plugins/*")

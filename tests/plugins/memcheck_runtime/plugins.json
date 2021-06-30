@@ -35,5 +35,13 @@
         "0": "code_2"
       }
     }
+  },
+  "jobs_plugins": {
+    "test_cron_plugin": {
+      "schedule": 56
+    },
+    "test_job_2": {
+      "schedule": 42
+    }
   }
 }
