@@ -64,7 +64,7 @@ static void on_delete_vm(void *self) {
 
 /* should be used in the protocol to "pluginize" */
 int
-init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir, size_t len,
+init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir,
                     insertion_point_info_t *insertion_points_array,
                     int dbg, struct log_config *logs) {
 
@@ -126,12 +126,11 @@ void ubpf_terminate() {
 
 int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t extra_mem, uint64_t shared_mem,
                        int insertion_point_id, const char *insertion_point, size_t i_pt_name, anchor_t type_anchor,
-                       int seq_anchor, int jit,
-                       const char *obj_path_code,
-                       size_t len_obj_path_code,
-                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission) {
+                       int seq_anchor, int jit, const char *obj_path_code, size_t len_obj_path_code,
+                       const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission,
+                       int add_memcheck_insts) {
 
-    uint8_t *bytecode;
+    const uint8_t *bytecode;
     size_t bytecode_len;
     vm_container_t *vm;
     plugin_t *p;
@@ -178,7 +177,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
     }
 
     vm = new_vm(type_anchor, seq_anchor, point, jit, vm_name, vm_name_len, p, bytecode, bytecode_len, api_proto,
-                on_delete_vm);
+                on_delete_vm, add_memcheck_insts);
     free(bytecode);
     if (!vm) return -1;
     if (register_vm(&master, vm) != 0) return -1;

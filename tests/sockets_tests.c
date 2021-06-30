@@ -42,7 +42,7 @@ static int setup(void) {
 
         devnull_all_stdstream();
         if (execve(final_path, argv, NULL) == -1) {
-            log_msg(L_ERR "Execve failed %s\n", strerror(errno));
+            msg_log(L_ERR "Execve failed %s\n", strerror(errno));
             exit(1);
         }
     }
@@ -58,7 +58,7 @@ static int setup(void) {
         perror("Error with tcp_server");
         return -1;
     }
-    return init_plugin_manager(funcs, ".", 1, plugins, 0, NULL);
+    return init_plugin_manager(funcs, ".", plugins, 0, NULL);
 }
 
 static int teardown(void) {
@@ -90,7 +90,7 @@ static void tcp_communication_plugin(void) {
     status = add_extension_code("example_tcp", 11, 128,
                                 0, 1, "tcp_socket_test",
                                 15, BPF_REPLACE, 0, 0,
-                                path_pluglet, 0, "super_vm", 8, funcs, 0);
+                                path_pluglet, 0, "super_vm", 8, funcs, 0, 1);
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
     pt = insertion_point(1);

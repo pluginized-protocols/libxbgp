@@ -51,7 +51,7 @@ static int setup(void) {
 
     char path[PATH_MAX];
 
-    ret = init_plugin_manager(funcs, ".", 9, insertion_points, 0, NULL);
+    ret = init_plugin_manager(funcs, ".", insertion_points, 0, NULL);
 
     if (ret != 0) return -1;
 
@@ -66,7 +66,7 @@ static int setup(void) {
         if (add_extension_code("gros minet", 10, 512,
                                0, 1, "replace_chain",
                                13, BPF_REPLACE, i, 0, path, 0, elf_files[i],
-                               strlen(elf_files[i]), funcs, 0) != 0) {
+                               strlen(elf_files[i]), funcs, 0, 1) != 0) {
             return -1;
         }
     }

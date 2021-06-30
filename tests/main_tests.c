@@ -25,6 +25,7 @@
 #include "socket_tests.h"
 #include "utils_tests.h"
 #include "permissions_test.h"
+#include "runtime_memcheck_test.h"
 
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 
@@ -124,6 +125,7 @@ int main(int argc, char *argv[]) {
         (test_socket_api(plugin_folder_path) != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
+        (runtime_memcheck_test_suite(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (test_permissions_plugins(plugin_folder_path) != CUE_SUCCESS) ||
         (extra_info_tests() != CUE_SUCCESS) ||

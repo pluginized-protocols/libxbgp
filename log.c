@@ -30,7 +30,7 @@
 #include "log.h"
 #include "utlist.h"
 
-static char *ubpf_tools_name = "ubpf_plugin_manager";
+static const char *ubpf_tools_name = "ubpf_plugin_manager";
 
 static struct log_config *current_log_list = NULL;
 static char *current_syslog_name; /* NULL -> syslog closed */
@@ -45,7 +45,7 @@ static inline struct log_config *new_log_config() {
 }
 
 
-static inline int get_time(uint8_t *buf_time, size_t len) {
+static inline int get_time(char *buf_time, size_t len) {
     long millisec;
     struct tm *tm_info;
     struct timeval tv;
@@ -90,7 +90,7 @@ static int syslog_priorities[] = {
         LOG_CRIT
 };
 
-static char *class_names[] = {
+static const char *class_names[] = {
         "???",
         "DBG",
         "TRACE",
@@ -161,10 +161,10 @@ log_rotate(struct log_config *l) {
  * The message class is an integer, not a first char of a string like
  * in log(), so it should be written like *L_INFO.
  */
-void
+static void
 log_commit(int class, buffer *buf) {
     struct log_config *l;
-    uint8_t tbuf[TM_DATETIME_BUFFER_SIZE];
+    char tbuf[TM_DATETIME_BUFFER_SIZE];
 
     if (buf->pos == buf->end)
         strcpy(buf->end - 100, " ... <too long>");
@@ -242,7 +242,7 @@ vlog(int class, const char *msg, va_list args) {
  * It is essentially a sequence of log_reset(), logn() and log_commit().
  */
 void
-log_msg(const char *msg, ...) {
+msg_log(const char *msg, ...) {
     int class = 1;
     va_list args;
 

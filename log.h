@@ -69,9 +69,9 @@ struct log_config {
 };
 
 typedef struct buffer {
-    uint8_t *start;
-    uint8_t *pos;
-    uint8_t *end;
+    char *start;
+    char *pos;
+    char *end;
 } buffer;
 
 /**
@@ -98,12 +98,12 @@ void log_init(int dbg, const char *new_syslog_name, struct log_config *extra_log
  * @param msg
  * @param ... format
  */
-void log_msg(const char *msg, ...);
+void msg_log(const char *msg, ...);
 
 /**
  * Close the logger
  */
-void logs_close();
+void logs_close(void);
 
 
 #endif //UBPF_TOOLS_LOG_H

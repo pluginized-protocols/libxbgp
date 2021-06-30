@@ -123,7 +123,7 @@ int open_tcp(int af, const struct sockaddr *addr, socklen_t addrlen) {
     }
 
     if (connect(sfd, addr, addrlen) != 0) {
-        log_msg(L_ERR "connect %s", strerror(errno));
+        msg_log(L_ERR "connect %s", strerror(errno));
         goto err;
     }
 

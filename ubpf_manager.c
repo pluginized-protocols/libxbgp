@@ -144,10 +144,10 @@ static int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len)
 
     if (elf) {
         err = ubpf_load_elf(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id,
-                            call_next_rewrite);
+                            call_next_rewrite, vmc->add_memcheck_inst);
     } else {
         err = ubpf_load(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id,
-                        call_next_rewrite);
+                        call_next_rewrite, vmc->add_memcheck_inst);
     }
     //free(loaded_code);
 
@@ -200,8 +200,8 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
 
 vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8_t jit,
                        const char *name, size_t name_len, plugin_t *p,
-                       uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
-                       void (*on_delete)(void *)) {
+                       const uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
+                       void (*on_delete)(void *), int add_memcheck_insts) {
 
     vm_container_t *vm;
 
@@ -230,6 +230,7 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
 
     vm->p = p;
     vm->jit = jit;
+    vm->add_memcheck_inst = add_memcheck_insts;
     vm->on_delete = on_delete;
 
     vm->vm_name_len = name_len;

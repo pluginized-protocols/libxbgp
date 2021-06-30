@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
   echo "Please run as root"
   exit
 fi
-
 
 BR_NAME="br0"
 
@@ -12,18 +11,18 @@ BR_NAME="br0"
 declare -A NB_IFACES
 
 # $1: ns name
-function inc_iface {
-    if [ ! "${NB_IFACES[$1]+isset}" ]; then
-        create-ns "$1"
-    fi
-    __ret="${1}-eth${NB_IFACES[$1]}"
-    ((++NB_IFACES[$1]))
+function inc_iface() {
+  if [ ! "${NB_IFACES[$1]+isset}" ]; then
+    create-ns "$1"
+  fi
+  __ret="${1}-eth${NB_IFACES[$1]}"
+  ((++NB_IFACES[$1]))
 }
 
 ## $1 interface name
 ## $2 ip address
 ## $3 namespace
-function provision-iface () {
+function provision-iface() {
 
   local netns_str=""
 
@@ -39,7 +38,7 @@ function provision-iface () {
 }
 
 ## $1 namespace name
-function create-ns () {
+function create-ns() {
   NB_IFACES[$1]=0
   ip netns add ${1}
   provision-iface "lo" "" ${1}
@@ -47,20 +46,20 @@ function create-ns () {
 
 ## $1 veth interface name
 ## $2 ns name
-function mv-ns () {
+function mv-ns() {
   ip link set dev "$1" netns "$2"
   ip netns exec "$2" ip link set dev "$1" up
 }
 
 ## $1 iface name 1
 ## $2 iface name 2
-function make-veth () {
+function make-veth() {
   ip link add dev "$1" type veth peer name "$2"
 }
 
 ## $1 namespace 1
 ## $2 namespace 2
-function make-link () {
+function make-link() {
 
   inc_iface "$1"
   local r1="$__ret"
@@ -78,7 +77,7 @@ function make-link () {
 }
 
 # $1 bridge interface name
-function create-bridge () {
+function create-bridge() {
   ip link add name "$1" type bridge
   ip link set dev "$1" up
 }
@@ -87,20 +86,19 @@ function create-bridge () {
 ## $2 ns name
 ## $3 iface name attached to the bridge
 ## $4 iface name attached to the ns
-function ns-to-bridge () {
+function ns-to-bridge() {
 
   make-veth "$3" "$4"
 
   mv-ns "$4" "$2"
 
-  if ! ip link show dev "$BR" &> /dev/null ; then
+  if ! ip link show dev "$BR" &>/dev/null; then
     create-bridge "$1"
   fi
 
   ip link set "$3" master "$1"
   ip link set "$3" up
 }
-
 
 #       +--------+
 #       | exabgp |
@@ -122,12 +120,10 @@ function ns-to-bridge () {
 #     | bridge host |
 #     +-------------+
 
-make-link "bird1" "bird2"
+# make-link "bird1" "bird2"
 
-provision-iface "bird1-eth0" "10.21.42.1/24" "bird1"
-provision-iface "bird2-eth0" "10.21.42.2/24" "bird2"
-
-exit 0
+# provision-iface "bird1-eth0" "10.21.42.1/24" "bird1"
+# provision-iface "bird2-eth0" "10.21.42.2/24" "bird2"
 
 # create and make links between namespaces
 make-link "frrouting" "bird"
@@ -135,14 +131,13 @@ make-link "frrouting" "exabgp"
 
 ns-to-bridge "$BR_NAME" "frrouting" "frr-net0" "frrouting-ebr0"
 
-
 # provision namespaces interfaces
 provision-iface "frrouting-eth0" "10.21.42.1/24" "frrouting"
 provision-iface "frrouting-eth1" "10.21.43.1/24" "frrouting"
 provision-iface "frrouting-ebr0" "10.21.44.2/24" "frrouting"
 
-provision-iface  "frrouting-eth0" "c1a4:4ad:42::1/64" "frrouting"
-provision-iface  "frrouting-eth1" "c1a4:4ad:43::1/64" "frrouting"
+provision-iface "frrouting-eth0" "c1a4:4ad:42::1/64" "frrouting"
+provision-iface "frrouting-eth1" "c1a4:4ad:43::1/64" "frrouting"
 
 provision-iface "bird-eth0" "10.21.42.2/24" "bird"
 provision-iface "bird-eth0" "c1a4:4ad:42::2/64" "bird"
