@@ -11,6 +11,7 @@ from pathlib import Path
 from abc import ABC
 from typing import Sequence, Callable
 
+import sys
 import time
 from time import sleep
 
@@ -26,6 +27,8 @@ __DRY_RUN = False
 
 
 class CLIProcess(object):
+    NAME = ''
+
     def get_cmd_line(self):
         raise NotImplementedError()
 
@@ -56,6 +59,7 @@ class Daemon(CLIProcess):
 
 
 class Zebra(Daemon):
+    NAME = 'zebra'
     DAEMONS = {
         'path': "{bin_path}",
         'args': "-f {config} -i/tmp/zebra.pid -z /tmp/zebra.api"
@@ -63,16 +67,18 @@ class Zebra(Daemon):
 
 
 class FRRBGP(Daemon):
+    NAME = 'frr'
     DAEMONS = {
         'path': "{bin_path}",
-        'args': "-z /tmp/zebra.api -i /tmp/bgpd.pid {extra_args}"
+        'args': "-f {config} -z /tmp/zebra.api -i /tmp/bgpd.pid {extra_args}"
     }
 
 
 class BirdBGP(Daemon):
+    NAME = 'bird'
     DAEMONS = {
         'path': "{bin_path}",
-        'args': "-c {config} {extra_args}"
+        'args': "-f -c {config} {extra_args}"
     }
 
 
@@ -94,17 +100,33 @@ class RunningDaemon(object):
     def __init__(self):
         self._daemons = list()
 
-    def add_daemon(self, daemon):
-        self._daemons.append(daemon)
+    def add_daemon(self, daemon, name):
+        self._daemons.append((daemon, name))
 
     def kill_all(self):
+        def find_tshark():
+            for i in range(0, len(self._daemons)):
+                if self._daemons[i][1] == TSHARK.NAME:
+                    return i
+            return -1
+
+        def dkill(d):
+            d.send_signal(signal.SIGINT)
+            d.wait()
+
+        # First kill tshark before any routing daemon
+        idx = find_tshark()
+        if idx >= 0:
+            daemon, _ = self._daemons.pop(idx)
+            dkill(daemon)
+
         while len(self._daemons) > 0:
-            daemon = self._daemons.pop()
-            daemon.send_signal(signal.SIGINT)
-            daemon.poll()
+            daemon, _ = self._daemons.pop()
+            dkill(daemon)
 
 
 class TSHARK(CLIProcess):
+    NAME = 'tshark'
     exe = {
         'path': 'tshark',
         'args': "-F pcapng {interfaces} -w "
@@ -114,7 +136,7 @@ class TSHARK(CLIProcess):
     def __init__(self, outdir, interfaces, prefix_file, exp_nb):
         self._outdir = outdir
         self._interfaces = '-i {fmt}'.format(fmt=' -i '.join(interfaces))
-        self._prefix_file = prefix_file
+        self._prefix_file = prefix_file.replace(' ', '_')
         self._exp_nb = exp_nb
 
     def get_cmd_line(self):
@@ -139,19 +161,21 @@ def launch(interfaces, outdir, prefix_file, exp_nb, daemons_list, daemons: 'Runn
               f"with daemons {daemons_list}")
         return
 
-    for daemon in daemons_list + [tshark]:
+    for daemon in [tshark] + daemons_list:
         proc = subprocess.Popen(
             shlex.split(daemon.get_cmd_line()),
-            stderr=DEVNULL,
+            stderr=sys.stderr,
             stdout=DEVNULL,
             stdin=None,
         )
 
-        sleep(0.75)
+        # tshark is waaaay too slow to start
+        sleep(1 if daemon.NAME != TSHARK.NAME else 10)
+
         if proc.poll() is not None:
             raise ChildProcessError("{daemon} couldn't be started!".format(daemon=daemon))
 
-        daemons.add_daemon(proc)
+        daemons.add_daemon(proc, daemon.NAME)
 
 
 class Scenario(object):
