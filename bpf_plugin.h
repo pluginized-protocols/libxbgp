@@ -50,16 +50,7 @@ typedef struct plugin {
 
 } plugin_t;
 
-
-void fallback_request(plugin_t *p);
-
-int must_fallback(plugin_t *p);
-
-void post_plugin_exec(plugin_t *p);
-
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permission);
-
-int init_plugin_transaction(plugin_t *p);
 
 void destroy_plugin(plugin_t *p);
 
@@ -67,21 +58,8 @@ int plugin_add_vm(plugin_t *p, vm_container_t *vm);
 
 int plugin_delete_vm(vm_container_t *vm);
 
-int commit_transaction(plugin_t *p);
-
 void destroy_plugin(plugin_t *p);
 
-int add_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int add_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int add_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-
-int transaction_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int transaction_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int transaction_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
+int run_plugin(plugin_t *p);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H

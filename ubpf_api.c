@@ -28,6 +28,7 @@
 #include "log.h"
 #include "plugin_socket.h"
 #include "static_injection.h"
+#include "evt_plugins.h"
 
 #include <netinet/in.h>
 #include <float.h>
@@ -1096,4 +1097,12 @@ int inject_pluglet(context_t *ctx, struct inject_pluglet_args *arg) {
     //add_extension_code(arg)
 
     return -1;
+}
+
+int __reschedule_plugin(context_t *ctx, time_t *time) {
+    if (!is_job_plugin(ctx->p)) {
+        return -1;
+    }
+
+    return reschedule_job(ctx->p, time);
 }

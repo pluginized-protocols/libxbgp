@@ -3,107 +3,110 @@
 //
 
 #include "queue.h"
-#include "list.h"
 
 
-queue_t *init_queue(size_t len) {
-    queue_t *new_q;
-    list_t *new_stack;
-    pthread_mutex_t mutex;
-    sem_t sem_add, sem_rm;
+queue_t *init_queue(queue_t *queue) {
+    memset(queue, 0, sizeof(*queue));
 
-    if (pthread_mutex_init(&mutex, NULL) != 0) {
-        perror("Cannot create mutex");
-        return NULL;
-    }
-    if (sem_init(&sem_add, 0, MAX_SIZE_QUEUE) == -1) {
+    *queue = (queue_t) {
+            .q_mutex = PTHREAD_MUTEX_INITIALIZER,
+            .q_size = 0,
+            .elems = NULL,
+    };
+
+    if (sem_init(&queue->q_add, 0, MAX_SIZE_QUEUE) == -1) {
         perror("Cannot create semaphore");
-        pthread_mutex_destroy(&mutex);
         return NULL;
     }
-    if (sem_init(&sem_rm, 0, 0) == -1) {
+    if (sem_init(&queue->q_rm, 0, 0) == -1) {
         perror("Cannot create semaphore (2nd)");
-        pthread_mutex_destroy(&mutex);
-        sem_destroy(&sem_add);
-        return NULL;
-    }
-    new_q = malloc(sizeof(queue_t));
-
-
-    if (!new_q) {
-        pthread_mutex_destroy(&mutex);
-        sem_destroy(&sem_add);
-        sem_destroy(&sem_rm);
-        perror("Cannot create queue");
+        sem_destroy(&queue->q_add);
         return NULL;
     }
 
-    new_stack = ebpf_init_list(len);
-
-    if (!new_stack) {
-        pthread_mutex_destroy(&mutex);
-        sem_destroy(&sem_add);
-        sem_destroy(&sem_rm);
-        free(new_q);
-        return NULL;
-    }
-
-    memcpy(&(new_q->q_mutex), &mutex, sizeof(pthread_mutex_t));
-    memcpy(&(new_q->q_add), &sem_add, sizeof(sem_t));
-    memcpy(&(new_q->q_rm), &sem_rm, sizeof(sem_t));
-    new_q->list = new_stack;
-
-    return new_q;
+    return queue;
 }
 
 int destroy_queue(queue_t *q) {
-
-    destroy_list(q->list);
+    struct qdata *elem, *tmp;
+    DL_FOREACH_SAFE(q->elems, elem, tmp) {
+        DL_DELETE(q->elems, elem);
+        free(elem);
+    }
 
     pthread_mutex_destroy(&q->q_mutex);
     sem_destroy(&q->q_rm);
     sem_destroy(&q->q_add);
-    free(q);
 
     return 0;
-
 }
 
 static inline int die(const char *str) {
     perror(str);
-    return 0;
+    return -1;
 }
 
 
-int enqueue(queue_t *q, void *elem) {
-
-    int err;
+int enqueue_inorder(queue_t *q, void *elem, size_t len, int (*comp)(void *, void *)) {
+    struct qdata *ndata;
 
     if (sem_wait(&q->q_add) != 0) return die("Sem Wait");
     if (pthread_mutex_lock(&q->q_mutex) != 0) return die("Mutex Lock");
     {
-        err = enqueue_s(q->list, elem);
+        ndata = malloc(sizeof(*ndata) + len);
+        if (!ndata) return -1;
+
+        if (comp == NULL) {
+            DL_APPEND(q->elems, ndata);
+        } else {
+            DL_INSERT_INORDER(q->elems, ndata, comp);
+        }
+
+
+        ndata->data_len = len;
+        memcpy(ndata->data, elem, len);
+
+        q->q_size += 1;
     }
     if (pthread_mutex_unlock(&q->q_mutex) != 0) return die("Mutex Unlock");
     if (sem_post(&q->q_rm) != 0) return die("Sem post");
-    return err == 0 ? 1 : 0;
+    return 0;
 }
 
-int dequeue(queue_t *q, void *elem) {
+int enqueue(queue_t *q, void *elem, size_t len) {
+    return enqueue_inorder(q, elem, len, NULL);
+}
 
-    int err;
+int dequeue(queue_t *q, void *elem, size_t len) {
+    struct qdata *data;
 
     if (sem_wait(&q->q_rm) != 0) return die("Sem Wait");
     if (pthread_mutex_lock(&q->q_mutex) != 0) return die("Mutex Lock");
     {
-        err = dequeue_s(q->list, elem);
+        data = q->elems;
+        DL_DELETE(q->elems, q->elems);
+        memcpy(elem, data->data, len);
+        free(data);
+        q->q_size -= 1;
     }
     if (pthread_mutex_unlock(&q->q_mutex) != 0) return die("Mutex unlock");
     if (sem_post(&q->q_add) != 0) return die("Sem post");
-    return err == 0 ? 1 : 0;
+    return 0;
+}
+
+void *peak(queue_t *queue) {
+    void *data = NULL;
+    if (pthread_mutex_lock(&queue->q_mutex) != 0) return NULL;
+    {
+        if (q_size(queue) != 0) {
+            data = queue->elems->data;
+        }
+    }
+    if (pthread_mutex_unlock(&queue->q_mutex) != 0) return NULL;
+    return data;
 }
 
 
 int q_size(queue_t *q) {
-    return size(q->list);
+    return q != NULL ? q->q_size : -1;
 }

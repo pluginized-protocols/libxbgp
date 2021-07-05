@@ -12,24 +12,33 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "list.h"
+#include "utlist.h"
 
 #define MAX_SIZE_QUEUE 2048
+
+struct qdata {
+    struct qdata *prev;
+    struct qdata *next;
+
+    size_t data_len;
+    void *data[0];
+};
 
 typedef struct queue {
     pthread_mutex_t q_mutex;
     sem_t q_add;
     sem_t q_rm;
 
-    list_t *list;
+    int q_size;
+    struct qdata *elems;
 } queue_t;
 
 /**
- * Allocate new space for the concurrent queue
- * @return a pointer associated to the new allocated structure
- *         NULL if out of memory
+ * Initialize the queue pointed by the "queue" pointer
+ * @return the pointer passed in argument. NULL if
+ *         the initialization fails
  */
-queue_t *init_queue(size_t len);
+queue_t *init_queue(queue_t *queue);
 
 /**
  * Delete resources associated to the queue.
@@ -43,10 +52,12 @@ int destroy_queue(queue_t *);
  * @param q pointer related to the queue
  * @param elem pointer related to the element to copy inside the queue
  * @param len_data total length of the data to enqueue
- * @return 1 if enqueue succeeded
- *         0 otherwise
+ * @return  0 if enqueue succeeded
+ *         -1 otherwise
  */
-int enqueue(queue_t *q, void *elem);
+int enqueue(queue_t *q, void *elem, size_t len);
+
+int enqueue_inorder(queue_t *q, void *elem, size_t len, int (*comp)(void *, void *));
 
 /**
  * Dequeue a eleement and copy it to the space pointed by
@@ -57,7 +68,9 @@ int enqueue(queue_t *q, void *elem);
  * @return 1 if operation succeeds
  *         0 otherwise.
  */
-int dequeue(queue_t *q, void *elem);
+int dequeue(queue_t *q, void *elem, size_t len);
+
+void *peak(queue_t *queue);
 
 int q_size(queue_t *q);
 

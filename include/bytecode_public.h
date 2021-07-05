@@ -140,4 +140,6 @@ extern int sk_read(int sfd, void *buf, size_t len);
 
 extern int sk_close(int sfd);
 
+extern int reschedule_plugin(time_t *time);
+
 #endif //FRR_UBPF_PUBLIC_BPF_H

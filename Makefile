@@ -48,7 +48,6 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ubpf_vm/vm/ubpf_vm.c \
       ./bpf_plugin.c \
       ./insertion_point.c \
-      ./list.c \
       ./map.c \
       ./log.c \
       ./plugin_extra_configuration.c \
@@ -64,6 +63,7 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./ubpf_misc.c \
       ./url_parser.c \
       ./plugin_socket.c \
+      ./event.c \
       ./evt_plugins.c
 
 

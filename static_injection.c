@@ -136,7 +136,7 @@ static int iter_anchors(json_object *insertion_point, const char *vm_name, struc
     return -1;
 }
 
-static int is_job_plugin(const char *plugin_str, json_object *manifest, struct job_plugin_info *jinfo) {
+static int is_job_plugin_json(const char *plugin_str, json_object *manifest, struct job_plugin_info *jinfo) {
     json_object *cron_plugins;
     json_object *job_plugin;
     json_object *schedule;
@@ -278,6 +278,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
 
     struct job_plugin_info _jinfo;
     struct job_plugin_info *jinfo = NULL;
+    plugin_t *plugin;
 
     it_plugins_end = json_object_iter_end(plugins);
     for (it_plugins = json_object_iter_begin(plugins);
@@ -326,7 +327,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
                 memset(&jinfo, 0, sizeof(_jinfo));
                 jinfo = &_jinfo;
 
-                if (is_job_plugin(plugin_str, plugins, jinfo) == -1) {
+                if (is_job_plugin_json(plugin_str, plugins, jinfo) == -1) {
                     return -1;
                 } else {
                     fill_info_job_plugins(&info);
@@ -334,11 +335,6 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
             }
 
             insertion_point_id = str_to_id_insertion_point(points_info, info.name_insertion, info.name_insertion_len);
-
-            if (jinfo != NULL) {
-                add_plugin_job(plugin_str, strnlen(plugin_str, 256),
-                               insertion_point_id, jinfo->schedule);
-            }
 
             if (json_object_object_get_ex(curr_code_obj, "permissions", &permissions_pluglet)) {
                 permissions = parse_permissions_pluglet(permissions_pluglet);
@@ -362,6 +358,18 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
                                    info.name_insertion_len, info.anchor, info.seq, jit_val, obj_path, 0, vm_str,
                                    strnlen(vm_str, NAME_MAX), api_proto, permissions, add_memcheck_insts) != 0) {
                 return -1;
+            }
+
+            if (jinfo != NULL) {
+                plugin = plugin_by_name(plugin_str);
+                if (!plugin) {
+                    fprintf(stderr, "Oh no! Plugin not found !");
+                    return -1;
+                }
+
+                if (add_plugin_job(plugin, insertion_point_id, jinfo->schedule) == -1) {
+                    fprintf(stderr, "Failed to add job !");
+                }
             }
         }
     }

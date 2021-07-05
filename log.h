@@ -66,6 +66,7 @@ struct log_config {
     int terminal_flag;
 
     struct log_config *prev, *next;
+    int dynamic_alloc;
 };
 
 typedef struct buffer {

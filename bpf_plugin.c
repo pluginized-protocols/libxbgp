@@ -102,6 +102,20 @@ int plugin_delete_vm(vm_container_t *vm) {
     return 0;
 }
 
+int run_plugin(plugin_t *p) {
+    vm_container_t *vm, *tmp;
+    uint64_t ret_val;
+
+    if (!p) return -1;
+
+    HASH_ITER(hh, p->vms, vm, tmp) {
+        if (run_injected_code(vm, &ret_val) == -1) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
 //static int init_ebpf_code(plugin_t *p, vm_container_t **new_vm, uint32_t seq,
 //                          const uint8_t *bytecode, size_t len, int type, uint8_t jit) {
 //

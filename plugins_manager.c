@@ -13,6 +13,7 @@
 #include "bpf_plugin.h"
 #include "log.h"
 #include "ubpf_context.h"
+#include "evt_plugins.h"
 
 #include <stdio.h>
 #include <elf.h>
@@ -79,6 +80,11 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir,
     // start logging manager
     log_init(dbg, syslog_name, logs);
 
+    // start event_loop
+    if (start_events_loop() != 0) {
+        return -1;
+    }
+
     // start plugin message listener
     // todo
     // :fmoh:
@@ -113,15 +119,18 @@ static void flush_manager(manager_t *manager) {
 }
 
 void ubpf_terminate() {
-
     is_init = 0;
+
+    // cancel events loop
+    cancel_event_loop();
 
     // CLOSE logger
     logs_close();
+
+
     // off listener thread TODO
 
     flush_manager(&master);
-
 }
 
 int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t extra_mem, uint64_t shared_mem,
@@ -373,6 +382,9 @@ inline insertion_point_t *insertion_point(int id) {
     return get_insertion_point(&master, id);
 }
 
+inline plugin_t *plugin_by_name(const char *name) {
+    return get_plugin_by_name(&master, name);
+}
 
 static inline unsigned long file_size(FILE *file) {
     long size;
