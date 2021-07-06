@@ -36,6 +36,21 @@ struct perms valid_perms[] = {
         valid_perm_null
 };
 
+#define reserved_insertion_point_null {.name = NULL, .id = 0}
+
+enum RESERVED_ID_INSERTION {
+    JOB_PLUGINS_INSERTION = 0,
+};
+
+static struct reserved_insertion_point {
+    const char *name;
+    size_t name_len;
+    int id;
+} reserved_insertion_point[] = {
+        [JOB_PLUGINS_INSERTION] = {.name = "job_plugins", .name_len = 12, .id = INSERTION_POINT_ID_RESERVED},
+        reserved_insertion_point_null // null marker
+};
+
 int str_anchor_to_enum(const char *anchor_str, anchor_t *anchor) {
     anchor_t anchor_;
     anchor_ = strncmp("replace", anchor_str, 7) == 0 ? BPF_REPLACE :
@@ -54,14 +69,22 @@ int str_to_id_insertion_point(insertion_point_info_t *info, const char *str, siz
             return info[i].insertion_point_id;
         }
     }
+
+    // check for reserved insertion points
+    for (i = 0; reserved_insertion_point->name != NULL && reserved_insertion_point->id != 0; i++) {
+        if (strncmp(str, reserved_insertion_point[i].name, len) == 0) {
+            return reserved_insertion_point[i].id;
+        }
+    }
     return -1;
 }
 
 static inline void fill_info_job_plugins(struct insertion_json *info) {
     static int job_seq = 0;
 
-    info->name_insertion = "job_plugins";
-    info->name_insertion_len = 11;
+    info->name_insertion = reserved_insertion_point[JOB_PLUGINS_INSERTION].name;
+    info->name_insertion_len = reserved_insertion_point[JOB_PLUGINS_INSERTION].name_len;
+    info->id_insertion = reserved_insertion_point[JOB_PLUGINS_INSERTION].id;
     info->anchor = BPF_REPLACE;
     info->seq = job_seq;
 
@@ -330,10 +353,13 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point, js
                     return -1;
                 } else {
                     fill_info_job_plugins(&info);
+                    insertion_point_id = info.id_insertion;
                 }
+            } else {
+                insertion_point_id = str_to_id_insertion_point(points_info, info.name_insertion,
+                                                               info.name_insertion_len);
             }
 
-            insertion_point_id = str_to_id_insertion_point(points_info, info.name_insertion, info.name_insertion_len);
 
             if (json_object_object_get_ex(curr_code_obj, "permissions", &permissions_pluglet)) {
                 permissions = parse_permissions_pluglet(permissions_pluglet);

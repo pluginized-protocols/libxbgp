@@ -67,7 +67,6 @@ static proto_ext_fun_t funcs[] = {
 };
 
 static insertion_point_info_t plugins[] = {
-        {.insertion_point_str = "job_plugins", .insertion_point_id = 1},
         insertion_point_info_null
 };
 

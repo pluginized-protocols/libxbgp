@@ -11,6 +11,8 @@
 #include "uthash.h"
 
 #define MAX_INSERTION_POINTS 128
+#define INSERTION_POINT_ID_RESERVED 2000000000
+#define IS_INSERTION_POINT_ID_RESERVED(x) ((x) >= INSERTION_POINT_ID_RESERVED)
 
 typedef struct insertion_point insertion_point_t;
 typedef struct vm_container vm_container_t;
