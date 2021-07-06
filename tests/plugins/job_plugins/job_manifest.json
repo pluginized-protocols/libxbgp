@@ -1,0 +1,19 @@
+{
+  "jit_all": false,
+  "plugins": {
+    "plugin_1": {
+      "extra_mem": 0,
+      "shared_mem": 0,
+      "obj_code_list": {
+        "code_1": {
+          "obj": "job3_test.o"
+        }
+      }
+    }
+  },
+  "jobs_plugins": {
+    "plugin_1": {
+      "schedule": 7
+    }
+  }
+}

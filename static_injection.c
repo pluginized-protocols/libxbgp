@@ -136,18 +136,15 @@ static int iter_anchors(json_object *insertion_point, const char *vm_name, struc
     return -1;
 }
 
-static int is_job_plugin_json(const char *plugin_str, json_object *manifest, struct job_plugin_info *jinfo) {
-    json_object *cron_plugins;
+static int is_job_plugin_json(const char *plugin_str, json_object *jobs_plugins, struct job_plugin_info *jinfo) {
     json_object *job_plugin;
     json_object *schedule;
 
     uint64_t scheduling_time;
 
-    if (!json_object_object_get_ex(manifest, "jobs_plugins", &cron_plugins)) {
-        return -1; // no cron plugin. Stop now
-    }
+    if (jobs_plugins == NULL) return -1;
 
-    if (!json_object_object_get_ex(cron_plugins, plugin_str, &job_plugin)) return -1;
+    if (!json_object_object_get_ex(jobs_plugins, plugin_str, &job_plugin)) return -1;
     if (!json_object_object_get_ex(job_plugin, "schedule", &schedule)) return -1;
 
     scheduling_time = json_object_get_uint64(schedule);
@@ -163,6 +160,8 @@ get_insertion_point_for_vm(json_object *insertions_point, const char *vm_name, s
 
     json_object *current_insertion_point;
     const char *current_insertion_point_str;
+
+    if (insertions_point == NULL) return -1;
 
     insertion_point_end = json_object_iter_end(insertions_point);
     for (insertion_point = json_object_iter_begin(insertions_point);
@@ -241,7 +240,7 @@ static int parse_permissions_pluglet(json_object *permission) {
 }
 
 
-static int parse_manifest(json_object *plugins, json_object *insertion_point,
+static int parse_manifest(json_object *plugins, json_object *insertion_point, json_object *jobs_plugins,
                           int default_jit, const char *obj_dir, proto_ext_fun_t *api_proto,
                           insertion_point_info_t *points_info) {
     int jit_val;
@@ -327,7 +326,7 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point,
                 memset(&jinfo, 0, sizeof(_jinfo));
                 jinfo = &_jinfo;
 
-                if (is_job_plugin_json(plugin_str, plugins, jinfo) == -1) {
+                if (is_job_plugin_json(plugin_str, jobs_plugins, jinfo) == -1) {
                     return -1;
                 } else {
                     fill_info_job_plugins(&info);
@@ -385,6 +384,7 @@ int load_extension_code(const char *path, const char *extension_code_dir, proto_
 
     json_object *insertion_point;
     json_object *plugins;
+    json_object *jobs_plugins;
     json_object *jit_all;
     json_object *obj_dir;
 
@@ -411,9 +411,14 @@ int load_extension_code(const char *path, const char *extension_code_dir, proto_
     }
 
     if (!json_object_object_get_ex(main_obj, "plugins", &plugins)) return -1;
-    if (!json_object_object_get_ex(main_obj, "insertion_points", &insertion_point)) return -1;
+    if (!json_object_object_get_ex(main_obj, "insertion_points", &insertion_point)) {
+        insertion_point = NULL;
+    }
+    if (!json_object_object_get_ex(main_obj, "jobs_plugins", &jobs_plugins)) {
+        jobs_plugins = NULL;
+    }
 
-    ret_val = parse_manifest(plugins, insertion_point, jit_all_val, obj_dir_str, api_proto, points_info);
+    ret_val = parse_manifest(plugins, insertion_point, jobs_plugins, jit_all_val, obj_dir_str, api_proto, points_info);
     json_object_put(main_obj);
     return ret_val;
 }

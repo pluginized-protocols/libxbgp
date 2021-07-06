@@ -9,6 +9,7 @@
 #include <CUnit/CUnit.h>
 #include <evt_plugins.h>
 #include <event.h>
+#include <static_injection.h>
 #include "tools_ubpf_api.h"
 
 #define compute_time(...) ({   \
@@ -141,6 +142,26 @@ static void test_one_job_plugin_reschedule(void) {
     CU_ASSERT_EQUAL(value, 56);
 }
 
+static void test_one_job_plugin_manifest(void) {
+    char path_manifest[PATH_MAX];
+    long elapsed_time;
+
+    memset(path_manifest, 0, sizeof(path_manifest));
+    snprintf(path_manifest, sizeof(path_manifest), "%s/job_manifest.json", plugin_folder_path);
+
+    CU_ASSERT_EQUAL_FATAL(
+            load_extension_code(path_manifest, plugin_folder_path, funcs, plugins),
+            0);
+
+    elapsed_time = compute_time({
+                                    event_wait(event);
+                                });
+
+    CU_ASSERT_TRUE(elapsed_time >= 7);
+    CU_ASSERT_EQUAL(value, 78);
+
+}
+
 
 CU_ErrorCode job_plugins_tests(const char *plugin_folder) {
     CU_pSuite pSuite = NULL;
@@ -153,7 +174,8 @@ CU_ErrorCode job_plugins_tests(const char *plugin_folder) {
     }
 
     if ((NULL == CU_add_test(pSuite, "Add one job plugin and execute is 5s later", test_one_job_plugin)) ||
-        (NULL == CU_add_test(pSuite, "Add one job 5s, then reschedule 10s later", test_one_job_plugin_reschedule))) {
+        (NULL == CU_add_test(pSuite, "Add one job 5s, then reschedule 10s later", test_one_job_plugin_reschedule)) ||
+        (NULL == CU_add_test(pSuite, "Add job 7s with manifest", test_one_job_plugin_manifest))) {
         CU_cleanup_registry();
         return CU_get_error();
     }
