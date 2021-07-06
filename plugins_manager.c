@@ -106,7 +106,7 @@ static void flush_manager(manager_t *manager) {
 
     HASH_ITER(hh, manager->plugin_table, p, tmp_plugin) {
         HASH_DELETE(hh, manager->plugin_table, p);
-        destroy_plugin(p);
+        plugin_unlock_ref(p);
     }
 
     HASH_ITER(hh, manager->vms_table, vm, tmp_vm) {
@@ -282,6 +282,7 @@ inline int is_plugin_registered_by_name(manager_t *manager, const char *name) {
 int register_plugin(manager_t *manager, plugin_t *plugin) {
     if (is_plugin_registered(manager, plugin)) return -1;
     HASH_ADD_STR(manager->plugin_table, name, plugin);
+    plugin_lock_ref(plugin);
     return 0;
 }
 
@@ -299,7 +300,7 @@ int unregister_plugin(manager_t *manager, const char *name) {
         HASH_DELETE(hh, manager->vms_table, vm);
     }
 
-    destroy_plugin(p);
+    plugin_unlock_ref(p);
     return 0;
 }
 

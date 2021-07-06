@@ -45,6 +45,8 @@ typedef struct plugin {
     /**/
     int permissions; // "ANDROID like" permissions
 
+    int refcount;
+
     size_t str_len;
     char name[0];
 
@@ -52,13 +54,25 @@ typedef struct plugin {
 
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permission);
 
-void destroy_plugin(plugin_t *p);
+/**
+ * Increase the reference counter by one.
+ * It tells that another object keeps its
+ * reference
+ * @param p the plugin pointer
+ */
+void plugin_lock_ref(plugin_t *p);
+
+/**
+ * Decrease the reference counter by one.
+ * If the counter reaches 0 or below, the
+ * plugin is freed
+ * @param p the plugin pointer
+ */
+void plugin_unlock_ref(plugin_t *p);
 
 int plugin_add_vm(plugin_t *p, vm_container_t *vm);
 
 int plugin_delete_vm(vm_container_t *vm);
-
-void destroy_plugin(plugin_t *p);
 
 int run_plugin(plugin_t *p);
 

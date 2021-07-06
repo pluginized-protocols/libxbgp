@@ -22,4 +22,8 @@ int reschedule_job(plugin_t *plugin, const time_t *time);
 
 int add_plugin_job(plugin_t *plugin, int insertion_point_id, int schedule);
 
+int remove_plugin_job(plugin_t *p);
+
+int remove_plugin_job_by_name(const char *name);
+
 #endif //UBPF_TOOLS_EVT_PLUGINS_H

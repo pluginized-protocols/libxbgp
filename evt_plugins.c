@@ -37,12 +37,11 @@ static event_t event__;
 static event_t *event = &event__;
 
 static inline int job_cmp(void *job1_, void *job2_) {
-    plugin_job_t *job1 = job1_;
-    plugin_job_t *job2 = job2_;
-
     time_t diff;
-    diff = job1->next_event - job2->next_event;
+    plugin_job_t *job1 = *(plugin_job_t **) ((struct qdata *) job1_)->data;
+    plugin_job_t *job2 = *(plugin_job_t **) ((struct qdata *) job2_)->data;
 
+    diff = job1->next_event - job2->next_event;
     return diff;
 }
 
@@ -55,6 +54,17 @@ static inline time_t monotime() {
     }
 
     return ts.tv_sec;
+}
+
+static inline plugin_job_t *new_job(void) {
+    return calloc(1, sizeof(plugin_job_t));
+}
+
+static inline void free_job(plugin_job_t *job) {
+    if (job->plugin) {
+        plugin_unlock_ref(job->plugin);
+    }
+    free(job);
 }
 
 void *job_loop(void *arg __attribute__((unused))) {
@@ -172,7 +182,7 @@ void cancel_event_loop() {
     destroy_queue(active_jobs);
     HASH_ITER(hh, jobs, job, tmp) {
         HASH_DEL(jobs, job);
-        free(job);
+        free_job(job);
     }
 
     jobs = NULL;
@@ -193,21 +203,58 @@ int is_job_plugin(plugin_t *p) {
     return job != NULL;
 }
 
+int remove_plugin_job(plugin_t *p) {
+    plugin_job_t *job;
+    if (!p) return -1;
+
+    HASH_FIND_STR(jobs, p->name, job);
+
+    if (!job) return -1;
+    if (job->active) return -1;
+
+    HASH_DELETE(hh, jobs, job);
+    free_job(job);
+    return 0;
+}
+
+int remove_plugin_job_by_name(const char *name) {
+    plugin_t *p;
+    p = plugin_by_name(name);
+
+    if (!p) return -1;
+
+    return remove_plugin_job(p);
+}
+
 int add_plugin_job(plugin_t *plugin, int insertion_point_id, int schedule) {
     plugin_job_t *job;
-    job = malloc(sizeof(*job));
 
+    if (!plugin) return -1;
+
+    HASH_FIND_STR(jobs, plugin->name, job);
+
+    if (job != NULL) {
+        if (job->active) {
+            return -1; // plugin is active and cannot be removed
+        }
+
+        // delete job to reinsert the new later
+        HASH_DEL(jobs, job);
+        free_job(job);
+    }
+
+    job = new_job();
     if (!job) {
         perror("Job malloc");
         return -1;
     }
 
-    memset(job, 0, sizeof(*job));
     job->schedule = schedule;
     job->insertion_point_id = insertion_point_id;
     job->active = 1;
     job->plugin = plugin;
     job->next_event = monotime() + job->schedule;
+    plugin_lock_ref(plugin);
 
     if (enqueue_inorder(active_jobs, &job, sizeof(job), job_cmp) != 0) {
         return -1;

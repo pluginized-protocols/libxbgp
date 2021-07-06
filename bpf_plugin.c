@@ -84,8 +84,19 @@ static inline void destroy_plugin__(plugin_t *p, int free_p) {
     if (free_p) free(p);
 }
 
-void destroy_plugin(plugin_t *p) {
-    destroy_plugin__(p, 1);
+void plugin_lock_ref(plugin_t *p) {
+    if (!p) return;
+    p->refcount += 1;
+}
+
+void plugin_unlock_ref(plugin_t *p) {
+    if (!p) return;
+
+    p->refcount -= 1;
+
+    if (p->refcount <= 0) {
+        destroy_plugin__(p, 1);
+    }
 }
 
 int plugin_add_vm(plugin_t *p, vm_container_t *vm) {

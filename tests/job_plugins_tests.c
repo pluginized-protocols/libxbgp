@@ -26,16 +26,8 @@ static event_t *event = &event__;
 
 static char plugin_folder_path[PATH_MAX - NAME_MAX - 1];
 static int value = 0;
-
-static inline int sleep_sec(int seconds) {
-    const struct timespec tp = {.tv_sec = seconds, .tv_nsec = 0};
-
-    if (nanosleep(&tp, NULL) == -1) {
-        perror("Nanosleep");
-        return -1;
-    }
-    return 0;
-}
+static int value1 = 0;
+static int value2 = 0;
 
 static long get_monotime(void) {
     struct timespec tp = {0};
@@ -54,8 +46,23 @@ static int set_value(context_t *ctx UNUSED, int a) {
     return value;
 }
 
+static int set_value1(context_t *ctx UNUSED, int a) {
+    value1 = a;
+    event_broadcast(event);
+    return value1;
+}
+
+static int set_value2(context_t *ctx UNUSED, int a) {
+    value2 = a;
+    event_broadcast(event);
+    return value2;
+}
+
+
 static proto_ext_fun_t funcs[] = {
         {.name = "set_value", .fn = set_value, .attributes = HELPER_ATTR_NONE},
+        {.name = "set_value1", .fn = set_value1, .attributes = HELPER_ATTR_NONE},
+        {.name = "set_value2", .fn = set_value2, .attributes = HELPER_ATTR_NONE},
         proto_ext_func_null
 };
 
@@ -105,6 +112,7 @@ static void test_one_job_plugin(void) {
     CU_ASSERT_TRUE(elapsed_time >= 5)
     CU_ASSERT_EQUAL(value, 131);
 
+    CU_ASSERT_EQUAL_FATAL(remove_plugin_job_by_name("job1"), 0);
     CU_ASSERT_EQUAL_FATAL(remove_plugin("job1"), 0);
 }
 
@@ -140,6 +148,9 @@ static void test_one_job_plugin_reschedule(void) {
     // 5 for the first execution + 10 for rescheduling in the plugin
     CU_ASSERT_TRUE(elapsed_time >= 15);
     CU_ASSERT_EQUAL(value, 56);
+
+    CU_ASSERT_EQUAL_FATAL(remove_plugin_job_by_name("job1"), 0);
+    CU_ASSERT_EQUAL_FATAL(remove_plugin("job1"), 0);
 }
 
 static void test_one_job_plugin_manifest(void) {
@@ -159,7 +170,55 @@ static void test_one_job_plugin_manifest(void) {
 
     CU_ASSERT_TRUE(elapsed_time >= 7);
     CU_ASSERT_EQUAL(value, 78);
+}
 
+static void test_two_jobs_plugin_manifest(void) {
+    char path_job[PATH_MAX];
+    long elapsed_time;
+    int status;
+
+    memset(path_job, 0, sizeof(path_job));
+    snprintf(path_job, sizeof(path_job), "%s/job41_test.o", plugin_folder_path);
+
+    status = add_extension_code("job1", 4, 0,
+                                0, 1, "job_plugins", 11,
+                                BPF_REPLACE, 0, 0, path_job, 0,
+                                "job2_vm", 7, funcs, 0, 1);
+
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    memset(path_job, 0, sizeof(path_job));
+    snprintf(path_job, sizeof(path_job), "%s/job42_test.o", plugin_folder_path);
+
+    status = add_extension_code("job2", 4, 0,
+                                0, 1, "job_plugins", 11,
+                                BPF_REPLACE, 0, 0, path_job, 0,
+                                "job42_vm", 8, funcs, 0, 1);
+
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    add_plugin_job(plugin_by_name("job1"), 1, 5);
+    add_plugin_job(plugin_by_name("job2"), 1, 2);
+
+    // should have 2 events
+    elapsed_time = compute_time({
+                                    event_wait(event);
+                                });
+
+    CU_ASSERT_TRUE(elapsed_time >= 2);
+    CU_ASSERT_EQUAL(value2, 111);
+
+    elapsed_time = compute_time({
+                                    event_wait(event);
+                                });
+
+    CU_ASSERT_TRUE(elapsed_time >= 3);
+    CU_ASSERT_EQUAL(value1, 678);
+
+    CU_ASSERT_EQUAL_FATAL(remove_plugin_job_by_name("job1"), 0);
+    CU_ASSERT_EQUAL_FATAL(remove_plugin_job_by_name("job2"), 0);
+    CU_ASSERT_EQUAL_FATAL(remove_plugin("job1"), 0);
+    CU_ASSERT_EQUAL_FATAL(remove_plugin("job2"), 0);
 }
 
 
@@ -175,7 +234,8 @@ CU_ErrorCode job_plugins_tests(const char *plugin_folder) {
 
     if ((NULL == CU_add_test(pSuite, "Add one job plugin and execute is 5s later", test_one_job_plugin)) ||
         (NULL == CU_add_test(pSuite, "Add one job 5s, then reschedule 10s later", test_one_job_plugin_reschedule)) ||
-        (NULL == CU_add_test(pSuite, "Add job 7s with manifest", test_one_job_plugin_manifest))) {
+        (NULL == CU_add_test(pSuite, "Add job 7s with manifest", test_one_job_plugin_manifest)) ||
+        (NULL == CU_add_test(pSuite, "Add 2 jobs: 2s and 5s", test_two_jobs_plugin_manifest))) {
         CU_cleanup_registry();
         return CU_get_error();
     }

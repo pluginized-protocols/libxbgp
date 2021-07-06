@@ -53,20 +53,19 @@ int enqueue_inorder(queue_t *q, void *elem, size_t len, int (*comp)(void *, void
     if (sem_wait(&q->q_add) != 0) return die("Sem Wait");
     if (pthread_mutex_lock(&q->q_mutex) != 0) return die("Mutex Lock");
     {
-        ndata = malloc(sizeof(*ndata) + len);
+        ndata = calloc(1, sizeof(*ndata) + len);
         if (!ndata) return -1;
+
+        ndata->data_len = len;
+        memcpy(ndata->data, elem, len);
+
+        q->q_size += 1;
 
         if (comp == NULL) {
             DL_APPEND(q->elems, ndata);
         } else {
             DL_INSERT_INORDER(q->elems, ndata, comp);
         }
-
-
-        ndata->data_len = len;
-        memcpy(ndata->data, elem, len);
-
-        q->q_size += 1;
     }
     if (pthread_mutex_unlock(&q->q_mutex) != 0) return die("Mutex Unlock");
     if (sem_post(&q->q_rm) != 0) return die("Sem post");
