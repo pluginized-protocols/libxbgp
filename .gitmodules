@@ -2,3 +2,6 @@
 	path = ubpf_vm
 	url = https://bitbucket.org/twirtgen/ubpf.git
 	branch = context-mtsafe
+[submodule "memalloc"]
+	path = memalloc
+	url = https://github.com/p-quic/michelfralloc.git
