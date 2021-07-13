@@ -20,8 +20,8 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
     uint8_t *super_block;
     plugin_t *p;
 
-    heap_size = (heap_size + 7u) & (-8u);
-    sheap_size = (sheap_size + 7u) & (-8u);
+    heap_size = MEM_ALIGN(heap_size);
+    sheap_size = MEM_ALIGN(sheap_size);
 
     total_allowed_mem = sheap_size + heap_size + MAX_SIZE_ARGS_PLUGIN;
 
@@ -38,7 +38,7 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
     p->str_len = name_len;
     p->permissions = permissions;
 
-    p->mem_len = total_allowed_mem;
+    p->mem.len = total_allowed_mem;
     super_block = malloc(total_allowed_mem);
     if (!super_block) {
         perror("Can't alloc mem for plugin");
@@ -46,21 +46,30 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
         return NULL;
     }
 
-    p->mem.block = super_block;
+    p->mem.master_block = super_block;
 
     if (heap_size > 0) {
-        p->mem.heap.has_mp = 1;
-        p->mem.heap.block = super_block + MAX_SIZE_ARGS_PLUGIN;
-        init_bump(&p->mem.heap.mp, heap_size, p->mem.heap.block);
-    } else {
+        p->mem.has_heap = 1;
+
+        // TODO give to the user the ability to change memory type
+        if (init_memory_manager(&p->mem.mgr_heap, MICHELFRA_MEM) != 0) {
+            return NULL;
+        }
+
+        mem_init(&p->mem.mgr_heap, super_block + MAX_SIZE_ARGS_PLUGIN, heap_size);
+
+    } /*else {
         init_bump(&p->mem.heap.mp, 0, NULL);
-    }
+    }*/
+
     if (sheap_size > 0) {
-        p->mem.shared_heap.has_smp = 1;
-        p->mem.shared_heap.block = super_block + MAX_SIZE_ARGS_PLUGIN + heap_size;
-        init_heap(&p->mem.shared_heap.smp, p->mem.shared_heap.block, sheap_size);
-    } else {
-        init_heap(&p->mem.shared_heap.smp, NULL, 0);
+        p->mem.has_shared_heap = 1;
+
+        if (init_memory_manager(&p->mem.mgr_shared_heap, MICHELFRA_MEM) != 0) {
+            return NULL;
+        }
+
+        mem_init(&p->mem.mgr_shared_heap, super_block + MAX_SIZE_ARGS_PLUGIN + heap_size, sheap_size);
     }
 
     p->vms = NULL;
@@ -71,8 +80,11 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
 static inline void destroy_plugin__(plugin_t *p, int free_p) {
     vm_container_t *curr_vm, *tmp;
     if (!p) return;
-    destroy_memory_management(&p->mem.shared_heap.smp);
-    free(p->mem.block);
+
+    destroy_memory_manager(&p->mem.mgr_heap);
+    destroy_memory_manager(&p->mem.mgr_shared_heap);
+    destroy_shared_map(&p->mem.shared_blocks);
+    free(p->mem.master_block);
 
     HASH_ITER(hh_plugin, p->vms, curr_vm, tmp) {
         HASH_DELETE(hh_plugin, p->vms, curr_vm);

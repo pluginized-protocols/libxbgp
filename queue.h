@@ -29,7 +29,7 @@ typedef struct queue {
     sem_t q_add;
     sem_t q_rm;
 
-    int q_size;
+    _Atomic int q_size;
     struct qdata *elems;
 } queue_t;
 

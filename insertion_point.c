@@ -227,7 +227,7 @@ int run_replace_next_replace_function(context_t *ctx) {
     }
 
     // flush all memory taken by the previous call
-    reset_bump(&ctx->p->mem.heap.mp);
+    mem_reset(&ctx->p->mem.mgr_heap);
 
     /* set arguments + return value for next replace VM*/
     next_vm->ctx->return_val = ctx->return_val;

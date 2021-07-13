@@ -251,37 +251,43 @@ int __super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 }
 
 void *__ctx_malloc(context_t *vm_ctx, size_t size) {
-    return bump_alloc(&vm_ctx->p->mem.heap.mp, size);
+    return mem_alloc(&vm_ctx->p->mem.mgr_heap, size);
 }
 
 void *__ctx_calloc(context_t *vm_ctx, size_t nmemb, size_t size) {
-    return bump_calloc(&vm_ctx->p->mem.heap.mp, nmemb, size);
+    void *ptr;
+    ptr = __ctx_malloc(vm_ctx, nmemb * size);
+
+    if (!ptr) return NULL;
+    memset(ptr, 0, nmemb * size);
+    return ptr;
 }
 
-void *__ctx_realloc(UNUSED context_t *vm_ctx, UNUSED void *ptr, UNUSED size_t size) {
-    return NULL; // we don't do that here
+void *__ctx_realloc(context_t *vm_ctx, void *ptr, size_t size) {
+    return mem_realloc(&vm_ctx->p->mem.mgr_heap, ptr, size);
 }
 
 void __ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
-    // bump alloc is a stack like alloc --> everything is removed after
-    // the plugin call
-    // my_free(&vm_ctx->p->heap.mp, ptr);
+    mem_free(&vm_ctx->p->mem.mgr_heap, ptr);
 }
 
 void *__ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
     void *addr;
-    addr = ubpf_shmnew(&vm_ctx->p->mem.shared_heap.smp, key, size);
+    addr = shared_new(&vm_ctx->p->mem.mgr_shared_heap,
+                      &vm_ctx->p->mem.shared_blocks, key, size);
     if (addr)
         memset(addr, 0, size);
     return addr;
 }
 
 void *__ctx_shmget(context_t *vm_ctx, key_t key) {
-    return ubpf_shmget(&vm_ctx->p->mem.shared_heap.smp, key);
+    return shared_get(&vm_ctx->p->mem.mgr_shared_heap,
+                      &vm_ctx->p->mem.shared_blocks, key);
 }
 
 void __ctx_shmrm(context_t *vm_ctx, key_t key) {
-    ubpf_shmrm(&vm_ctx->p->mem.shared_heap.smp, key);
+    shared_rm(&vm_ctx->p->mem.mgr_shared_heap,
+              &vm_ctx->p->mem.shared_blocks, key);
 }
 
 int __get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
@@ -790,7 +796,7 @@ void *__get_arg(context_t *vm_ctx, int type) {
 
     for (i = 0; i < check_args->nargs; i++) {
         if (check_args->args[i].type == type) {
-            ret_arg = bump_alloc(&vm_ctx->p->mem.heap.mp, check_args->args[i].len);
+            ret_arg = mem_alloc(&vm_ctx->p->mem.mgr_heap, check_args->args[i].len);
             if (!ret_arg) return NULL;
             memcpy(ret_arg, check_args->args[i].arg, check_args->args[i].len);
             return ret_arg;

@@ -27,12 +27,13 @@ CFLAGS += -I/usr/include/json-c
 
 LDFLAGS += -L/usr/local/lib
 LDFLAGS += -L.
+LDFLAGS += -Lmemalloc
 LDFLAGS += -Wl,--gc-sections
 
 LDLIBS += -Wl,-Bstatic -lcunit -lubpf -Wl,-Bdynamic
 LDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
 LDLIBS += -lncurses -ltinfo
-LDLIBS += -lm
+LDLIBS += -lm -lmichelfralloc -lptmalloc3
 
 GOTOLDLIBS  = -Wl,-Bstatic -lcunit -Wl,-Bdynamic
 GOTOLDLIBS += -ljson-c -pthread -lpthread -lrt -lffi
@@ -42,6 +43,9 @@ GOTOLDLIBS += -lncurses -ltinfo -lm
 # ./ebpf_injecter.c \
 # ./main_ipfix_collector.c \
 # ./main_ipfix_exporter.c \
+
+LIB_DEPS = memalloc/libmichelfralloc.a \
+           memalloc/libptmalloc3.a
 
 SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ubpf_vm/vm/ubpf_loader.c \
@@ -127,7 +131,7 @@ GOTO_CHECKS += --nan-check
 GOTO_CHECKS += --pointer-primitive-check
 # GOTO_CHECKS += --uninitialized-check   # cbmc failed to generate annotation
 
-all: libubpf.a
+all: libubpf.a $(LIB_DEPS)
 
 check: lib_tests
 
@@ -138,6 +142,10 @@ $(GOTO_CBMC): $(GOTOOBJ) $(GOTOOBJ_TESTS)
 $(GOTO_CBMC_INSTRUMENT): $(GOTO_CBMC)
 	@echo GOTO-INSTRUMENT $<
 	@$(GOTOINSTRUMENT) $< $@ $(GOTO_CHECKS)
+
+$(LIB_DEPS):
+	cd memalloc && $(MAKE)
+
 
 libxbgp_goto.a: $(GOTOOBJ)
 	@echo AR-GOTO $@
