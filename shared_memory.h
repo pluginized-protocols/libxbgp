@@ -33,8 +33,6 @@ void init_bump(bump_t *pool, uint32_t mem_size, uint8_t *mem_area);
 
 void *bump_alloc(bump_t *pool, size_t);
 
-void *bump_calloc(bump_t *pool, size_t nmemb, size_t size);
-
 void reset_bump(bump_t *pool);
 
 

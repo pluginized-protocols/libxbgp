@@ -101,7 +101,9 @@ static const struct memory_manager mem_mgrs[] = {
                 .realloc = michelfra_realloc,
                 .init = michelfra_init,
                 .reset = michelfra_reset,
-                .usable = 0,
+                .usable = 0, // make sure this field is
+                // set to zero (will be set to 1 if
+                // michelfra is init)
         },
         [BUMP_MEM] = {
                 .malloc = bump_malloc,
@@ -109,7 +111,7 @@ static const struct memory_manager mem_mgrs[] = {
                 .realloc = bump_realloc,
                 .reset = bump_reset,
                 .init = bump_init,
-                .usable = 0,
+                .usable = 0, // same as above
         }
 };
 
@@ -125,6 +127,9 @@ int init_memory_manager(struct memory_manager *mgr, mem_type_t mem_type) {
     switch (mem_type) {
         case MICHELFRA_MEM:
             memset(&mgr->memory_ctx.michelfra, 0, sizeof(mgr->memory_ctx.michelfra));
+            break;
+        case BUMP_MEM:
+            memset(&mgr->memory_ctx.bump, 0, sizeof(mgr->memory_ctx.bump));
             break;
         default:
             return -1;
