@@ -14,36 +14,78 @@
 #include "tools_ubpf_api.h"
 
 
-#define NUMARGS_SPRINTF__(...)  (sizeof((uintptr_t[]){__VA_ARGS__})/sizeof(uintptr_t))
+#define UTILITY_PP_CONCAT_(v1, v2) v1 ## v2
+#define UTILITY_PP_CONCAT(v1, v2) UTILITY_PP_CONCAT_(v1, v2)
+
+#define UTILITY_PP_CONCAT5_(_0, _1, _2, _3, _4) _0 ## _1 ## _2 ## _3 ## _4
+
+#define UTILITY_PP_IDENTITY_(x) x
+#define UTILITY_PP_IDENTITY(x) UTILITY_PP_IDENTITY_(x)
+
+#define UTILITY_PP_VA_ARGS_(...) __VA_ARGS__
+#define UTILITY_PP_VA_ARGS(...) UTILITY_PP_VA_ARGS_(__VA_ARGS__)
+
+#define UTILITY_PP_IDENTITY_VA_ARGS_(x, ...) x, __VA_ARGS__
+#define UTILITY_PP_IDENTITY_VA_ARGS(x, ...) UTILITY_PP_IDENTITY_VA_ARGS_(x, __VA_ARGS__)
+
+#define UTILITY_PP_IIF_0(x, ...) __VA_ARGS__
+#define UTILITY_PP_IIF_1(x, ...) x
+#define UTILITY_PP_IIF(c) UTILITY_PP_CONCAT_(UTILITY_PP_IIF_, c)
+
+#define UTILITY_PP_HAS_COMMA(...) UTILITY_PP_IDENTITY(UTILITY_PP_VA_ARGS_TAIL(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0))
+#define UTILITY_PP_IS_EMPTY_TRIGGER_PARENTHESIS_(...) ,
+
+#define UTILITY_PP_IS_EMPTY(...) UTILITY_PP_IS_EMPTY_( \
+    /* test if there is just one argument, eventually an empty one */ \
+    UTILITY_PP_HAS_COMMA(__VA_ARGS__),                                \
+    /* test if _TRIGGER_PARENTHESIS_ together with the argument adds a comma */ \
+    UTILITY_PP_HAS_COMMA(UTILITY_PP_IS_EMPTY_TRIGGER_PARENTHESIS_ __VA_ARGS__), \
+    /* test if the argument together with a parenthesis adds a comma */ \
+    UTILITY_PP_HAS_COMMA(__VA_ARGS__ ()),                             \
+    /* test if placing it between _TRIGGER_PARENTHESIS_ and the parenthesis adds a comma */ \
+    UTILITY_PP_HAS_COMMA(UTILITY_PP_IS_EMPTY_TRIGGER_PARENTHESIS_ __VA_ARGS__ ()))
+
+#define UTILITY_PP_IS_EMPTY_(_0, _1, _2, _3) UTILITY_PP_HAS_COMMA(UTILITY_PP_CONCAT5_(UTILITY_PP_IS_EMPTY_IS_EMPTY_CASE_, _0, _1, _2, _3))
+#define UTILITY_PP_IS_EMPTY_IS_EMPTY_CASE_0001 ,
+
+#define UTILITY_PP_VA_ARGS_SIZE(...) UTILITY_PP_IIF(UTILITY_PP_IS_EMPTY(__VA_ARGS__))(0, UTILITY_PP_VA_ARGS_SIZE_(__VA_ARGS__, UTILITY_PP_VA_ARGS_SEQ64()))
+#define UTILITY_PP_VA_ARGS_SIZE_(...) UTILITY_PP_IDENTITY(UTILITY_PP_VA_ARGS_TAIL(__VA_ARGS__))
+
+#define UTILITY_PP_VA_ARGS_TAIL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, x, ...) x
+#define UTILITY_PP_VA_ARGS_SEQ64() 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0
+
+
+#define NUMARGS_SPRINTF__(...)  (UTILITY_PP_VA_ARGS_SIZE(__VA_ARGS__))
 
 #define ubpf_sprintf(str, size, format, ...)\
 ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__), __VA_ARGS__})
 
 
-#define NUMARGS_LOGMSG(...) (sizeof((struct vtype[]){__VA_ARGS__}) / sizeof(struct vtype))
+#define NUMARGS_LOGMSG(...) (UTILITY_PP_VA_ARGS_SIZE(__VA_ARGS__))
 
-#define LOG_S8(i) {.val = {.s8 = (i)}, .type = VT_S8}
-#define LOG_U8(i) {.val = {.u8 = (i)}, .type = VT_U8}
-#define LOG_S16(i) {.val = {.s16 = (i)}, .type = VT_S16}
-#define LOG_U16(i) {.val = {.u16 = (i)}, .type = VT_U16}
-#define LOG_S32(i) {.val = {.s32 = (i)}, .type = VT_S32}
-#define LOG_U32(i) {.val = {.u32 = (i)}, .type = VT_U32}
-#define LOG_S64(i) {.val = {.s64 = (i)}, .type = VT_S64}
-#define LOG_U64(i) {.val = {.u64 = (i)}, .type = VT_U64}
-#define LOG_FLOAT(i) {.val = {.fvalue = (i)}, .type = VT_FLOAT}
-#define LOG_DOUBLE(i) {.val = {.dvalue = (i)}, .type = VT_DOUBLE}
-#define LOG_LDOUBLE(i) {.val = {.ldvalue = (i)}, .type = VT_LONGDOUBLE}
-#define LOG_PTR(i) {.val = {.pvalue = (void *)(i)}, .type = VT_POINTER}
-#define LOG_SCHAR(i) {.val = {.schar = (i)}, .type = VT_SCHAR}
-#define LOG_UCHAR(i) {.val = {.uchar = (i)}, .type = VT_UCHAR}
-#define LOG_SSHORT(i) {.val = {.sshort = (i)}, .type = VT_SSHORT}
-#define LOG_USHORT(i) {.val = {.ushort = (i)}, .type = VT_USHORT}
-#define LOG_INT(i) {.val = {.sint = (i)}, .type = VT_SINT}
-#define LOG_UINT(i) {.val = {.uint = (i)}, .type = VT_UINT}
-#define LOG_SLONG(i) {.val = {.slong = (i)}, .type = VT_SLONG}
-#define LOG_ULONG(i) {.val = {.ulong = (i)}, .type = VT_ULONG}
-#define LOG_SLLONG(i) {.val = {.sllong = (i)}, .type = VT_SLLONG}
-#define LOG_ULLONG(i) {.val = {.ullong = (i)}, .type = VT_ULLONG}
+#define LOG_S8(i) ((struct vtype) {.val = {.s8 = (i)}, .type = VT_S8})
+#define LOG_U8(i) ((struct vtype) {.val = {.u8 = (i)}, .type = VT_U8})
+#define LOG_S16(i) ((struct vtype) {.val = {.s16 = (i)}, .type = VT_S16})
+#define LOG_U16(i) ((struct vtype) {.val = {.u16 = (i)}, .type = VT_U16})
+#define LOG_S32(i) ((struct vtype) {.val = {.s32 = (i)}, .type = VT_S32})
+#define LOG_U32(i) ((struct vtype) {.val = {.u32 = (i)}, .type = VT_U32})
+#define LOG_S64(i) ((struct vtype) {.val = {.s64 = (i)}, .type = VT_S64})
+#define LOG_U64(i) ((struct vtype) {.val = {.u64 = (i)}, .type = VT_U64})
+#define LOG_FLOAT(i) ((struct vtype) {.val = {.fvalue = (i)}, .type = VT_FLOAT})
+#define LOG_DOUBLE(i) ((struct vtype) {.val = {.dvalue = (i)}, .type = VT_DOUBLE})
+#define LOG_LDOUBLE(i) ((struct vtype) {.val = {.ldvalue = (i)}, .type = VT_LONGDOUBLE})
+#define LOG_PTR(i) ((struct vtype) {.val = {.pvalue = (void *)(i)}, .type = VT_POINTER})
+#define LOG_STR(i) LOG_PTR(i)
+#define LOG_SCHAR(i) ((struct vtype) {.val = {.schar = (i)}, .type = VT_SCHAR})
+#define LOG_UCHAR(i) ((struct vtype) {.val = {.uchar = (i)}, .type = VT_UCHAR})
+#define LOG_SSHORT(i) ((struct vtype) {.val = {.sshort = (i)}, .type = VT_SSHORT})
+#define LOG_USHORT(i) ((struct vtype) {.val = {.ushort = (i)}, .type = VT_USHORT})
+#define LOG_INT(i) ((struct vtype) {.val = {.sint = (i)}, .type = VT_SINT}
+#define LOG_UINT(i) ((struct vtype) {.val = {.uint = (i)}, .type = VT_UINT})
+#define LOG_SLONG(i) ((struct vtype) {.val = {.slong = (i)}, .type = VT_SLONG})
+#define LOG_ULONG(i) ((struct vtype) {.val = {.ulong = (i)}, .type = VT_ULONG})
+#define LOG_SLLONG(i) ((struct vtype) {.val = {.sllong = (i)}, .type = VT_SLLONG})
+#define LOG_ULLONG(i) ((struct vtype) {.val = {.ullong = (i)}, .type = VT_ULLONG})
 
 #define log_msg(format, ...) ({                       \
       struct vargs __vargs__ = {                      \
