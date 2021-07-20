@@ -16,7 +16,6 @@
 #include "tree_test.h"
 #include "ubpf_manager_test.h"
 #include "monitoring_tests.h"
-#include "list_test.h"
 #include "mempool_tests.h"
 #include "internal_tests.h"
 #include "next_replace_tests.h"
@@ -26,6 +25,7 @@
 #include "utils_tests.h"
 #include "permissions_test.h"
 #include "runtime_memcheck_test.h"
+#include "job_plugins_tests.h"
 
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 
@@ -121,10 +121,10 @@ int main(int argc, char *argv[]) {
 
     if ((internal_tests() != CUE_SUCCESS) ||
         (tree_tests() != CUE_SUCCESS) ||
-        (list_tests() != CUE_SUCCESS) ||
         (test_socket_api(plugin_folder_path) != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
+        (job_plugins_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (runtime_memcheck_test_suite(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (test_permissions_plugins(plugin_folder_path) != CUE_SUCCESS) ||
@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
     CU_basic_run_tests();
 
     CU_basic_show_failures(CU_get_failure_list());
+    printf("\n");
     CU_cleanup_registry();
     return EXIT_SUCCESS;
 

@@ -122,6 +122,8 @@ int str_insertion_point_to_int(manager_t *manager, const char *plugin_str);
 
 insertion_point_t *insertion_point(int id);
 
+plugin_t *plugin_by_name(const char *name);
+
 const char *id_insertion_point_to_str(manager_t *manager, int id);
 
 insertion_point_t *get_insertion_point(manager_t *manager, int id);

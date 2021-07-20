@@ -86,4 +86,6 @@ int __sk_read(context_t *ctx, int sfd, void *buf, size_t len);
 
 int __sk_close(context_t *ctx, int sfd);
 
+int __reschedule_plugin(context_t *ctx, time_t *time);
+
 #endif //FRR_THESIS_UBPF_API_H

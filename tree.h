@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "list.h"
 
 #define RED 1
 #define BLACK 0
@@ -27,6 +26,10 @@ struct tree_node {
     uint8_t parent_color;
     struct tree_node *left;
     struct tree_node *right;
+
+    // hidden value for iterators
+    struct tree_node *next_;
+    struct tree_node *prev_;
 };
 
 typedef struct tree {
@@ -35,8 +38,7 @@ typedef struct tree {
 
 
 struct tree_iterator {
-    tree_t *tree;
-    list_t *queue;
+    struct tree_node *tree;
 };
 
 void new_tree(tree_t *tree);

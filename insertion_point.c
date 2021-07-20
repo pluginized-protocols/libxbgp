@@ -13,13 +13,14 @@ static inline int cmp_seq(vm_container_t *a, vm_container_t *b) {
 }
 
 insertion_point_t *new_insertion_point(int id, const char *name, size_t name_len) {
-    insertion_point_t *point = calloc(1, sizeof(insertion_point_t) + (name_len * sizeof(char)));
+    insertion_point_t *point = calloc(1, sizeof(insertion_point_t) + ((name_len + 1) * sizeof(char)));
     if (!point) return NULL;
 
     point->id = id;
     point->name_len = name_len;
 
     strncpy(point->name, name, name_len);
+    point->name[name_len] = 0;
 
     point->pre_vms = NULL;
     point->post_vms = NULL;
@@ -226,7 +227,7 @@ int run_replace_next_replace_function(context_t *ctx) {
     }
 
     // flush all memory taken by the previous call
-    reset_bump(&ctx->p->mem.heap.mp);
+    mem_reset(&ctx->p->mem.mgr_heap);
 
     /* set arguments + return value for next replace VM*/
     next_vm->ctx->return_val = ctx->return_val;

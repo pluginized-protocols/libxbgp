@@ -70,6 +70,7 @@ static int teardown(void) {
     // wait that the server is effectively killed
     waitpid(tcp_server, 0, 0);
 
+    ubpf_terminate();
     return 0;
 }
 
@@ -122,7 +123,6 @@ CU_ErrorCode test_socket_api(const char *plugin_folder) {
         return CUE_SINIT_FAILED;
     }
     bytecode_dir = plugin_folder;
-
 
     pSuite = CU_add_suite("plugin_socket_api", setup, teardown);
     if (NULL == pSuite) {

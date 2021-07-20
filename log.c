@@ -28,9 +28,12 @@
 #include <math.h>
 
 #include "log.h"
-#include "utlist.h"
 
-static const char *ubpf_tools_name = "ubpf_plugin_manager";
+#define SYSLOG_NAME_MAX 256
+
+static const char default_syslog_name[] = "ubpf_plugin_manager";
+
+#include "utlist.h"
 
 static struct log_config *current_log_list = NULL;
 static char *current_syslog_name; /* NULL -> syslog closed */
@@ -41,6 +44,7 @@ static inline struct log_config *new_log_config() {
 
     if (!lc) return NULL;
 
+    lc->dynamic_alloc = 1;
     return lc;
 }
 
@@ -254,26 +258,23 @@ msg_log(const char *msg, ...) {
 }
 
 static struct log_config *
-default_log_list(int stderr_dbg, const char **syslog_name) {
+default_log_list(int stderr_dbg) {
     static struct log_config *log_list = NULL;
-    struct log_config *l;
+    struct log_config *l, *tmp;
 
     if (log_list != NULL) {
         /* flush the default log list */
-        DL_FOREACH(log_list, l) {
+        DL_FOREACH_SAFE(log_list, l, tmp) {
             DL_DELETE(log_list, l); /* lc_syslog and lc_stderr are static vars */
         }
         log_list = NULL;
     }
-
-    *syslog_name = NULL;
 
     // config syslog
     static struct log_config lc_syslog = {
             .mask = ~0u,
     };
     DL_APPEND(log_list, &lc_syslog);
-    *syslog_name = ubpf_tools_name;
     // end config syslog
 
     // config debug to stderr
@@ -315,28 +316,28 @@ static inline void append_logs(struct log_config *dest_logs, struct log_config *
 }
 
 
-static inline void logs_close_(int close_syslog) {
-    struct log_config *l;
+void logs_close() {
+    struct log_config *l, *tmp;
     if (current_log_list) {
-        DL_FOREACH(current_log_list, l) {
+        DL_FOREACH_SAFE(current_log_list, l, tmp) {
+            DL_DELETE(current_log_list, l);
             if (l->rf) {
                 log_close(l);
             }
+            if (l->dynamic_alloc) {
+                free(l);
+            }
         }
+        current_log_list = NULL;
     }
 
-    if (close_syslog) {
-        if (current_syslog_name) {
-            closelog();
-            free(current_syslog_name);
-            current_syslog_name = NULL;
-        }
+    if (current_syslog_name) {
+        closelog();
+        free(current_syslog_name);
+        current_syslog_name = NULL;
     }
 
-}
 
-void logs_close() {
-    logs_close_(1);
 }
 
 void
@@ -347,42 +348,27 @@ log_init(int dbg, const char *new_syslog_name, struct log_config *extra_log) {
     /* We should not manipulate with log list when other threads may use it */
     log_lock();
 
-    if (!current_log_list || current_log_list == NULL)
-        logs = default_log_list(dbg, &new_syslog_name);
-
+    logs = default_log_list(dbg);
     append_logs(logs, extra_log);
 
-    /* Close the logs to avoid pinning them on disk when deleted */
-    logs_close_(0);
-
-    /* Reopen the logs, needed for 'configure undo' */
-    if (logs) {
-        DL_FOREACH(logs, l) {
-            if (l->filename && !l->rf) {
-                log_open(l);
-            }
+    /* Open the logs, needed for 'configure undo' */
+    DL_FOREACH(logs, l) {
+        if (l->filename && !l->rf) {
+            log_open(l);
         }
     }
 
     current_log_list = logs;
 
-    if (current_syslog_name) {
-        if (!strcmp(current_syslog_name, new_syslog_name))
-            goto done;
-    }
-
-    if (current_syslog_name) {
-        closelog();
-        free(current_syslog_name);
-        current_syslog_name = NULL;
-    }
-
+    /* syslog open */
     if (new_syslog_name) {
-        current_syslog_name = strdup(new_syslog_name);
-        openlog(current_syslog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON);
+        current_syslog_name = strndup(new_syslog_name, SYSLOG_NAME_MAX);
+    } else {
+        current_syslog_name = strndup(default_syslog_name, sizeof(default_syslog_name));
     }
+    openlog(current_syslog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON);
 
-    done:
+
     /* Logs exchange done, let the threads log as before */
     log_unlock();
 }

@@ -23,19 +23,16 @@ typedef struct plugin {
      * ptr_heap = ptr_args + MAX_SIZE_ARGS_PLUGIN
      * If no extra mem are allowed both ptr_{args,heap}
      * are null */
-    size_t mem_len; // 0 if no extra memory
+
     struct {
-        struct {
-            bump_t mp;
-            int has_mp;
-            uint8_t *block; // should point to mem.block + ARG_SIZE
-        } heap;
-        struct {
-            heap_t smp;
-            int has_smp;
-            uint8_t *block; // mem.block + ARG_SIZE + total_sizeof(heap.block)
-        } shared_heap;
-        uint8_t *block; // master block
+        uint8_t has_heap: 1;
+        uint8_t has_shared_heap: 1;
+        size_t len;
+        uint8_t *master_block;
+
+        struct memory_manager mgr_heap;
+        struct memory_manager mgr_shared_heap;
+        map_shared_t *shared_blocks;
     } mem;
 
     vm_container_t *vms; // hash table of vms attached to the plugin
@@ -45,43 +42,35 @@ typedef struct plugin {
     /**/
     int permissions; // "ANDROID like" permissions
 
+    int refcount;
+
     size_t str_len;
     char name[0];
 
 } plugin_t;
 
-
-void fallback_request(plugin_t *p);
-
-int must_fallback(plugin_t *p);
-
-void post_plugin_exec(plugin_t *p);
-
 plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permission);
 
-int init_plugin_transaction(plugin_t *p);
+/**
+ * Increase the reference counter by one.
+ * It tells that another object keeps its
+ * reference
+ * @param p the plugin pointer
+ */
+void plugin_lock_ref(plugin_t *p);
 
-void destroy_plugin(plugin_t *p);
+/**
+ * Decrease the reference counter by one.
+ * If the counter reaches 0 or below, the
+ * plugin is freed
+ * @param p the plugin pointer
+ */
+void plugin_unlock_ref(plugin_t *p);
 
 int plugin_add_vm(plugin_t *p, vm_container_t *vm);
 
 int plugin_delete_vm(vm_container_t *vm);
 
-int commit_transaction(plugin_t *p);
-
-void destroy_plugin(plugin_t *p);
-
-int add_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int add_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int add_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-
-int transaction_pre_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int transaction_post_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
-
-int transaction_replace_function(plugin_t *p, const uint8_t *bytecode, size_t len, uint32_t seq, uint8_t jit);
+int run_plugin(plugin_t *p);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H

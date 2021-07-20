@@ -75,6 +75,7 @@ static inline int base_register(vm_container_t *vmc) {
     if (!safe_ubpf_register(vmc, "ebpf_memcpy", __ebpf_memcpy, HELPER_ATTR_NONE)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_memcmp", __ebpf_memcmp, HELPER_ATTR_NONE)) return 0;
     if (!safe_ubpf_register(vmc, "ebpf_bvsnprintf", __ebpf_bvsnprintf, HELPER_ATTR_NONE)) return 0;
+    if (!safe_ubpf_register(vmc, "reschedule_plugin", __reschedule_plugin, HELPER_ATTR_NONE)) return 0;
 
     /* memory related*/
     if (!safe_ubpf_register(vmc, "ctx_malloc", __ctx_malloc, HELPER_ATTR_NONE)) return 0;
@@ -210,8 +211,8 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
 
 
     vm->vm = ubpf_create();
-    vm->mem = p->mem.block;
-    vm->total_mem = p->mem_len;
+    vm->mem = p->mem.master_block;
+    vm->total_mem = p->mem.len;
     vm->num_ext_fun = 0;
 
     if (vm->vm == NULL) {
@@ -268,7 +269,7 @@ int run_injected_code(vm_container_t *vmc, uint64_t *ret_val) {
     }
 
     if (ret == UINT64_MAX) {
-        fprintf(stderr, "Bytecode %s of plugin %s crashed in %s (%s seq %d)\n",
+        msg_log("Bytecode %s of plugin %s crashed in %s (%s seq %d)\n",
                 vmc->vm_name,
                 vmc->p->name,
                 vmc->pop->point->name,
@@ -291,7 +292,7 @@ int run_injected_code(vm_container_t *vmc, uint64_t *ret_val) {
         }
     }
     // flush heap is done just before returning
-    reset_bump(&vmc->p->mem.heap.mp);
+    mem_reset(&vmc->p->mem.mgr_heap);
 
     this_fun_ret = vmc->ctx->fallback ? -1 : 0;
 

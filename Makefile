@@ -4,8 +4,8 @@ AR = ar
 GOTOCC = goto-gcc
 GOTOINSTRUMENT = goto-instrument
 
-# CFLAGS += -march=native -mtune=native
-# CFLAGS += -O2
+CFLAGS += -march=native -mtune=native
+#CFLAGS += -O2 -g
 CFLAGS += -O0 -g3
 CFLAGS += -std=gnu11
 CFLAGS += -Wall
@@ -43,12 +43,19 @@ GOTOLDLIBS += -lncurses -ltinfo -lm
 # ./main_ipfix_collector.c \
 # ./main_ipfix_exporter.c \
 
+LIB_DEPS = memalloc/libmichelfralloc.a \
+           memalloc/libptmalloc3.a
+
+OBJ_DEPS = memalloc/michelfralloc.o \
+           memalloc/sbrk.o \
+           memalloc/ptmalloc3/malloc.o \
+
+
 SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ubpf_vm/vm/ubpf_loader.c \
       ubpf_vm/vm/ubpf_vm.c \
       ./bpf_plugin.c \
       ./insertion_point.c \
-      ./list.c \
       ./map.c \
       ./log.c \
       ./plugin_extra_configuration.c \
@@ -64,6 +71,7 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./ubpf_misc.c \
       ./url_parser.c \
       ./plugin_socket.c \
+      ./event.c \
       ./evt_plugins.c
 
 
@@ -139,11 +147,18 @@ $(GOTO_CBMC_INSTRUMENT): $(GOTO_CBMC)
 	@echo GOTO-INSTRUMENT $<
 	@$(GOTOINSTRUMENT) $< $@ $(GOTO_CHECKS)
 
+$(LIB_DEPS):
+	pushd memalloc && make && popd
+
 libxbgp_goto.a: $(GOTOOBJ)
 	@echo AR-GOTO $@
 	@$(AR) rcs $@ $^
 	@ranlib $@
 
+# (ugly) hack to force the generation
+# of objects file used by michelfralloc
+memalloc/%.o: $(LIB_DEPS)
+	@echo ""
 
 %.o: %.c %.h
 	@echo CC $@
@@ -153,7 +168,7 @@ libxbgp_goto.a: $(GOTOOBJ)
 	@echo GOTO-CC $@
 	@$(GOTOCC) $(CFLAGS) -c $< -o $@
 
-$(LIBUBPF_A): $(OBJ)
+$(LIBUBPF_A): $(OBJ) $(OBJ_DEPS)
 	@echo AR $@
 	@$(AR) rcs $@ $^
 	@ranlib $@
@@ -168,4 +183,5 @@ lib_tests: $(LIBUBPF_A) $(OBJ_TESTS)
 .PHONY: clean
 
 clean:
+	cd memalloc && $(MAKE) clean
 	rm -f $(OBJ) $(OBJ_TESTS) $(LIBUBPF_A) $(GOTOOBJ) $(GOTOOBJ_TESTS) $(GOTO_CBMC)

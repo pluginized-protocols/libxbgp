@@ -2,3 +2,6 @@
 	path = ubpf_vm
 	url = https://github.com/pluginized-protocols/xbgp_ubpf_vm.git
 	branch = master
+[submodule "memalloc"]
+	path = memalloc
+	url = https://github.com/p-quic/michelfralloc.git

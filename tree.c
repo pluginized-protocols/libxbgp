@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "tree.h"
 #include <string.h>
+#include "utlist.h"
 
 
 struct tree_node *new_node(uint32_t key, void *value, int color, size_t val_len, size_t n_size) {
@@ -194,13 +195,19 @@ void new_tree(tree_t *tree) {
 
 static struct tree_node *__tree_iterator_next(struct tree_iterator *it) {
     struct tree_node *next, *walker;
-    if (pop(it->queue, &next) == -1) return NULL;
+
+
+    if (it->tree == NULL) return NULL;
+
+    next = it->tree;
+    DL_DELETE2(it->tree, it->tree, prev_, next_);
+
 
     if (!next) return NULL;
 
     walker = next->right;
     while (walker) {
-        push(it->queue, &walker);
+        DL_PREPEND2(it->tree, walker, prev_, next_);
         walker = walker->left;
     }
     return next;
@@ -227,13 +234,11 @@ struct tree_iterator *new_tree_iterator(tree_t *tree, struct tree_iterator *it) 
 
     struct tree_node *walker;
 
-    it->tree = tree;
-    it->queue = ebpf_init_list(sizeof(struct tree_node *));
-    if (!it->queue) return NULL;
+    it->tree = NULL;
 
     walker = tree->root;
     while (walker) {
-        push(it->queue, &walker);
+        DL_PREPEND2(it->tree, walker, prev_, next_);
         walker = walker->left;
     }
 
@@ -251,10 +256,10 @@ void *tree_iterator_next(struct tree_iterator *it) {
 }
 
 int tree_iterator_has_next(struct tree_iterator *it) {
-    return it->queue->size != 0;
+    return it->tree == NULL;
 }
 
-void rm_tree_iterator(struct tree_iterator *it) {
-    destroy_list(it->queue);
+inline void rm_tree_iterator(struct tree_iterator *it) {
+    return;
 }
 

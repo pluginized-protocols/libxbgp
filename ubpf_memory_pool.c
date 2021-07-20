@@ -3,7 +3,6 @@
 //
 
 #include "ubpf_memory_pool.h"
-#include "list.h"
 #include "utlist.h"
 
 #include <stdint.h>
