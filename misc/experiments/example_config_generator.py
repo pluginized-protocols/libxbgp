@@ -1,7 +1,7 @@
 import pathlib
 from ipaddress import ip_address
 
-from experiments.config_generator import Config, FRR, BIRD, IPV4_UNICAST, IPV6_UNICAST, BGPRoute, EXABGP, \
+from misc.experiments.config_generator import Config, FRR, BIRD, IPV4_UNICAST, IPV6_UNICAST, BGPRoute, EXABGP, \
     BGPAttribute, DirIn, DirOut
 
 

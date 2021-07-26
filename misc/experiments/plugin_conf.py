@@ -1,6 +1,7 @@
 import json
 import pathlib
 from typing import Sequence, Union
+from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 
 class Code(object):
