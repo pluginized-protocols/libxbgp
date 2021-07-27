@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "ubpf_manager.h"
-#include "map.h"
 #include "bpf_plugin.h"
 #include "log.h"
 #include "ubpf_context.h"
