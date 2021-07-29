@@ -80,7 +80,7 @@ ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__),
 #define LOG_UCHAR(i) ((struct vtype) {.val = {.uchar = (i)}, .type = VT_UCHAR})
 #define LOG_SSHORT(i) ((struct vtype) {.val = {.sshort = (i)}, .type = VT_SSHORT})
 #define LOG_USHORT(i) ((struct vtype) {.val = {.ushort = (i)}, .type = VT_USHORT})
-#define LOG_INT(i) ((struct vtype) {.val = {.sint = (i)}, .type = VT_SINT}
+#define LOG_INT(i) ((struct vtype) {.val = {.sint = (i)}, .type = VT_SINT})
 #define LOG_UINT(i) ((struct vtype) {.val = {.uint = (i)}, .type = VT_UINT})
 #define LOG_SLONG(i) ((struct vtype) {.val = {.slong = (i)}, .type = VT_SLONG})
 #define LOG_ULONG(i) ((struct vtype) {.val = {.ulong = (i)}, .type = VT_ULONG})
