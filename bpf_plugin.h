@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include "shared_memory.h"
 #include "uthash.h"
+#include "dict.h"
 
 #define MAX_HEAP_PLUGIN 1048576 // 1MB
 #define MAX_SIZE_ARGS_PLUGIN 512 // 512B must be checked before memcpy args
@@ -34,6 +35,8 @@ typedef struct plugin {
         struct memory_manager mgr_shared_heap;
         map_shared_t *shared_blocks;
     } mem;
+
+    dict_t runtime_dict;
 
     vm_container_t *vms; // hash table of vms attached to the plugin
 
@@ -72,5 +75,11 @@ int plugin_add_vm(plugin_t *p, vm_container_t *vm);
 int plugin_delete_vm(vm_container_t *vm);
 
 int run_plugin(plugin_t *p);
+
+int new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
+
+void *get_runtime_data(plugin_t *p, const char *key);
+
+void del_runtime_data(plugin_t *p, const char *key);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H

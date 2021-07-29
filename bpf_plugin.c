@@ -74,6 +74,8 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
 
     p->vms = NULL;
 
+    dict_init(&p->runtime_dict);
+
     return p;
 }
 
@@ -92,6 +94,8 @@ static inline void destroy_plugin__(plugin_t *p, int free_p) {
         rm_vm_insertion_point(curr_vm);
         shutdown_vm(curr_vm);
     }
+
+    dict_del(&p->runtime_dict);
 
     if (free_p) free(p);
 }
@@ -139,31 +143,14 @@ int run_plugin(plugin_t *p) {
     return 0;
 }
 
-//static int init_ebpf_code(plugin_t *p, vm_container_t **new_vm, uint32_t seq,
-//                          const uint8_t *bytecode, size_t len, int type, uint8_t jit) {
-//
-//
-//    context_t *ctx;
-//
-//    if (!p) return -1; // plugin must be init before loading eBPF code
-//
-//    ctx = new_context(p);
-//    if (!ctx) return -1;
-//
-//    ctx->type = type;
-//    ctx->seq = seq;
-//    ctx->plugin_id = p->plugin_id;
-//
-//    if (!register_context(ctx)) {
-//        free(ctx);
-//        return -1;
-//    }
-//
-//    if (!vm_init(new_vm, ctx, p->mem.block, seq, p->size_allowed_mem, jit))
-//        return -1;
-//
-//    if (!start_vm(*new_vm)) return -1;
-//    if (!inject_code_ptr(*new_vm, bytecode, len)) return -1;
-//
-//    return 0;
-//}
+int new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len) {
+    return dict_add(&p->runtime_dict, key, key_len, data, data_len);
+}
+
+void *get_runtime_data(plugin_t *p, const char *key) {
+    return dict_get(&p->runtime_dict, key);
+}
+
+void del_runtime_data(plugin_t *p, const char *key) {
+    return dict_entry_del(&p->runtime_dict, key);
+}

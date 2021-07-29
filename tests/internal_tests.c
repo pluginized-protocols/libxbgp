@@ -248,6 +248,41 @@ static void test_fetch_file_api_fun(void) {
     unlink(name_tmp);
 }
 
+static void test_dict(void) {
+    char data1[] = "mydata";
+    int forty_two = 42;
+    int _val = 10;
+    int *val = &_val;
+
+    dict_t dict;
+    dict_init(&dict);
+
+    CU_ASSERT_PTR_NULL(dict);
+
+    CU_ASSERT_EQUAL_FATAL(dict_add(&dict, data1, sizeof(data1) - 1, &forty_two, sizeof(forty_two)), 0);
+    CU_ASSERT_EQUAL_FATAL(dict_add(&dict, "data2", strlen("data2"), &val, sizeof(val)), 0);
+
+    _val = 56;
+    forty_two = 43;
+
+    int *ptr_42 = dict_get(&dict, "mydata");
+    int *null_ptr = dict_get(&dict, "my_data");
+    int **ptr_val = dict_get(&dict, "data2");
+
+    CU_ASSERT_PTR_NOT_NULL_FATAL(ptr_42);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(ptr_val);
+    CU_ASSERT_PTR_NULL(null_ptr);
+
+    CU_ASSERT_EQUAL(*ptr_42, 42);
+    CU_ASSERT_EQUAL(**ptr_val, 56);
+
+    dict_entry_del(&dict, "mydata");
+    CU_ASSERT_PTR_NULL(dict_get(&dict, "mydata"));
+
+    dict_del(&dict);
+    CU_ASSERT_PTR_NULL(dict);
+}
+
 CU_ErrorCode internal_tests(void) {
     CU_pSuite pSuite = NULL;
 
@@ -259,6 +294,7 @@ CU_ErrorCode internal_tests(void) {
 
     if ((NULL == CU_add_test(pSuite, "Custom snprintf", test_my_snprintf)) ||
         (NULL == CU_add_test(pSuite, "Custom snprintf overflow", test_my_snprintf_overflow)) ||
+        (NULL == CU_add_test(pSuite, "Dict implem", test_dict)) ||
         (NULL == CU_add_test(pSuite, "Custom snprintf ptr", test_my_snprintf_ptr)) ||
         (NULL == CU_add_test(pSuite, "Custom snprintf mix", test_my_snprintf_mix)) ||
         (NULL == CU_add_test(pSuite, "Custom snprintf string", test_my_snprintf_string)) ||

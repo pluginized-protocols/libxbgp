@@ -56,7 +56,7 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ubpf_vm/vm/ubpf_vm.c \
       ./bpf_plugin.c \
       ./insertion_point.c \
-      ./map.c \
+      ./dict.c \
       ./log.c \
       ./plugin_extra_configuration.c \
       ./plugins_manager.c \
