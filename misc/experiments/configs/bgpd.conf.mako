@@ -22,6 +22,7 @@ router bgp ${node.asn}
     %if neigh.description:
   neighbor ${neigh.ip} description ${neigh.description}
     %endif
+  neighbor ${neigh.ip} update-source ${neigh.local_ip}
   %endfor
 !
 %for af in node.af:

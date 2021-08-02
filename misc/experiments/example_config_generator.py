@@ -1,19 +1,40 @@
 import pathlib
 from ipaddress import ip_address
+from typing import Callable
 
 from misc.experiments.config_generator import Config, FRR, BIRD, IPV4_UNICAST, IPV6_UNICAST, BGPRoute, EXABGP, \
     BGPAttribute, DirIn, DirOut
 
 
+def config_dut_rr(config_path, dut_suite):
+    return config_dut_generic(config_path, dut_suite, {
+        'as': 65022,
+        'ip_dut_injecter': "42.42.1.1",
+        'ip_dut_monitor': "42.42.2.1",
+        'ip_injecter': "42.42.2.2",
+        'ip_monitor': "42.42.1.2"
+    })
+
+
 def config_dut(config_path, dut_suite):
+    return config_dut_generic(config_path, dut_suite, {
+        'as': 65021,
+        'ip_dut_injecter': "42.0.1.1",
+        'ip_dut_monitor': "42.0.2.1",
+        'ip_injecter': "42.0.2.2",
+        'ip_monitor': "42.0.1.2"
+    })
+
+
+def config_dut_generic(config_path, dut_suite, dut_conf):
     con = Config(config_path)
 
     monit = con.new_bgp_node("monitor", suite=EXABGP())
     dut = con.new_bgp_node("dut", suite=dut_suite)
     injecter = con.new_bgp_node("injecter", suite=FRR())
 
-    monit.set_as(65012)
-    dut.set_as(65021)
+    monit.set_as(65022)
+    dut.set_as(dut_conf['as'])
     injecter.set_as(65022)
 
     monit.set_router_id(ip_address("42.0.1.2"))
@@ -28,13 +49,13 @@ def config_dut(config_path, dut_suite):
     injecter.activate_af(IPV6_UNICAST())
 
     n1_neigh_conf, n2_neigh_conf = con.make_link(node1=monit, node2=dut,
-                                                 ip_node1=ip_address("42.0.1.2"),
-                                                 ip_node2=ip_address("42.0.1.1"))
+                                                 ip_node1=ip_address(dut_conf["ip_monitor"]),
+                                                 ip_node2=ip_address(dut_conf["ip_dut_monitor"]))
 
     dut_neigh_inject_conf, inject_neigh_dut_conf = \
         con.make_link(node1=dut, node2=injecter,
-                      ip_node1=ip_address("42.0.2.1"),
-                      ip_node2=ip_address("42.0.2.2"))
+                      ip_node1=ip_address(dut_conf["ip_dut_injecter"]),
+                      ip_node2=ip_address(dut_conf["ip_injecter"]))
 
     n1_neigh_conf.set_holdtime(240)
     n2_neigh_conf.set_holdtime(240)
@@ -68,7 +89,7 @@ def config_dut(config_path, dut_suite):
     return dut.output_path, dut.extra_config
 
 
-def gen_dut_conf(config_path, suite_str: str):
+def gen_dut_conf_generic(config_path, suite_str: str, config_gen: Callable):
     map_str_to_obj = {
         'frr': FRR(),
         'bird': BIRD(),
@@ -83,7 +104,15 @@ def gen_dut_conf(config_path, suite_str: str):
     elif not dir_path.is_dir():
         raise ValueError('"{path}" is not a valid directory'.format(path=str(dir_path)))
 
-    return config_dut(str(dir_path), map_str_to_obj[suite_str])
+    return config_gen(str(dir_path), map_str_to_obj[suite_str])
+
+
+def gen_dut_conf(config_path, suite_str: str):
+    return gen_dut_conf_generic(config_path, suite_str, config_dut)
+
+
+def gen_dut_conf_rr(config_path, suite_str: str):
+    return gen_dut_conf_generic(config_path, suite_str, config_dut_rr)
 
 
 if __name__ == '__main__':
