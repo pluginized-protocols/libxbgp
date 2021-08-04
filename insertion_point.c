@@ -237,6 +237,10 @@ int run_replace_next_replace_function(context_t *ctx) {
     ctx->return_value_set = next_vm->ctx->return_value_set;
     ctx->fallback = next_vm->ctx->fallback;
 
+    /* reset value of fallback and return_value_set for terminated next_vm */
+    next_vm->ctx->fallback = 0;
+    next_vm->ctx->return_value_set = 0;
+
     return return_val;
 }
 
