@@ -1,4 +1,4 @@
-from misc.experiments.example_config_generator import gen_dut_conf
+from misc.experiments.example_config_generator import gen_dut_conf_rr
 from misc.experiments.extra_conf import ExtraConf, ExtraConfVarElemList, ExtraConfVarElemIPv4
 from misc.experiments.global_utils import dry_run
 from misc.experiments.plugin_conf import Code, Plugin, PluginManifest
@@ -72,7 +72,7 @@ def scenario_frr_plugin_route_reflector(interfaces, memcheck, scenario_name):
 
     return new_scenario(interfaces, routing_suite='frr', extra_args=extra_args,
                         bin_path="/home/thomas/bird_plugin", scenario_name=scenario_name,
-                        confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf)
+                        confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf_rr)
 
 
 def scenario_frr_plugin_route_reflector_memcheck(interfaces):
@@ -101,7 +101,7 @@ def scenario_bird_plugin_route_reflector(interfaces, memcheck, scenario_name):
 
     return new_scenario(interfaces, routing_suite='bird', extra_args=extra_args,
                         bin_path="/home/thomas/bird_plugin", scenario_name=scenario_name,
-                        confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf)
+                        confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf_rr)
 
 
 def scenario_bird_plugin_route_reflector_memcheck(interfaces):
