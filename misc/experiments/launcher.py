@@ -98,6 +98,8 @@ def main(args):
     scenario: Callable
     for scenario in get_scenarios():
         s: 'Scenario' = scenario(args.interface)
+        s.write_metadata(os.path.join(out_dir, f"{s.outfile}.metadata"))
+
         for i in range(0, args.nb_experiments):
             launch(s.interfaces, out_dir, s.outfile, i,
                    s.daemons, RunningDaemon())
@@ -105,6 +107,11 @@ def main(args):
             if not dry_run():
                 time.sleep(args.timeout)
                 RunningDaemon().kill_all()
+                # once the daemons has been successfully killed,
+                # we wait a bit to let the other routers to complete
+                # their cleanup because we killed the BGP sessions of
+                # our router
+                time.sleep(args.wait)
 
 
 if __name__ == '__main__':
@@ -130,6 +137,8 @@ if __name__ == '__main__':
                         help='Prefix string to insert at each file produced by the experiment')
     parser.add_argument("-t", "--timeout", help="Set the maximum time of the experiment",
                         required=True, dest='timeout', type=int)
+    parser.add_argument("-w", "--wait", help="Amount of time to wait before restarting a new experiment",
+                        required=True, dest='wait', type=int)
     parser.add_argument("-d", "--dry-run", dest='dry_run', action='store_true',
                         default=False, help="Do a dry run")
 
