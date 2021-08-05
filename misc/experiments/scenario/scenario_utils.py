@@ -34,6 +34,8 @@ class Scenario(object):
         self._metadata[key] = value
 
     def write_metadata(self, outfile):
+        if self._metadata is None:
+            return
         with open(outfile, 'w') as f:
             json.dump(self._metadata, f)
 

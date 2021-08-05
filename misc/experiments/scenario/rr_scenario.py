@@ -102,7 +102,7 @@ def scenario_bird_plugin_route_reflector(interfaces, memcheck, scenario_name):
                  "-x /tmp/launch/plugin_extra_conf.conf"
 
     return new_scenario(interfaces, routing_suite='bird', extra_args=extra_args,
-                        bin_path="/home/thomas/bird_plugin/dbin", scenario_name=scenario_name,
+                        bin_path="/home/thomas/bird_plugin/sbin", scenario_name=scenario_name,
                         confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf_rr)
 
 
