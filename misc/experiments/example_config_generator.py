@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pathlib
 from ipaddress import ip_address
 from typing import Callable, Union
@@ -56,7 +57,7 @@ def config_dut(config_path, dut_suite, scenario):
     })
 
 
-def config_dut_generic(config_path, dut_suite, dut_conf: dict['str', Union[int, str, list[str]]]):
+def config_dut_generic(config_path, dut_suite, dut_conf: dict[str, Union[int, str, list[str]]]):
     con = Config(config_path)
 
     monit = con.new_bgp_node("monitor", suite=EXABGP())

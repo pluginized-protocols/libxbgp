@@ -125,7 +125,7 @@ def scenario_frr_native_route_reflector(interfaces):
 
 
 def scenario_bird_native_route_reflector(interfaces):
-    return new_scenario(interfaces, routing_suite='frr',
+    return new_scenario(interfaces, routing_suite='bird',
                         bin_path="/home/thomas/bird_native/sbin",
                         scenario_name='bird_native_rr',
                         confdir="/tmp/launch/confdir",
