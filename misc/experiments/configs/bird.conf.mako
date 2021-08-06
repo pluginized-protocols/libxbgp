@@ -43,6 +43,9 @@ protocol bgp ${neigh.name} {
   %endif
   local ${neigh.local_ip} as ${node.asn};
   neighbor ${neigh.ip} as ${neigh.asn};
+  %if neigh.is_rr_client:
+  rr client;
+  %endif
   hold time ${neigh.holdtime};
   %for af in node.af:
 

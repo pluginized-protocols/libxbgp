@@ -1,4 +1,4 @@
-from misc.experiments.example_config_generator import gen_dut_conf_rr
+from misc.experiments.example_config_generator import gen_dut_conf_rr, gen_dut_conf_rr_native
 from misc.experiments.extra_conf import ExtraConf, ExtraConfVarElemList, ExtraConfVarElemIPv4
 from misc.experiments.global_utils import dry_run
 from misc.experiments.plugin_conf import Code, Plugin, PluginManifest
@@ -114,3 +114,19 @@ def scenario_bird_plugin_route_reflector_memcheck(interfaces):
 def scenario_bird_plugin_route_reflector_no_memcheck(interfaces):
     return scenario_bird_plugin_route_reflector(interfaces, memcheck=False,
                                                 scenario_name='bird_rr_no_memcheck')
+
+
+def scenario_frr_native_route_reflector(interfaces):
+    return new_scenario(interfaces, routing_suite='frr',
+                        bin_path="/home/thomas/frr_native/sbin",
+                        scenario_name='frr_native_rr',
+                        confdir="/tmp/launch/confdir",
+                        dut_conf_generator=gen_dut_conf_rr_native)
+
+
+def scenario_bird_native_route_reflector(interfaces):
+    return new_scenario(interfaces, routing_suite='frr',
+                        bin_path="/home/thomas/bird_native/sbin",
+                        scenario_name='bird_native_rr',
+                        confdir="/tmp/launch/confdir",
+                        dut_conf_generator=gen_dut_conf_rr_native)

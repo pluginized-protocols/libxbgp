@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import csv
 import json
@@ -106,7 +107,7 @@ def extract_completion_time(traces, metadata):
     times = list()
 
     for trace in traces:
-        print(f"Processing {trace}...", end='')
+        print(f"Processing {trace}... ", end='')
         sys.stdout.flush()
         start_time = run_tshark({
             'ip_src': metadata['ip_injecter'],
@@ -144,7 +145,16 @@ def save_processed_values(times_per_scenario, output_path):
 def main(args):
     times_per_scenario = list()
 
-    for scenario in args.scenarios:
+    scenarios = list()
+    if not args.scenarios:
+        metadatas = pathlib.Path(args.dir).glob('*.metadata')
+        fglob: 'pathlib.Path'
+        for fglob in metadatas:
+            scenarios.append(fglob.stem)
+    else:
+        scenarios = args.scenarios
+
+    for scenario in scenarios:
         traces = pathlib.Path(args.dir).glob(f'{scenario}*.pcapng')
         meta_data_file = pathlib.Path(args.dir, f"{scenario}.metadata")
 
@@ -164,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dir', dest='dir', help='Where to find pcap trace',
                         required=True)
     parser.add_argument('-s', '--scenario', dest='scenarios', action='append',
-                        help='Which scenario to process', required=True)
+                        help='Which scenario to process', required=False)
 
     parser.add_argument('-o', '--output', dest='output', required=False,
                         help="Store processed time values to this file (value stored in csv format)")

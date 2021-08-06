@@ -23,6 +23,23 @@ def config_dut_rr(config_path, dut_suite, scenario):
     })
 
 
+def config_dut_rr_native(config_path, dut_suite, scenario):
+    if scenario is not None:
+        scenario.add_metadata('ip_dut_injecter', '42.42.2.1')
+        scenario.add_metadata('ip_dut_monitor', '42.42.1.1')
+        scenario.add_metadata('ip_injecter', '42.42.2.2')
+        scenario.add_metadata('ip_monitor', '42.42.1.2')
+
+    return config_dut_generic(config_path, dut_suite, {
+        'as': 65022,
+        'ip_dut_injecter': "42.42.2.1",
+        'ip_dut_monitor': "42.42.1.1",
+        'ip_injecter': "42.42.2.2",
+        'ip_monitor': "42.42.1.2",
+        'rr_clients': ['monitor', 'injecter']
+    })
+
+
 def config_dut(config_path, dut_suite, scenario):
     if scenario is not None:
         scenario.add_metadata('ip_dut_injecter', '42.0.2.1')
@@ -39,7 +56,7 @@ def config_dut(config_path, dut_suite, scenario):
     })
 
 
-def config_dut_generic(config_path, dut_suite, dut_conf):
+def config_dut_generic(config_path, dut_suite, dut_conf: dict['str', Union[int, str, list[str]]]):
     con = Config(config_path)
 
     monit = con.new_bgp_node("monitor", suite=EXABGP())
@@ -97,6 +114,12 @@ def config_dut_generic(config_path, dut_suite, dut_conf):
     dut_neigh_inject_conf.set_filter_acl(perm_all6, DirIn())
     dut_neigh_inject_conf.set_filter_acl(block_all6, DirOut())
 
+    if 'rr_clients' in dut_conf:
+        if 'injecter' in dut_conf['rr_clients']:
+            dut_neigh_inject_conf.set_rr_client()
+        if 'monitor' in dut_conf['rr_clients']:
+            n2_neigh_conf.set_rr_client()
+
     con.write_conf()
 
     return dut.output_path, dut.extra_config
@@ -126,6 +149,10 @@ def gen_dut_conf(config_path, suite_str: str, scenario: Union['Scenario', None])
 
 def gen_dut_conf_rr(config_path, suite_str: str, scenario: Union['Scenario', None]):
     return gen_dut_conf_generic(config_path, suite_str, config_dut_rr, scenario)
+
+
+def gen_dut_conf_rr_native(config_path, suite_str, scenario: Union['Scenario', None]):
+    return gen_dut_conf_generic(config_path, suite_str, config_dut_rr_native, scenario)
 
 
 if __name__ == '__main__':
