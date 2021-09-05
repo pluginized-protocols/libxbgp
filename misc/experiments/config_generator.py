@@ -521,6 +521,7 @@ class NeighborConfig(object):
         self.holdtime = 240
         self.processes = list()
         self.description = None
+        self.is_rr_client = False
         self.acl_filters = {
             IPV4: list(),
             IPV6: list(),
@@ -562,6 +563,12 @@ class NeighborConfig(object):
         if af not in self.acl_filters:
             return False
         return len(self.acl_filters[af]) > 0
+
+    def set_rr_client(self):
+        self.is_rr_client = True
+
+    def unset_rr_client(self):
+        self.is_rr_client = False
 
     @property
     def ip(self):

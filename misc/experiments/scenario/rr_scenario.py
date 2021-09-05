@@ -1,4 +1,4 @@
-from misc.experiments.example_config_generator import gen_dut_conf_rr
+from misc.experiments.example_config_generator import gen_dut_conf_rr, gen_dut_conf_rr_native
 from misc.experiments.extra_conf import ExtraConf, ExtraConfVarElemList, ExtraConfVarElemIPv4
 from misc.experiments.global_utils import dry_run
 from misc.experiments.plugin_conf import Code, Plugin, PluginManifest
@@ -11,34 +11,34 @@ def route_reflector(memcheck):
     import_rr = Code('import_route_rr', '/tmp/import_route_rr.o',
                      insertion_point='bgp_pre_inbound_filter',
                      seq=0, anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                     strict_check=strict_check)
+                     strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
     export_rr = Code('export_route_rr', '/tmp/export_route_rr.o',
                      insertion_point='bgp_pre_outbound_filter',
                      seq=0, anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                     strict_check=strict_check)
+                     strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
     encode_cluster_list = Code('encode_cluster_list', '/tmp/encode_cluster_list.o',
                                insertion_point='bgp_encode_attr',
                                seq=0, anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                               strict_check=strict_check)
+                               strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
     encode_originator_id = Code('encode_originator_id', '/tmp/encode_originator_id.o',
                                 insertion_point='bgp_encode_attr',
                                 seq=10, anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                                strict_check=strict_check)
+                                strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
     decode_cluster_list = Code('decode_cluster_list', '/tmp/decode_cluster_list.o',
                                insertion_point='bgp_decode_attr',
                                seq=0, anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                               strict_check=strict_check)
+                               strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
-    decode_originator_id = Code('decode_originator_id', '/tmp/decode_originator_id.o',
+    decode_originator_id = Code('decode_originator', '/tmp/decode_originator.o',
                                 insertion_point='bgp_decode_attr',
                                 seq=10, anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                                strict_check=strict_check)
+                                strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
-    plugin = Plugin("route_reflector", 4096, 0, (import_rr, export_rr, encode_cluster_list,
+    plugin = Plugin("route_reflector", 0, 4096, (import_rr, export_rr, encode_cluster_list,
                                                  encode_originator_id, decode_cluster_list,
                                                  decode_originator_id))
 
@@ -49,6 +49,8 @@ def gen_extra_conf():
     conf = ExtraConf()
 
     conf.rr_clients = ExtraConfVarElemList()
+    conf.rr_clients.append(ExtraConfVarElemIPv4("42.42.1.2"))
+    conf.rr_clients.append(ExtraConfVarElemIPv4("42.42.2.2"))
     conf.rr_clients.append(ExtraConfVarElemIPv4("42.0.1.2"))
     conf.rr_clients.append(ExtraConfVarElemIPv4("42.0.2.2"))
 
@@ -71,7 +73,7 @@ def scenario_frr_plugin_route_reflector(interfaces, memcheck, scenario_name):
                  "-a /tmp/launch/plugin_extra_conf.conf"
 
     return new_scenario(interfaces, routing_suite='frr', extra_args=extra_args,
-                        bin_path="/home/thomas/bird_plugin", scenario_name=scenario_name,
+                        bin_path="/home/thomas/frr_plugins/sbin", scenario_name=scenario_name,
                         confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf_rr)
 
 
@@ -100,7 +102,7 @@ def scenario_bird_plugin_route_reflector(interfaces, memcheck, scenario_name):
                  "-x /tmp/launch/plugin_extra_conf.conf"
 
     return new_scenario(interfaces, routing_suite='bird', extra_args=extra_args,
-                        bin_path="/home/thomas/bird_plugin", scenario_name=scenario_name,
+                        bin_path="/home/thomas/bird_plugin/sbin", scenario_name=scenario_name,
                         confdir="/tmp/launch/confdir", dut_conf_generator=gen_dut_conf_rr)
 
 
@@ -112,3 +114,19 @@ def scenario_bird_plugin_route_reflector_memcheck(interfaces):
 def scenario_bird_plugin_route_reflector_no_memcheck(interfaces):
     return scenario_bird_plugin_route_reflector(interfaces, memcheck=False,
                                                 scenario_name='bird_rr_no_memcheck')
+
+
+def scenario_frr_native_route_reflector(interfaces):
+    return new_scenario(interfaces, routing_suite='frr',
+                        bin_path="/home/thomas/frr_native/sbin",
+                        scenario_name='frr_native_rr',
+                        confdir="/tmp/launch/confdir",
+                        dut_conf_generator=gen_dut_conf_rr_native)
+
+
+def scenario_bird_native_route_reflector(interfaces):
+    return new_scenario(interfaces, routing_suite='bird',
+                        bin_path="/home/thomas/bird_native/sbin",
+                        scenario_name='bird_native_rr',
+                        confdir="/tmp/launch/confdir",
+                        dut_conf_generator=gen_dut_conf_rr_native)

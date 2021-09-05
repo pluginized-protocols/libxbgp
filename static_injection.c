@@ -344,9 +344,9 @@ static int parse_manifest(json_object *plugins, json_object *insertion_point, js
             if (json_object_object_get_ex(curr_code_obj, "jit", &jit)) {
                 jit_val = json_object_get_boolean(jit);
             }
-
+            jinfo = NULL;
             if (get_insertion_point_for_vm(insertion_point, vm_str, &info) != 0) {
-                memset(&jinfo, 0, sizeof(_jinfo));
+                memset(&_jinfo, 0, sizeof(_jinfo));
                 jinfo = &_jinfo;
 
                 if (is_job_plugin_json(plugin_str, jobs_plugins, jinfo) == -1) {

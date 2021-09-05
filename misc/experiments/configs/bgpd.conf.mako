@@ -23,6 +23,9 @@ router bgp ${node.asn}
   neighbor ${neigh.ip} description ${neigh.description}
     %endif
   neighbor ${neigh.ip} update-source ${neigh.local_ip}
+    %if neigh.is_rr_client:
+  neighbor ${neigh.ip} route-reflector-client
+    %endif
   %endfor
 !
 %for af in node.af:

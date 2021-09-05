@@ -135,7 +135,7 @@ int run_plugin(plugin_t *p) {
 
     if (!p) return -1;
 
-    HASH_ITER(hh, p->vms, vm, tmp) {
+    HASH_ITER(hh_plugin, p->vms, vm, tmp) {
         if (run_injected_code(vm, &ret_val) == -1) {
             return -1;
         }

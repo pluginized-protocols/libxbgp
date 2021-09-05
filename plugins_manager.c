@@ -238,6 +238,12 @@ inline int is_vm_registered_by_name(manager_t *manager, const char *name) {
     return the_vm != NULL;
 }
 
+static inline vm_container_t *get_vm_by_name(manager_t *manager, const char *name) {
+    vm_container_t *vm;
+    HASH_FIND_STR(manager->vms_table, name, vm);
+    return vm;
+}
+
 int register_vm(manager_t *manager, vm_container_t *vm) {
     if (is_vm_registered(manager, vm)) return -1;
 
@@ -384,6 +390,10 @@ inline insertion_point_t *insertion_point(int id) {
 
 inline plugin_t *plugin_by_name(const char *name) {
     return get_plugin_by_name(&master, name);
+}
+
+inline vm_container_t *vm_by_name(const char *name) {
+    return get_vm_by_name(&master, name);
 }
 
 static inline unsigned long file_size(FILE *file) {
