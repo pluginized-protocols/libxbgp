@@ -120,4 +120,4 @@ def main(file_path, valid_ratio):
 
 
 if __name__ == '__main__':
-    main("./dump.txt", 0.75)
+    main("../experiments/data/updatedump.txt", 0.75)

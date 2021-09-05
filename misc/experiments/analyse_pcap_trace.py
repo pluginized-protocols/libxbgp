@@ -6,6 +6,7 @@ import os
 import pathlib
 import subprocess
 import tempfile
+from operator import itemgetter
 from typing import Callable, TextIO
 
 import sys
@@ -14,6 +15,8 @@ import matplotlib.pyplot as plt
 
 import shlex
 from subprocess import run
+
+from posix import EX_USAGE
 
 
 def run_tshark(info_run, tshark_reader: Callable):
@@ -142,41 +145,84 @@ def save_processed_values(times_per_scenario, output_path):
                 })
 
 
-def main(args):
+def plot_from_csv(csv_path):
+    parsed_values = dict()
+
+    with open(csv_path) as f:
+        csv_reader = csv.DictReader(f)
+        for row in csv_reader:
+            scenario = row['scenario']
+            if scenario not in parsed_values:
+                parsed_values[scenario] = list()
+            parsed_values[scenario].append(float(row['time']))
+
+    formatted_val = [(key, parsed_values[key]) for key in parsed_values]
+    formatted_val.sort(key=itemgetter(0))
+    make_the_boxplot(formatted_val)
+
+
+def plot_from_pcap(pcap_dir, usr_scenario=None, save_output=None):
     times_per_scenario = list()
 
     scenarios = list()
-    if not args.scenarios:
-        metadatas = pathlib.Path(args.dir).glob('*.metadata')
+    if usr_scenario is None:
+        metadatas = pathlib.Path(pcap_dir).glob('*.metadata')
         fglob: 'pathlib.Path'
         for fglob in metadatas:
             scenarios.append(fglob.stem)
     else:
-        scenarios = args.scenarios
+        scenarios = usr_scenario
 
     for scenario in scenarios:
-        traces = pathlib.Path(args.dir).glob(f'{scenario}*.pcapng')
-        meta_data_file = pathlib.Path(args.dir, f"{scenario}.metadata")
+        traces = pathlib.Path(pcap_dir).glob(f'{scenario}*.pcapng')
+        meta_data_file = pathlib.Path(pcap_dir, f"{scenario}.metadata")
 
         with open(meta_data_file) as f:
             metadata = json.load(f)
 
         times_per_scenario.append((scenario, extract_completion_time(traces, metadata)))
 
-    if args.output:
-        save_processed_values(times_per_scenario, args.output)
+    times_per_scenario.sort(key=itemgetter(0))
+    if save_output is not None:
+        save_processed_values(times_per_scenario, save_output)
 
     make_the_boxplot(times_per_scenario)
 
 
+def main(args):
+    if args.csv and args.dir:
+        sys.stderr.write("--csv and --dir options cannot be used at the same time\n\n")
+        return False
+
+    if args.csv:
+        plot_from_csv(args.csv)
+        return True
+
+    if not args.dir:
+        sys.stderr.write("Either --csv or --dir option must be given to the program\n\n")
+        return False
+
+    plot_from_pcap(args.dir, args.scenarios, args.output)
+    return True
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Extract time of RIB processing")
-    parser.add_argument('-d', '--dir', dest='dir', help='Where to find pcap trace',
-                        required=True)
+    parser.add_argument('-d', '--dir', dest='dir', help='Where to find pcap trace. '
+                                                        'This option is not necessary '
+                                                        'if --csv is set.',
+                        required=False)
     parser.add_argument('-s', '--scenario', dest='scenarios', action='append',
-                        help='Which scenario to process', required=False)
+                        help='Which scenario to process. If the option is not '
+                             'set, all scenarios located in DIR folder '
+                             'will be processed.', required=False)
+
+    parser.add_argument('-c', '--csv', dest='csv', required=False,
+                        help='Make the boxplot with csv values instead of pcap files located'
+                             'in DIR folder. --csv and --dir options cannot be set altogether')
 
     parser.add_argument('-o', '--output', dest='output', required=False,
                         help="Store processed time values to this file (value stored in csv format)")
 
-    main(parser.parse_args())
+    if not main(parser.parse_args()):
+        parser.print_help()

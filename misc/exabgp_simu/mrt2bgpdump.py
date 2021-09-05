@@ -1,16 +1,21 @@
 #!/usr/bin/env python
 '''
 mrt2bgpdump.py - a script to convert MRT format to bgpdump format.
+
 Copyright (C) 2020 Tetsumune KISO
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
 Authors:
     Tetsumune KISO <t2mune@gmail.com>
     Yoshiyuki YAMAUCHI <info@greenhippo.co.jp>
@@ -22,6 +27,7 @@ from datetime import *
 from mrtparse import *
 
 peer = None
+
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -53,6 +59,7 @@ def parse_args():
         'path_to_file',
         help='specify path to MRT format file')
     return p.parse_args()
+
 
 class BgpDump:
     __slots__ = [
@@ -302,6 +309,7 @@ class BgpDump:
         else:
             return self.aggr
 
+
 def main():
     args = parse_args()
     d = Reader(args.path_to_file)
@@ -317,6 +325,7 @@ def main():
         elif m.data['type'][0] == MRT_T['BGP4MP']:
             b.bgp4mp(m.data, count)
         count += 1
+
 
 if __name__ == '__main__':
     main()
