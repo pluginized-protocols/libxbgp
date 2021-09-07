@@ -153,9 +153,11 @@ def config_vrf_dut(config_path, suite_str, scenario):
 
     return config_dut_generic(config_path, suite_str, {
         'as': 65021,
-        'ip_dut_injecter': "42.4.0.2",
+        'ip_dut_injecter1': "42.0.2.1",
+        'ip_dut_injecter2': "42.4.0.2",
         'ip_dut_monitor': "42.0.1.1",
-        'ip_injecter': "42.4.0.1",
+        'ip_injecter1': "42.0.2.2",
+        'ip_injecter2': "42.4.0.1",
         'ip_monitor': "42.0.1.2"
     }, )
 
