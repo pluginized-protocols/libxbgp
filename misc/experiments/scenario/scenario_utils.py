@@ -11,6 +11,8 @@ class Scenario(object):
         self._interface = interfaces  # type: list
         self._out_name_file = filename.strip().replace(' ', '_')
         self._metadata = None
+        self._pre_script = None
+        self._post_script = None
 
     @property
     def daemons(self):
@@ -23,6 +25,22 @@ class Scenario(object):
     @property
     def outfile(self):
         return self._out_name_file
+
+    @property
+    def pre_script(self):
+        return self._pre_script
+
+    @pre_script.setter
+    def pre_script(self, value):
+        self._pre_script = value
+
+    @property
+    def post_script(self):
+        return self._post_script
+
+    @post_script.setter
+    def post_script(self, value):
+        self._post_script = value
 
     def add_daemon(self, d: 'Daemon'):
         self._daemons_cnf.append(d)
@@ -75,7 +93,7 @@ def set_proto(proto_suite, **args):
 
 
 def new_scenario(interfaces, routing_suite, bin_path, scenario_name, confdir, dut_conf_generator: Callable,
-                 extra_args=None):
+                 extra_args=None, pre_script=None, post_script=None):
     assert (any(routing_suite == x for x in ('frr', 'bird')))
 
     s = Scenario(interfaces, scenario_name)
@@ -84,5 +102,11 @@ def new_scenario(interfaces, routing_suite, bin_path, scenario_name, confdir, du
     set_proto(routing_suite, bin_path=bin_path, scenario=s,
               confs=dict(extra_conf, bgp=bgp_conf),
               extra_args=extra_args)
+
+    if pre_script:
+        s.pre_script = pre_script
+
+    if post_script:
+        s.post_script = post_script
 
     return s

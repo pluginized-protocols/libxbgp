@@ -77,7 +77,7 @@ def launch(interfaces, outdir, prefix_file, exp_nb, daemons_list, daemons: 'Runn
         )
 
         # tshark is waaaay too slow to start
-        sleep(2 if daemon.NAME != TSHARK.NAME else 70)
+        sleep(2 if daemon.NAME != TSHARK.NAME else 80)
 
         if proc.poll() is not None:
             raise ChildProcessError("{daemon} couldn't be started!".format(daemon=daemon))
@@ -104,6 +104,10 @@ def main(args):
         s.write_metadata(os.path.join(out_dir, f"{s.outfile}.metadata"))
 
         for i in range(0, args.nb_experiments):
+
+            if s.pre_script:
+                s.pre_script.run()
+
             launch(s.interfaces, out_dir, s.outfile, i,
                    s.daemons, RunningDaemon())
 
