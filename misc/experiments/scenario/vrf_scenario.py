@@ -172,3 +172,8 @@ def scenario_frr_vrf(interfaces, memcheck, scenario_name):
                         bin_path='/home/thomas/frr_plugins/sbin', scenario_name=scenario_name,
                         confdir='/tmp/launch/confdir', dut_conf_generator=config_vrf_dut,
                         post_script=post_script, pre_script=pre_script)
+
+
+def scenario_frr_vrf_memcheck(interfaces):
+    return scenario_frr_vrf(interfaces, memcheck=True,
+                            scenario_name='frr_memcheck_vrf')
