@@ -28,7 +28,7 @@ def pre_script_ifdown(file_path, iface):
       exit 1
     fi
     
-    ip link set {iface} down
+    ssh -i /home/thomas/id_rsa root@10.0.0.6 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} down"
     
     """.format(iface=iface)
 
@@ -38,7 +38,7 @@ def pre_script_ifdown(file_path, iface):
     return PreScript(f"bash {file_path}", 0)
 
 
-def post_script_ifup(file_path, iface, ip_addr):
+def post_script_ifup(file_path, iface):
     sh_script = """#!/usr/bin/env bash
     
     if [[ $EUID -ne 0 ]]; then
@@ -46,10 +46,9 @@ def post_script_ifup(file_path, iface, ip_addr):
       exit 1
     fi
     
-    ip addr add {ipv4} dev {iface}
-    ip link set {iface} up
+    ssh -i /home/thomas/id_rsa root@10.0.0.6 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} up"
     
-    """.format(iface=iface, ipv4=ip_addr)
+    """.format(iface=iface)
 
     with open(file_path, 'w') as f:
         f.write(sh_script)
@@ -164,8 +163,8 @@ def config_vrf_dut(config_path, suite_str, scenario):
 
 def scenario_frr_vrf(interfaces, memcheck, scenario_name):
     manifest = vrf_manifest(memcheck)
-    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'ens2f0', '42.0.0.0/24')
-    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'ens2f0')
+    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp16s0f1')
+    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp16s0f1')
 
     manifest.write_conf('/tmp/launch/plugin_manifest.conf')
     extra_args = "-w /tmp/launch/plugin_manifest.conf " \
