@@ -86,6 +86,14 @@ extern int load_extension_code(const char *path, const char *extension_code_dir,
     return return_val;\
 }
 
+#define CALL_PRE(insertion_id, args) \
+do {                                                \
+   args_t FULL_ARGS = build_args(args);                    \
+   insertion_point_t *INSERTION_POINT = insertion_point(insertion_id); \
+   if (!INSERTION_POINT) break;                     \
+   run_pre_functions(INSERTION_POINT, &FULL_ARGS, NULL);\
+} while(0)
+
 #define CALL_ALL(insertion_id, args, args_vm_check, default_ret_val, on_err, ...){\
   uint64_t VM_RETURN_VALUE = 0; \
   args_t FULL_ARGS;\

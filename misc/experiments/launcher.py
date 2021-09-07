@@ -60,12 +60,15 @@ def sigint_handler(sig, frame):
 def launch(interfaces, outdir, prefix_file, exp_nb, daemons_list, daemons: 'RunningDaemon'):
     tshark = TSHARK(outdir, interfaces, prefix_file, exp_nb)
 
+    all_daemons = [tshark]
+    all_daemons.extend(daemons_list)
+
     if dry_run():
         print(f"Launching exp #{exp_nb} {prefix_file} at interface(s) {interfaces} "
-              f"with daemons {daemons_list}")
+              f"with daemons {all_daemons}")
         return
 
-    for daemon in [tshark] + daemons_list:
+    for daemon in all_daemons:
         proc = subprocess.Popen(
             shlex.split(daemon.get_cmd_line()),
             stderr=sys.stderr,
@@ -74,7 +77,7 @@ def launch(interfaces, outdir, prefix_file, exp_nb, daemons_list, daemons: 'Runn
         )
 
         # tshark is waaaay too slow to start
-        sleep(1 if daemon.NAME != TSHARK.NAME else 10)
+        sleep(2 if daemon.NAME != TSHARK.NAME else 70)
 
         if proc.poll() is not None:
             raise ChildProcessError("{daemon} couldn't be started!".format(daemon=daemon))
@@ -103,6 +106,9 @@ def main(args):
         for i in range(0, args.nb_experiments):
             launch(s.interfaces, out_dir, s.outfile, i,
                    s.daemons, RunningDaemon())
+
+            if s.post_script:
+                s.post_script.run()
             # sleep
             if not dry_run():
                 time.sleep(args.timeout)
@@ -110,7 +116,7 @@ def main(args):
                 # once the daemons has been successfully killed,
                 # we wait a bit to let the other routers to complete
                 # their cleanup because we killed the BGP sessions of
-                # our router
+                # our router but not the remote ones.
                 time.sleep(args.wait)
 
 
