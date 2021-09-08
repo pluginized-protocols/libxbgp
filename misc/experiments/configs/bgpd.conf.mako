@@ -37,7 +37,7 @@ router bgp ${bgp_conf.asn} vrf ${vrf}
   %endfor
 !
 %for af in bgp_conf.af:
-address-family ${af.to_str(bgp_conf.proto_suite)}
+ address-family ${af.to_str(bgp_conf.proto_suite)}
   ${af.vpn_leak(bgp_conf.proto_suite)}
   %for neigh in bgp_conf.neighbors:
   neighbor ${neigh.ip} activate
@@ -52,7 +52,7 @@ address-family ${af.to_str(bgp_conf.proto_suite)}
       %endfor
     %endif
   %endfor
-exit-address-family
+ exit-address-family
 !
 %endfor
 %endfor

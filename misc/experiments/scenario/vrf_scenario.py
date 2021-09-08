@@ -209,5 +209,10 @@ def scenario_frr_vrf_memcheck(interfaces):
                             scenario_name='frr_memcheck_vrf')
 
 
+def scenario_frr_vrf_no_memcheck(interfaces):
+    return scenario_frr_vrf(interfaces, memcheck=False,
+                            scenario_name='frr_no_memcheck_vrf')
+
+
 if __name__ == '__main__':
     print(config_vrf_dut('/tmp/exdir', 'frr', None))
