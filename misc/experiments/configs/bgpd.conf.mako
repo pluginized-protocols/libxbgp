@@ -41,8 +41,8 @@ address-family ${af.to_str(bgp_conf.proto_suite)}
   ${af.vpn_leak(bgp_conf.proto_suite)}
   %for neigh in bgp_conf.neighbors:
   neighbor ${neigh.ip} activate
-    %if neigh.has_acl_from_af(str(af)):
-      %for acl, direction in neigh.acl_filters[str(af)]:
+    %if neigh.has_acl_from_af(af.str_afi()):
+      %for acl, direction in neigh.acl_filters[af.str_afi()]:
   neighbor ${neigh.ip} distribute-list ${acl.name} ${direction.to_str(bgp_conf.proto_suite)}
       %endfor
     %endif

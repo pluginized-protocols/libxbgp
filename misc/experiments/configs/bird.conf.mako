@@ -54,7 +54,7 @@ protocol bgp ${neigh.name} {
   %for af in bgp_config.af:
 
   ${af.to_str(node.proto_suite)} {
-    %for acl, direction in neigh.acl_filters[af.to_str(node.proto_suite)]:
+    %for acl, direction in neigh.acl_filters[af.str_afi()]:
       ${direction.to_str(node.proto_suite)} filter ${acl.name} ;
     %endfor
   };

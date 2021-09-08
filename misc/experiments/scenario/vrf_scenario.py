@@ -2,7 +2,8 @@ from __future__ import annotations
 from ipaddress import ip_address
 from typing import Union
 
-from misc.experiments.config_generator import Config, EXABGP, FRR, IPV6_UNICAST, IPV4_UNICAST, DirIn, DirOut, BIRD
+from misc.experiments.config_generator import Config, EXABGP, FRR, IPV6_UNICAST, IPV4_UNICAST, DirIn, DirOut, BIRD, \
+    AddressFamilyConfig
 from misc.experiments.global_utils import dry_run
 from misc.experiments.plugin_conf import Code, Plugin, PluginManifest
 from misc.experiments.post_script import PostScript, PreScript
@@ -70,33 +71,57 @@ def strsuite2obj(str_suite: str):
 def config_dut_generic(config_path, dut_suite: str, dut_conf: dict[str, Union[int, str, list[str]]]):
     con = Config(config_path)
 
-    monit = con.new_bgp_node("monitor", suite=EXABGP())
-    dut = con.new_bgp_node("dut", suite=strsuite2obj(dut_suite))
-    injecter1 = con.new_bgp_node("injecter1", suite=FRR())
-    injecter2 = con.new_bgp_node("injecter2", suite=FRR())
+    monit = con.new_node("monitor", suite=EXABGP())
+    dut = con.new_node("dut", suite=strsuite2obj(dut_suite))
+    injecter1 = con.new_node("injecter1", suite=FRR())
+    injecter2 = con.new_node("injecter2", suite=FRR())
 
-    monit.set_as(65022)
-    dut.set_as(dut_conf['as'])
-    injecter1.set_as(65022)
-    injecter2.set_as(65022)
+    bgp_monit = monit.add_bgp_config()
+    bgp_dut = dut.add_bgp_config()
+    bgp_dut_red = dut.add_bgp_config("red")
+    bgp_injecter1 = injecter1.add_bgp_config()
+    bgp_injecter2 = injecter2.add_bgp_config()
+
+    bgp_monit.set_as(65022)
+    bgp_dut.set_as(dut_conf['as'])
+    bgp_dut_red.set_as(dut_conf['as'])
+    bgp_injecter1.set_as(65022)
+    bgp_injecter2.set_as(65022)
 
     monit.set_router_id(ip_address("42.0.1.2"))
     dut.set_router_id(ip_address("42.0.2.1"))
     injecter1.set_router_id(ip_address("42.0.2.2"))
     injecter2.set_router_id(ip_address("42.4.0.1"))
 
-    monit.activate_af(IPV4_UNICAST())
-    monit.activate_af(IPV6_UNICAST())
-    dut.activate_af(IPV4_UNICAST())
-    dut.activate_af(IPV6_UNICAST())
-    injecter1.activate_af(IPV4_UNICAST())
-    injecter1.activate_af(IPV6_UNICAST())
-    injecter2.activate_af(IPV4_UNICAST())
-    injecter2.activate_af(IPV6_UNICAST())
+    bgp_monit.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_monit.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+    dut_ipv4_unicast = bgp_dut.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    dut_ipv6_unicast = bgp_dut.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+    dut_red_ipv4_unicast = bgp_dut_red.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    dut_red_ipv6_unicast = bgp_dut_red.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_injecter1.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_injecter1.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_injecter2.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_injecter2.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+
+    dut_red_ipv4_unicast.import_vpn()
+    dut_red_ipv4_unicast.add_rt(AddressFamilyConfig.IMPORT, '65002:421')
+
+    dut_red_ipv6_unicast.import_vpn()
+    dut_red_ipv6_unicast.add_rt(AddressFamilyConfig.IMPORT, '65002:421')
+
+    dut_ipv4_unicast.export_vpn()
+    dut_ipv4_unicast.add_rd('65002:421')
+    dut_ipv4_unicast.add_rt(AddressFamilyConfig.EXPORT, '65002:421')
+
+    dut_ipv6_unicast.export_vpn()
+    dut_ipv6_unicast.add_rd('65002:421')
+    dut_ipv6_unicast.add_rt(AddressFamilyConfig.EXPORT, '65002:421')
 
     n1_neigh_conf, n2_neigh_conf = con.make_link(node1=monit, node2=dut,
                                                  ip_node1=ip_address(dut_conf["ip_monitor"]),
-                                                 ip_node2=ip_address(dut_conf["ip_dut_monitor"]))
+                                                 ip_node2=ip_address(dut_conf["ip_dut_monitor"]),
+                                                 vrf_node2="red")
 
     dut_neigh_inject1_conf, inject_neigh_dut_conf = \
         con.make_link(node1=dut, node2=injecter1,
@@ -182,3 +207,7 @@ def scenario_frr_vrf(interfaces, memcheck, scenario_name):
 def scenario_frr_vrf_memcheck(interfaces):
     return scenario_frr_vrf(interfaces, memcheck=True,
                             scenario_name='frr_memcheck_vrf')
+
+
+if __name__ == '__main__':
+    print(config_vrf_dut('/tmp/exdir', 'frr', None))

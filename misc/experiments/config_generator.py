@@ -351,15 +351,15 @@ class FRR(BGPImplem):
             AddressFamilyConfig.IMPORT: 'import',
             AddressFamilyConfig.EXPORT: 'export'
         }
-        fin_str = f'rd vpn export {af_conf.rd}' if af_conf.rd else ''
+        fin_str = f'rd vpn export {af_conf.rd}\n' if af_conf.rd else ''
 
         if af_conf.rt:
             for direction in af_conf.rt:
-                fin_str += f"rt vpn {_dir[direction]} {af_conf.rt[direction].join(' ')}\n"
+                fin_str += f"  rt vpn {_dir[direction]} {' '.join([val for val in af_conf.rt[direction]])}\n"
 
         if af_conf.rt:
             for direction in af_conf.vpn:
-                fin_str += f'{_dir[direction]} vpn'
+                fin_str += f'  {_dir[direction]} vpn\n'
 
         return fin_str
 
@@ -667,6 +667,14 @@ class AddressFamilyConfig(object):
         if self.vpn is None:
             self.vpn = set()
         self.vpn.add(self.EXPORT)
+
+    def str_afi(self):
+        map_str = {
+            self.AFI_IPV4: IPV4,
+            self.AFI_IPV6: IPV6,
+        }
+        the_str = map_str[self.afi]
+        return the_str
 
     def afi_str(self, bgp_implem):
         return bgp_implem.afi_str(self)
