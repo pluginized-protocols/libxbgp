@@ -77,10 +77,11 @@ def launch(interfaces, outdir, prefix_file, exp_nb, daemons_list, daemons: 'Runn
         )
 
         # tshark is waaaay too slow to start
-        sleep(2 if daemon.NAME != TSHARK.NAME else 80)
+        sleep(2 if daemon.NAME != TSHARK.NAME else 85)
 
         if proc.poll() is not None:
-            raise ChildProcessError("{daemon} couldn't be started!".format(daemon=daemon))
+            raise ChildProcessError("{daemon} couldn't be started!".
+                                    format(daemon=daemon))
 
         daemons.add_daemon(proc, daemon.NAME)
 
@@ -113,6 +114,7 @@ def main(args):
 
             if s.post_script:
                 s.post_script.run()
+                s.post_script.post_sleep()
             # sleep
             if not dry_run():
                 time.sleep(args.timeout)

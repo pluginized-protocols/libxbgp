@@ -53,7 +53,10 @@ def post_script_ifup(file_path, iface):
     with open(file_path, 'w') as f:
         f.write(sh_script)
 
-    return PostScript(f'bash "{file_path}"', 60)
+    # post sleep 60s after re-enabling the remote interface up
+    # to let the BGP daemon establishes the connection with
+    # the remote peer
+    return PostScript(f'bash "{file_path}"', 80, post_sleep=60)
 
 
 def strsuite2obj(str_suite: str):
