@@ -4,6 +4,7 @@ from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 from typing import Any, Union, Optional, Sequence, Dict
 
 from mako.template import Template
+from mako import exceptions as mako_exception
 
 IN = 'in'
 OUT = 'out'
@@ -223,9 +224,11 @@ class BGPRoute(object):
 class AFISAFI(Singleton):
 
     def afi_str(self, bgp_implem):
+        raise NotImplementedError
         return bgp_implem.afi_str(self)
 
     def to_str(self, bgp_implem):
+        raise NotImplementedError
         return bgp_implem.afi_safi_str(self)
 
 
@@ -295,6 +298,9 @@ class BGPImplem(Singleton):
     def get_template(self):
         return Template(filename=self.template)
 
+    def vpn_leak(self, af_conf):
+        raise NotImplementedError()
+
     def write_config(self, node, output_dir, config):
         af_list = [IPV4_UNICAST(), IPV6_UNICAST()]
         out_file = os.path.join(output_dir, self.get_output_filename(node))
@@ -304,8 +310,12 @@ class BGPImplem(Singleton):
         template = self.get_template()
 
         with open(out_file, 'w') as f:
-            f.write(template.render(node=node, afis=af_list, acls=config.acl_filters,
-                                    process=config.api_process))
+            try:
+                f.write(template.render(node=node, afis=af_list, acls=config.acl_filters,
+                                        process=config.api_process))
+            except:
+                print(mako_exception.text_error_template().render())
+                raise mako_exception.MakoException
 
 
 class FRR(BGPImplem):
@@ -320,11 +330,38 @@ class FRR(BGPImplem):
     MAKO_TEMPLATE = 'bgpd.conf.mako'
     IMPLEM_NAME = "bgpd"
 
+    @property
+    def __afi(self):
+        return {
+            AddressFamilyConfig.AFI_IPV4: 'ipv4',
+            AddressFamilyConfig.AFI_IPV6: 'ipv6',
+        }
+
+    @property
+    def __safi(self):
+        return {
+            AddressFamilyConfig.SAFI_UNICAST: 'unicast'
+        }
+
     def afi_safi_str(self, afi_safi):
-        if type(afi_safi) == IPV4_UNICAST:
-            return "ipv4 unicast"
-        elif type(afi_safi) == IPV6_UNICAST:
-            return "ipv6 unicast"
+        return f'{self.__afi[afi_safi.afi]} {self.__safi[afi_safi.safi]}'
+
+    def vpn_leak(self, af_conf: 'AddressFamilyConfig'):
+        _dir = {
+            AddressFamilyConfig.IMPORT: 'import',
+            AddressFamilyConfig.EXPORT: 'export'
+        }
+        fin_str = f'rd vpn export {af_conf.rd}' if af_conf.rd else ''
+
+        if af_conf.rt:
+            for direction in af_conf.rt:
+                fin_str += f"rt vpn {_dir[direction]} {af_conf.rt[direction].join(' ')}\n"
+
+        if af_conf.rt:
+            for direction in af_conf.vpn:
+                fin_str += f'{_dir[direction]} vpn'
+
+        return fin_str
 
     def route_to_str(self, bgp_route):
         return "{address}/{prefix}". \
@@ -402,11 +439,13 @@ class BIRD(BGPImplem):
     MAKO_TEMPLATE = 'bird.conf.mako'
     IMPLEM_NAME = 'bird'
 
-    def afi_safi_str(self, afi_safi):
-        if type(afi_safi) == IPV4_UNICAST:
-            return "ipv4"
-        elif type(afi_safi) == IPV6_UNICAST:
-            return "ipv6"
+    def afi_safi_str(self, afi_safi: 'AddressFamilyConfig'):
+        afi = {
+            AddressFamilyConfig.AFI_IPV4: 'ipv4',
+            AddressFamilyConfig.AFI_IPV6: 'ipv6',
+        }
+
+        return f'{afi[afi_safi.afi]}'
 
     def route_to_str(self, bgp_route):
         raise UnsupportedOperation("We do not support route injection with BIRD yet")
@@ -416,17 +455,24 @@ class EXABGP(BGPImplem):
     MAKO_TEMPLATE = 'exabgp.conf.mako'
     IMPLEM_NAME = 'exabgp'
 
+    @property
+    def __afi(self):
+        return {
+            AddressFamilyConfig.AFI_IPV4: 'ipv4',
+            AddressFamilyConfig.AFI_IPV6: 'ipv6',
+        }
+
+    @property
+    def __safi(self):
+        return {
+            AddressFamilyConfig.SAFI_UNICAST: 'unicast'
+        }
+
     def afi_safi_str(self, afi_safi):
-        if type(afi_safi) == IPV4_UNICAST:
-            return "ipv4 unicast"
-        elif type(afi_safi) == IPV6_UNICAST:
-            return "ipv6 unicast"
+        return f'{self.__afi[afi_safi.afi]} {self.__safi[afi_safi.safi]}'
 
     def afi_str(self, afi_safi):
-        if type(afi_safi) == IPV4_UNICAST:
-            return "ipv4"
-        elif type(afi_safi) == IPV6_UNICAST:
-            return "ipv6"
+        return f'{self.__afi[afi_safi.afi]}'
 
     def route_to_str(self, bgp_route: 'BGPRoute'):
         # we only handle unicast ipv4 and ipv6 routes
@@ -579,25 +625,81 @@ class NeighborConfig(object):
         return self._local_ip
 
 
-class NodeConfig(object):
-    def __init__(self, name, proto_suite, config):
+class AddressFamilyConfig(object):
+    IMPORT = 'import'
+    EXPORT = 'export'
+    AFI_IPV4 = 1
+    AFI_IPV6 = 2
+    SAFI_UNICAST = 1
+
+    def __init__(self, afi, safi):
+        self.afi = afi
+        self.safi = safi
+        self.rd = None
+        self.rt = None
+        self.vpn = None
+
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, AddressFamilyConfig):
+            return o.afi == self.afi and o.safi == self.safi
+        return False
+
+    def __hash__(self) -> int:
+        return hash((self.afi, self.safi))
+
+    def add_rt(self, direction, rt_value):
+        if self.rt is None:
+            self.rt = {direction: set()}
+        if direction not in self.rt:
+            self.rt[direction] = set()
+
+        self.rt[direction].add(rt_value)
+
+    def add_rd(self, rd_value):
+        self.rd = rd_value
+
+    def import_vpn(self):
+        if self.vpn is None:
+            self.vpn = set()
+        self.vpn.add(self.IMPORT)
+
+    def export_vpn(self):
+        if self.vpn is None:
+            self.vpn = set()
+        self.vpn.add(self.EXPORT)
+
+    def afi_str(self, bgp_implem):
+        return bgp_implem.afi_str(self)
+
+    def to_str(self, bgp_implem):
+        return bgp_implem.afi_safi_str(self)
+
+    def vpn_leak(self, bgp_implem):
+        return bgp_implem.vpn_leak(self)
+
+
+class NodeBGPConfig(object):
+    DEFAULT_VRF = 'default'
+
+    def __init__(self, proto_suite, config, vrf: Union[None, str] = None):
         self.proto_suite = proto_suite
         self.asn = -1
-        self.name = name
         self.router_id = -1
         self.neighbors = set()
-        self.log_file = None
-        self.debugs = list()
         self.af = set()
         self.routes = {
             IPV4_UNICAST(): list(),
             IPV6_UNICAST(): list()
         }
-        self.password = None
         self.description = None
         self.__config = config  # type: Config
         self.__output_path = None
-        self.extra_config = dict()
+        self.vrf = vrf
+
+    def is_default_vrf(self):
+        if self.vrf is None:
+            return True
+        return self.vrf == self.DEFAULT_VRF
 
     @property
     def output_path(self):
@@ -613,25 +715,15 @@ class NodeConfig(object):
     def config(self):
         return self.__config
 
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-    def __eq__(self, o: object) -> bool:
-        if not isinstance(NodeConfig, o):
-            return False
-        return o.name == self.name
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return str(self.name)
-
     def set_as(self, asn):
         self.asn = asn
 
-    def activate_af(self, af):
-        self.af.add(af)
+    def activate_af(self, afi, safi):
+        af_config = AddressFamilyConfig(afi, safi)
+        if af_config in self.af:
+            raise ValueError(f"Address Family ({afi}, {safi}) already configured !")
+        self.af.add(af_config)
+        return af_config
 
     def set_router_id(self, router_id):
         self.router_id = router_id
@@ -662,6 +754,47 @@ class NodeConfig(object):
 
         return neighbor_conf
 
+
+class NodeConfig(object):
+    def __init__(self, name, proto_suite, config: 'Config'):
+        self.name = name
+        self.config = config
+        self._bgp_config = dict()
+        self.log_file = None
+        self.debugs = list()
+        self.password = None
+        self.proto_suite = proto_suite
+        self.router_id = -1
+        self.extra_config = dict()
+
+    def add_bgp_config(self, vrf: str = NodeBGPConfig.DEFAULT_VRF):
+        if vrf in self._bgp_config:
+            raise ValueError("{name} is already configured for vrf {vrf} !".format(name=self.name, vrf=vrf))
+        new_bgp_config = NodeBGPConfig(self.proto_suite, self.config, vrf)
+        self._bgp_config[vrf] = new_bgp_config
+        return new_bgp_config
+
+    @property
+    def bgp_config(self):
+        return self._bgp_config
+
+    def set_router_id(self, router_id):
+        self.router_id = router_id
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(NodeConfig, o):
+            return False
+        return o.name == self.name
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return str(self.name)
+
     def write_config(self, output_dir, config):
         self.proto_suite.write_config(self, output_dir, config)
 
@@ -673,7 +806,7 @@ class Config(object):
         self.api_process = dict()
         self.acl_filters = dict()  # type: Dict[str, AccessList]
 
-    def new_bgp_node(self, name: str, suite):
+    def new_node(self, name: str, suite):
         if name not in self._nodes:
             node_conf = NodeConfig(name, suite, self)
             self._nodes[node_conf] = node_conf
@@ -681,18 +814,25 @@ class Config(object):
             raise ValueError("{name} is already configured !".format(name=name))
         return node_conf
 
-    def make_link(self, node1, node2, ip_node1, ip_node2):
+    def make_link(self, node1, node2, ip_node1, ip_node2,
+                  vrf_node1=NodeBGPConfig.DEFAULT_VRF, vrf_node2=NodeBGPConfig.DEFAULT_VRF):
         if node1 not in self._nodes:
             raise ValueError("{node} not yet created".format(node=str(node1)))
 
         if node2 not in self._nodes:
             raise ValueError("{node} not yet created".format(node=str(node2)))
 
-        n1_neigh_config = self._nodes[node1].add_neighbor(node2, ip_node2, local_ip=ip_node1)
-        n2_neigh_config = self._nodes[node2].add_neighbor(node1, ip_node1, local_ip=ip_node2)
+        if vrf_node1 not in self._nodes[node1].bgp_config:
+            raise ValueError("vrf {vrf} not configured for {node}".format(vrf=vrf_node1, node=node1))
 
-        n1_neigh_config.set_asn(node2.asn)
-        n2_neigh_config.set_asn(node1.asn)
+        if vrf_node2 not in self._nodes[node2].bgp_config:
+            raise ValueError("vrf {vrf} not configured for {node}".format(vrf=vrf_node2, node=node2))
+
+        n1_neigh_config = self._nodes[node1].bgp_config[vrf_node1].add_neighbor(node2, ip_node2, local_ip=ip_node1)
+        n2_neigh_config = self._nodes[node2].bgp_config[vrf_node2].add_neighbor(node1, ip_node1, local_ip=ip_node2)
+
+        n1_neigh_config.set_asn(self._nodes[node2].bgp_config[vrf_node2].asn)
+        n2_neigh_config.set_asn(self._nodes[node1].bgp_config[vrf_node1].asn)
         n1_neigh_config.name = node2.name
         n2_neigh_config.name = node1.name
 

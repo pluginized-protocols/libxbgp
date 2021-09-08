@@ -35,25 +35,30 @@ protocol kernel {
 ${acls[a].to_str(node.proto_suite)}
 
 %endfor
-%for neigh in node.neighbors:
+%for vrf in node.bgp_config:
+<%
+bgp_config = node.bgp_config[vrf]
+%>
+%for neigh in bgp_config.neighbors:
 
 protocol bgp ${neigh.name} {
   %if neigh.description:
   description "${neigh.description}";
   %endif
-  local ${neigh.local_ip} as ${node.asn};
+  local ${neigh.local_ip} as ${bgp_config.asn};
   neighbor ${neigh.ip} as ${neigh.asn};
   %if neigh.is_rr_client:
   rr client;
   %endif
   hold time ${neigh.holdtime};
-  %for af in node.af:
+  %for af in bgp_config.af:
 
   ${af.to_str(node.proto_suite)} {
-    %for acl, direction in neigh.acl_filters[str(af)]:
+    %for acl, direction in neigh.acl_filters[af.to_str(node.proto_suite)]:
       ${direction.to_str(node.proto_suite)} filter ${acl.name} ;
     %endfor
   };
   %endfor
 }
+%endfor
 %endfor

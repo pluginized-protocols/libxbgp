@@ -4,7 +4,7 @@ from ipaddress import ip_address
 from typing import Callable, Union
 
 from misc.experiments.config_generator import Config, FRR, BIRD, IPV4_UNICAST, IPV6_UNICAST, BGPRoute, EXABGP, \
-    BGPAttribute, DirIn, DirOut
+    BGPAttribute, DirIn, DirOut, AddressFamilyConfig
 from misc.experiments.scenario.scenario_utils import Scenario
 
 
@@ -60,24 +60,28 @@ def config_dut(config_path, dut_suite, scenario):
 def config_dut_generic(config_path, dut_suite, dut_conf: dict[str, Union[int, str, list[str]]]):
     con = Config(config_path)
 
-    monit = con.new_bgp_node("monitor", suite=EXABGP())
-    dut = con.new_bgp_node("dut", suite=dut_suite)
-    injecter = con.new_bgp_node("injecter", suite=FRR())
+    monit = con.new_node("monitor", suite=FRR())
+    dut = con.new_node("dut", suite=dut_suite)
+    injecter = con.new_node("injecter", suite=EXABGP())
 
-    monit.set_as(65022)
-    dut.set_as(dut_conf['as'])
-    injecter.set_as(65022)
+    bgp_monit = monit.add_bgp_config()
+    bgp_dut = dut.add_bgp_config()
+    bgp_injecter = injecter.add_bgp_config()
+
+    bgp_monit.set_as(65022)
+    bgp_dut.set_as(dut_conf['as'])
+    bgp_injecter.set_as(65022)
 
     monit.set_router_id(ip_address("42.0.1.2"))
     dut.set_router_id(ip_address("42.0.2.1"))
     injecter.set_router_id(ip_address("42.0.2.2"))
 
-    monit.activate_af(IPV4_UNICAST())
-    monit.activate_af(IPV6_UNICAST())
-    dut.activate_af(IPV4_UNICAST())
-    dut.activate_af(IPV6_UNICAST())
-    injecter.activate_af(IPV4_UNICAST())
-    injecter.activate_af(IPV6_UNICAST())
+    bgp_monit.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_monit.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_dut.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_dut.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_injecter.activate_af(AddressFamilyConfig.AFI_IPV4, AddressFamilyConfig.SAFI_UNICAST)
+    bgp_injecter.activate_af(AddressFamilyConfig.AFI_IPV6, AddressFamilyConfig.SAFI_UNICAST)
 
     n1_neigh_conf, n2_neigh_conf = con.make_link(node1=monit, node2=dut,
                                                  ip_node1=ip_address(dut_conf["ip_monitor"]),
@@ -157,4 +161,4 @@ def gen_dut_conf_rr_native(config_path, suite_str, scenario: Union['Scenario', N
 
 
 if __name__ == '__main__':
-    print(gen_dut_conf('/tmp/exdir', 'frr', None))
+    print(gen_dut_conf('/tmp/exdir', 'bird', None))
