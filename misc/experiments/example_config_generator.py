@@ -37,7 +37,7 @@ def config_dut_rr_native(config_path, dut_suite, scenario):
         'ip_dut_monitor': "42.42.1.1",
         'ip_injecter': "42.42.2.2",
         'ip_monitor': "42.42.1.2",
-        'rr_clients': ['monitor', 'injecter']
+        'rr_clients': ['monitor']
     })
 
 
