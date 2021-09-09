@@ -70,7 +70,7 @@ def config_dut_generic(config_path, dut_suite, dut_conf: dict[str, Union[int, st
 
     bgp_monit.set_as(65022)
     bgp_dut.set_as(dut_conf['as'])
-    bgp_injecter.set_as(65022)
+    bgp_injecter.set_as(65020)
 
     monit.set_router_id(ip_address("42.0.1.2"))
     dut.set_router_id(ip_address("42.0.2.1"))
