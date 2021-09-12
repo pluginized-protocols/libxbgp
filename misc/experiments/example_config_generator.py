@@ -161,4 +161,4 @@ def gen_dut_conf_rr_native(config_path, suite_str, scenario: Union['Scenario', N
 
 
 if __name__ == '__main__':
-    print(gen_dut_conf('/tmp/exdir', 'bird', None))
+    print(gen_dut_conf('/tmp/exdir', 'frr', None))

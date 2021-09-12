@@ -773,6 +773,7 @@ class NodeConfig(object):
         self.password = None
         self.proto_suite = proto_suite
         self.router_id = -1
+        self.always_compare_router_id = 1
         self.extra_config = dict()
 
     def add_bgp_config(self, vrf: str = NodeBGPConfig.DEFAULT_VRF):

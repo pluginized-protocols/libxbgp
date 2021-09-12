@@ -24,6 +24,9 @@ router bgp ${bgp_conf.asn} vrf ${vrf}
 %endif
   bgp router-id ${node.router_id}
   no bgp default ipv4-unicast
+  %if node.always_compare_router_id:
+  bgp bestpath compare-routerid
+  %endif
   !
   %for neigh in bgp_conf.neighbors:
   neighbor ${neigh.ip} remote-as ${neigh.asn}
