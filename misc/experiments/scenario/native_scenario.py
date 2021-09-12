@@ -16,7 +16,7 @@ def pre_script_ifdown(file_path, iface):
       exit 1
     fi
     
-    ssh -i /home/thomas/id_rsa root@10.0.0.6 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} down"
+    ssh -i /home/thomas/id_rsa root@10.0.0.4 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} down"
     
     """.format(iface=iface)
 
@@ -34,7 +34,7 @@ def post_script_ifup(file_path, iface):
       exit 1
     fi
     
-    ssh -i /home/thomas/id_rsa root@10.0.0.6 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} up"
+    ssh -i /home/thomas/id_rsa root@10.0.0.4 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} up"
     
     """.format(iface=iface)
 
@@ -141,9 +141,9 @@ def config_dut_generic(config_path, dut_suite: str, dut_conf: dict[str, Union[in
 
 def config_dut_2peers(config_path, suite_str, scenario):
     if scenario is not None:
-        scenario.add_metadata('ip_dut_injecter', '42.4.0.2')
+        scenario.add_metadata('ip_dut_injecter', '42.0.2.1')
         scenario.add_metadata('ip_dut_monitor', '42.0.1.1')
-        scenario.add_metadata('ip_injecter', '42.4.0.1')
+        scenario.add_metadata('ip_injecter', '42.0.2.2')
         scenario.add_metadata('ip_monitor', '42.0.1.2')
 
     return config_dut_generic(config_path, suite_str, {
@@ -182,8 +182,8 @@ def scenario_frr_native_2peers(interfaces):
 
 
 def scenario_bird_native_2peers(interfaces):
-    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp16s0f1')
-    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp16s0f1')
+    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp4s0f1')
+    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp4s0f1')
     return new_scenario(interfaces, routing_suite='bird',
                         bin_path="/home/thomas/bird_native/sbin",
                         scenario_name='bird_native_2peers', confdir="/tmp/launch/confdir",
