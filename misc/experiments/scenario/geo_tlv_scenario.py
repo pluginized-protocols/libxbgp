@@ -32,11 +32,6 @@ def geo_tlv_manifest(memcheck):
                          anchor=Code.REPLACE, jit=True, memcheck=memcheck,
                          strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
-    export_igp_metric = Code('export_igp_metric', '/tmp/launch/plugins/export_igp_metric.o',
-                             insertion_point='bgp_pre_outbound_filter', seq=10,
-                             anchor=Code.REPLACE, jit=True, memcheck=memcheck,
-                             strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
-
     plugin = Plugin("geo_tlv", 0, 4096, (compare_med, receive_attr, write_attr,
                                          import_pfx_originator, set_med_coord,
                                          export_igp_metric))
