@@ -172,8 +172,8 @@ def scenario_bird_native(interfaces):
 
 
 def scenario_frr_native_2peers(interfaces):
-    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp16s0f1')
-    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp16s0f1')
+    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp4s0f1')
+    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp4s0f1')
 
     return new_scenario(interfaces, routing_suite='frr',
                         bin_path="/home/thomas/frr_native/sbin",
