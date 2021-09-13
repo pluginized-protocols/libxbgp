@@ -33,8 +33,7 @@ def geo_tlv_manifest(memcheck):
                          strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
 
     plugin = Plugin("geo_tlv", 0, 4096, (compare_med, receive_attr, write_attr,
-                                         import_pfx_originator, set_med_coord,
-                                         export_igp_metric))
+                                         import_pfx_originator, set_med_coord,))
 
     return PluginManifest((plugin,), jit_all=True)
 
