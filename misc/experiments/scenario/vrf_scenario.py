@@ -14,7 +14,7 @@ def vrf_manifest(memcheck):
     strict_check = False if dry_run() else True
 
     alternate_old_new = Code('alternate', '/tmp/launch/plugins/alternate_old_new.o',
-                             insertion_point='bgp_local_pref_decision', seq=0,
+                             insertion_point='bgp_router_id_decision', seq=0,
                              anchor=Code.REPLACE, jit=True, memcheck=memcheck,
                              strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
     plugin = Plugin("client_choice", 4096, 4096, (alternate_old_new,))
@@ -29,7 +29,7 @@ def pre_script_ifdown(file_path, iface):
       exit 1
     fi
     
-    ssh -i /home/thomas/id_rsa root@10.0.0.6 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} down"
+    ssh -i /home/thomas/id_rsa root@10.0.0.4 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} down"
     
     """.format(iface=iface)
 
@@ -47,7 +47,7 @@ def post_script_ifup(file_path, iface):
       exit 1
     fi
     
-    ssh -i /home/thomas/id_rsa root@10.0.0.6 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} up"
+    ssh -i /home/thomas/id_rsa root@10.0.0.4 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "ip link set dev {iface} up"
     
     """.format(iface=iface)
 
@@ -191,8 +191,8 @@ def config_vrf_dut(config_path, suite_str, scenario):
 
 def scenario_frr_vrf(interfaces, memcheck, scenario_name):
     manifest = vrf_manifest(memcheck)
-    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp16s0f1')
-    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp16s0f1')
+    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp4s0f1')
+    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp4s0f1')
 
     manifest.write_conf('/tmp/launch/plugin_manifest.conf')
     extra_args = "-w /tmp/launch/plugin_manifest.conf " \
@@ -204,6 +204,18 @@ def scenario_frr_vrf(interfaces, memcheck, scenario_name):
                         post_script=post_script, pre_script=pre_script)
 
 
+def scenario_frr_vrf_native(interfaces):
+    post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp4s0f1')
+    pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp4s0f1')
+
+    return new_scenario(interfaces, routing_suite='frr',
+                        bin_path="/home/thomas/frr_native/sbin",
+                        confdir="/tmp/launch/confdir",
+                        scenario_name='scenario_frr_vrf_native',
+                        dut_conf_generator=config_vrf_dut,
+                        post_script=post_script, pre_script=pre_script)
+
+
 def scenario_frr_vrf_memcheck(interfaces):
     return scenario_frr_vrf(interfaces, memcheck=True,
                             scenario_name='frr_memcheck_vrf')
@@ -212,7 +224,6 @@ def scenario_frr_vrf_memcheck(interfaces):
 def scenario_frr_vrf_no_memcheck(interfaces):
     return scenario_frr_vrf(interfaces, memcheck=False,
                             scenario_name='frr_no_memcheck_vrf')
-
 
 if __name__ == '__main__':
     print(config_vrf_dut('/tmp/exdir', 'frr', None))
