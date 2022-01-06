@@ -161,6 +161,22 @@ static inline int get_real_path(const char *base_dir, const char *decoded_path, 
     return 0;
 }
 
+#define free_list(list) do {        \
+    struct insertion_point_parser *elt, *tmp;           \
+    DL_FOREACH_SAFE(list,elt,tmp) { \
+        DL_DELETE(list,elt);        \
+        free(elt);                  \
+    }                               \
+} while(0)
+
+#define free_hash(hash) do { \
+    struct obj_code_list_parser *elt, *tmp; \
+    HASH_ITER(hh, hash, elt, tmp) {         \
+        HASH_DEL(hash, elt); \
+        free(elt);\
+    }\
+} while(0)
+
 static int iter_anchors(json_object *insertion_point,
                         const char *insertion_point_name,
                         size_t insertion_point_name_len,
@@ -837,6 +853,8 @@ int load_pluglet(const char *path, const char *extension_code_dir,
     }
 
     // TODO unload parser structs
+    free_list(insertion_points_list);
+    free_hash(obj_code_info);
 
     ret_val = 0;
     json_object_put(main_obj);
