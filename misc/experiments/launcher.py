@@ -42,8 +42,8 @@ class RunningDaemon(object):
             d.wait()
 
         # First kill tshark before any routing daemon
-        idx = find_tshark()
-        if idx >= 0:
+        # idx = find_tshark()
+        if idx := find_tshark() >= 0:
             daemon, _ = self._daemons.pop(idx)
             dkill(daemon)
 
@@ -55,35 +55,6 @@ class RunningDaemon(object):
 def sigint_handler(sig, frame):
     RunningDaemon().kill_all()
     exit(EX_OK)
-
-
-def launch(interfaces, outdir, prefix_file, exp_nb, daemons_list, daemons: 'RunningDaemon'):
-    tshark = TSHARK(outdir, interfaces, prefix_file, exp_nb)
-
-    all_daemons = [tshark]
-    all_daemons.extend(daemons_list)
-
-    if dry_run():
-        print(f"Launching exp #{exp_nb} {prefix_file} at interface(s) {interfaces} "
-              f"with daemons {all_daemons}")
-        return
-
-    for daemon in all_daemons:
-        proc = subprocess.Popen(
-            shlex.split(daemon.get_cmd_line()),
-            stderr=sys.stderr,
-            stdout=DEVNULL,
-            stdin=None,
-        )
-
-        # tshark is waaaay too slow to start
-        sleep(2 if daemon.NAME != TSHARK.NAME else 85)
-
-        if proc.poll() is not None:
-            raise ChildProcessError("{daemon} couldn't be started!".
-                                    format(daemon=daemon))
-
-        daemons.add_daemon(proc, daemon.NAME)
 
 
 def main(args):
@@ -102,28 +73,7 @@ def main(args):
     scenario: Callable
     for scenario in get_scenarios():
         s: 'Scenario' = scenario(args.interface)
-        s.write_metadata(os.path.join(out_dir, f"{s.outfile}.metadata"))
-
-        for i in range(0, args.nb_experiments):
-
-            if s.pre_script:
-                s.pre_script.run()
-
-            launch(s.interfaces, out_dir, s.outfile, i,
-                   s.daemons, RunningDaemon())
-
-            if s.post_script:
-                s.post_script.run()
-                s.post_script.post_sleep()
-            # sleep
-            if not dry_run():
-                time.sleep(args.timeout)
-                RunningDaemon().kill_all()
-                # once the daemons has been successfully killed,
-                # we wait a bit to let the other routers to complete
-                # their cleanup because we killed the BGP sessions of
-                # our router but not the remote ones.
-                time.sleep(args.wait)
+        s.launch(out_dir, RunningDaemon())
 
 
 if __name__ == '__main__':

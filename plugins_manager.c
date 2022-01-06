@@ -441,7 +441,7 @@ void *readfile(const char *path, size_t maxlen, size_t *len) {
         memset(absolute_path, 0, PATH_MAX * sizeof(char));
         realpath(path, absolute_path);
         sel_path = absolute_path;
-        file = fopen(path, "r");
+        file = fopen(sel_path, "r");
     }
 
     if (file == NULL) {

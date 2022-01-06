@@ -48,11 +48,17 @@ extern void *__ctx_malloc(context_t *vm_ctx, size_t size);
   ptr__;                                     \
 })
 
-extern int new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
+extern void *new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
+
+extern void *new_runtime_data_int_key(plugin_t *p, unsigned int key, void *data, size_t data_len);
 
 extern void *get_runtime_data(plugin_t *p, const char *key);
 
+extern void *get_runtime_data_int_key(plugin_t *p, unsigned int key);
+
 extern void del_runtime_data(plugin_t *p, const char *key);
+
+extern void del_runtime_data_int_key(plugin_t *p, unsigned int key);
 
 extern int load_extension_code(const char *path, const char *extension_code_dir, proto_ext_fun_t *api_proto,
                                insertion_point_info_t *points_info);

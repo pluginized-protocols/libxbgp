@@ -24,3 +24,11 @@ class PostScript(object):
 
 class PreScript(PostScript):
     pass
+
+
+class InitScript(PostScript):
+    pass
+
+
+class FiniScript(PostScript):
+    pass

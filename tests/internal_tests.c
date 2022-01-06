@@ -259,8 +259,8 @@ static void test_dict(void) {
 
     CU_ASSERT_PTR_NULL(dict);
 
-    CU_ASSERT_EQUAL_FATAL(dict_add(&dict, data1, sizeof(data1) - 1, &forty_two, sizeof(forty_two)), 0);
-    CU_ASSERT_EQUAL_FATAL(dict_add(&dict, "data2", strlen("data2"), &val, sizeof(val)), 0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(dict_add(&dict, data1, sizeof(data1) - 1, &forty_two, sizeof(forty_two)));
+    CU_ASSERT_PTR_NOT_NULL_FATAL(dict_add(&dict, "data2", strlen("data2"), &val, sizeof(val)));
 
     _val = 56;
     forty_two = 43;

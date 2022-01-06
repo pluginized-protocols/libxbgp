@@ -1,0 +1,24 @@
+{
+  "jit_all": false,
+  "name": "add_two_insert",
+  "extra_mem": 4096,
+  "shared_mem": 0,
+  "obj_code_list": {
+    "simple_test_api": {
+      "obj": "simple_test_api.o",
+      "jit": true,
+      "add_memcheck": true,
+      "permissions": [
+        "read",
+        "usr_ptr"
+      ]
+    }
+  },
+  "insertion_points": {
+    "add_two_insert_ip": {
+      "replace": {
+        "0": "simple_test_api"
+      }
+    }
+  }
+}

@@ -157,7 +157,7 @@ static void test_one_job_plugin_manifest(void) {
     long elapsed_time;
 
     memset(path_manifest, 0, sizeof(path_manifest));
-    snprintf(path_manifest, sizeof(path_manifest), "%s/job_manifest.json", plugin_folder_path);
+    snprintf(path_manifest, sizeof(path_manifest), "%s/meta_manifest.conf", plugin_folder_path);
 
     CU_ASSERT_EQUAL_FATAL(
             load_extension_code(path_manifest, plugin_folder_path, funcs, plugins),

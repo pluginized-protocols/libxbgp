@@ -72,7 +72,7 @@ void send_monitoring_record_test(void) {
     memset(path_pluglet, 0, sizeof(path_pluglet));
     snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "send_monitoring_data.o");
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
             entry_arg_null,
     };
@@ -102,7 +102,7 @@ static void send_multiple_records_test(void) {
     memset(path_pluglet, 0, sizeof(path_pluglet));
     snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
             entry_arg_null
     };
@@ -131,7 +131,7 @@ static void send_multiple_records_type_test(void) {
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
     snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "multiple_type_record.o");
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
             entry_arg_null
     };

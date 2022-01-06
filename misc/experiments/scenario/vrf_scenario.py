@@ -4,9 +4,9 @@ from typing import Union
 
 from misc.experiments.config_generator import Config, EXABGP, FRR, IPV6_UNICAST, IPV4_UNICAST, DirIn, DirOut, BIRD, \
     AddressFamilyConfig
-from misc.experiments.global_utils import dry_run
+from misc.experiments.global_utils import dry_run, singleton
 from misc.experiments.plugin_conf import Code, Plugin, PluginManifest
-from misc.experiments.post_script import PostScript, PreScript
+from misc.experiments.post_script import PostScript, PreScript, InitScript, FiniScript
 from misc.experiments.scenario.scenario_utils import new_scenario
 
 
@@ -19,6 +19,34 @@ def vrf_manifest(memcheck):
                              strict_check=strict_check, perms=[Code.READ, Code.WRITE, Code.USR_PTR])
     plugin = Plugin("client_choice", 4096, 4096, (alternate_old_new,))
     return PluginManifest((plugin,), jit_all=True)
+
+
+def init_script_master_vrf(file_path, iif_to_bind):
+    sh_script = """#!/usr/bin/env bash
+    ip link add red type vrf table 42
+    ip link set dev red up
+    
+    ip route add table 42 unreachable default metric 4278198272
+    ip link set dev {iface} master red
+    """.format(iface=iif_to_bind)
+
+    with open(file_path, 'w') as f:
+        f.write(sh_script)
+
+    return InitScript(f"bash {file_path}", 0)
+
+
+def fini_script_master_vrf(file_path, iif_to_unbind):
+    sh_script = """#!/usr/bin/env bash
+    
+    # un-enslave the interface from the VRF
+    ip link set dev {iface} nomaster
+    """.format(iface=iif_to_unbind)
+
+    with open(file_path, 'w') as f:
+        f.write(sh_script)
+
+    return FiniScript(f"bash {file_path}", 0)
 
 
 def pre_script_ifdown(file_path, iface):
@@ -193,6 +221,8 @@ def scenario_frr_vrf(interfaces, memcheck, scenario_name):
     manifest = vrf_manifest(memcheck)
     post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp4s0f1')
     pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp4s0f1')
+    init_script = init_script_master_vrf('/tmp/launch/init_vrf.sh', mlep)
+    fini_script = init_script_master_vrf('/tmp/launch/fini_vrf.sh', mlep)
 
     manifest.write_conf('/tmp/launch/plugin_manifest.conf')
     extra_args = "-w /tmp/launch/plugin_manifest.conf " \
@@ -201,19 +231,23 @@ def scenario_frr_vrf(interfaces, memcheck, scenario_name):
     return new_scenario(interfaces, routing_suite='frr', extra_args=extra_args,
                         bin_path='/home/thomas/frr_plugins/sbin', scenario_name=scenario_name,
                         confdir='/tmp/launch/confdir', dut_conf_generator=config_vrf_dut,
-                        post_script=post_script, pre_script=pre_script)
+                        post_script=post_script, pre_script=pre_script, init_script=init_script,
+                        fini_script=fini_script)
 
 
 def scenario_frr_vrf_native(interfaces):
     post_script = post_script_ifup('/tmp/launch/ifup.sh', 'enp4s0f1')
     pre_script = pre_script_ifdown('/tmp/launch/ifdown.sh', 'enp4s0f1')
+    init_script = init_script_master_vrf('/tmp/launch/init_vrf.sh', mslep)
+    fini_script = init_script_master_vrf('/tmp/launch/fini_vrf.sh', mlep)
 
     return new_scenario(interfaces, routing_suite='frr',
                         bin_path="/home/thomas/frr_native/sbin",
                         confdir="/tmp/launch/confdir",
                         scenario_name='scenario_frr_vrf_native',
                         dut_conf_generator=config_vrf_dut,
-                        post_script=post_script, pre_script=pre_script)
+                        post_script=post_script, pre_script=pre_script,
+                        init_script=init_script, fini_script=fini_script)
 
 
 def scenario_frr_vrf_memcheck(interfaces):
@@ -224,6 +258,7 @@ def scenario_frr_vrf_memcheck(interfaces):
 def scenario_frr_vrf_no_memcheck(interfaces):
     return scenario_frr_vrf(interfaces, memcheck=False,
                             scenario_name='frr_no_memcheck_vrf')
+
 
 if __name__ == '__main__':
     print(config_vrf_dut('/tmp/exdir', 'frr', None))

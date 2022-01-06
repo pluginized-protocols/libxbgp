@@ -50,7 +50,7 @@ do {                                                                            
     memset(path_pluglet, 0, sizeof(path_pluglet));                                                              \
     snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, extension_code_name);             \
                                                                                                                 \
-    entry_args_t args[] = {                                                                                     \
+    entry_arg_t args[] = {                                                                                     \
             {.arg = &super_malloc, .len = sizeof(void *), .kind = kind_primitive, .type = 42},                  \
             entry_arg_null                                                                                      \
     };                                                                                                          \
@@ -129,13 +129,13 @@ static void load_with_manifest(void) {
     snprintf(sub_dir, sizeof(sub_dir), "%s/"BASE_FOLDER, plugin_folder_path);
 
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &super_malloc, .len = sizeof(void *), .kind = kind_primitive, .type = 42},
             entry_arg_null
     };
 
     char path_json[PATH_MAX];
-    snprintf(path_json, sizeof(path_json), "%s/plugins.json", sub_dir);
+    snprintf(path_json, sizeof(path_json), "%s/meta_manifest.conf", sub_dir);
 
     status = load_extension_code(path_json, sub_dir, funcs, plugins);
     CU_ASSERT_EQUAL_FATAL(status, 0);

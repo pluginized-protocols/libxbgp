@@ -143,14 +143,26 @@ int run_plugin(plugin_t *p) {
     return 0;
 }
 
-int new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len) {
+void *new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len) {
     return dict_add(&p->runtime_dict, key, key_len, data, data_len);
+}
+
+void *new_runtime_data_int_key(plugin_t *p, unsigned int key, void *data, size_t data_len) {
+    return dict_add_key_int(&p->runtime_dict, key, data, data_len);
 }
 
 void *get_runtime_data(plugin_t *p, const char *key) {
     return dict_get(&p->runtime_dict, key);
 }
 
+void *get_runtime_data_int_key(plugin_t *p, unsigned int key) {
+    return dict_get_by_int(&p->runtime_dict, key);
+}
+
 void del_runtime_data(plugin_t *p, const char *key) {
     return dict_entry_del(&p->runtime_dict, key);
+}
+
+void del_runtime_data_int_key(plugin_t *p, unsigned int key) {
+    return dict_entry_del_key_int(&p->runtime_dict, key);
 }

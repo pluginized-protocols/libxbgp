@@ -28,3 +28,11 @@ def singleton(real_cls):
 
     SingletonFactory.register(real_cls)
     return SingletonFactory
+
+
+@singleton
+class GlobalConf(object):
+    def __init__(self):
+        self.timeout = 120
+        self.delay_time = 100
+        self.nb_runs = 10

@@ -79,7 +79,7 @@ static void tcp_communication_plugin(void) {
     int status;
     char path_pluglet[PATH_MAX];
     insertion_point_t *pt;
-    entry_args_t *args;
+    entry_arg_t *args;
     args_t fargs;
     uint64_t ret_val;
 
@@ -98,7 +98,7 @@ static void tcp_communication_plugin(void) {
     CU_ASSERT_PTR_NOT_NULL_FATAL(pt);
 
 
-    args = (entry_args_t[]) {
+    args = (entry_arg_t[]) {
             {.arg = &val, .len = sizeof(val), .kind = kind_primitive, .type = 1},
             entry_arg_null,
     };

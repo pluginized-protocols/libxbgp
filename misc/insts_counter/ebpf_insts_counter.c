@@ -41,7 +41,8 @@ struct ubpf_nexthop *get_nexthop(context_t *ctx, struct ubpf_prefix *pfx) {}
 
 struct ubpf_rib_entry *get_rib_in_entry(context_t *ctx, uint8_t af_family, struct ubpf_prefix *pfx) {}
 
-struct ubpf_rib_entry *get_rib_out_entry(context_t *ctx, uint8_t af_family, struct ubpf_prefix *pfx) {}
+struct bgp_route *get_rib_out_entry(context_t *ctx, uint8_t af_family,
+                                    struct ubpf_prefix *pfx, struct ubpf_peer_info *pinfo) {}
 
 struct ubpf_rib_entry *get_loc_rib_entry(context_t *ctx, uint8_t af_family, struct ubpf_prefix *pfx) {}
 
