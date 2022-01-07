@@ -74,7 +74,7 @@ int delete_conf_arg(const char *key) {
     return 0;
 }
 
-int delete_all() {
+int delete_all_extra_info() {
     if (!global_conf) return 0;
     struct conf_arg *curr_arg, *tmp;
     HASH_ITER(hh, global_conf, curr_arg, tmp) {
@@ -454,6 +454,7 @@ int extra_conf_delete_dict(struct conf_val *val) {
         delete_current_info(curr_arg->val);
         free(curr_arg);
     }
+    free(val);
     return 0;
 }
 

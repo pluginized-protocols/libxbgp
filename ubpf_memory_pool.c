@@ -112,6 +112,7 @@ void delete_mempool(struct mem_pool *mp) {
     HASH_ITER(hh, mp->node, curr, temp) {
         remove_memnode(mp, curr);
     }
+    free(mp);
 }
 
 struct mem_node_it *new_memnode_iterator(struct mem_node *node) {

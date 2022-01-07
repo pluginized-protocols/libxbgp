@@ -30,6 +30,8 @@ struct file_description *new_file_description(int host_fd, int type_fd);
 
 void rm_file_description(int plugin_fd);
 
+void rm_all_file_descriptions(void);
+
 /* TCP related functions */
 int open_tcp(int af, const struct sockaddr *addr, socklen_t addrlen);
 

@@ -85,6 +85,7 @@ do {                                                                            
     }                                                                                                           \
                                                                                                                 \
     CU_ASSERT_EQUAL(remove_extension_code("simple_test"), 0);                                                   \
+    free(super_malloc); \
 } while(0)
 
 
@@ -160,6 +161,7 @@ static void load_with_manifest(void) {
 
     remove_plugin("plugin_1");
     remove_plugin("plugin_2");
+    free(super_malloc);
 }
 
 

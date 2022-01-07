@@ -35,10 +35,6 @@
 #define j_obj_val(identifier) identifier
 #define j_obj_get_ex(obj, identifier) json_object_object_get_ex(obj, #identifier, &j_obj_json(identifier))
 
-struct job_plugin_info {
-    uint64_t schedule;
-};
-
 struct perms valid_perms[] = {
         {.perm_str = "none", .perm = HELPER_ATTR_NONE, .len_perm = 4},
         {.perm_str = "usr_ptr", .perm = HELPER_ATTR_USR_PTR, .len_perm = 7},
@@ -268,51 +264,6 @@ static int iter_anchors(json_object *insertion_point,
     return 0;
 }
 
-static int is_job_plugin_json(const char *plugin_str, json_object *jobs_plugins, struct job_plugin_info *jinfo) {
-    json_object *job_plugin;
-    json_object *schedule;
-
-    uint64_t scheduling_time;
-
-    if (jobs_plugins == NULL) return -1;
-
-    if (!json_object_object_get_ex(jobs_plugins, plugin_str, &job_plugin)) return -1;
-    if (!json_object_object_get_ex(job_plugin, "schedule", &schedule)) return -1;
-
-    scheduling_time = json_object_get_uint64(schedule);
-
-    jinfo->schedule = scheduling_time;
-    return 0;
-}
-
-/*static int
-get_insertion_point_for_vm(json_object *insertions_point, const char *vm_name, struct insertion_json *j_point) {
-    struct json_object_iterator insertion_point;
-    struct json_object_iterator insertion_point_end;
-
-    json_object *current_insertion_point;
-    const char *current_insertion_point_str;
-
-    if (insertions_point == NULL) return -1;
-
-    insertion_point_end = json_object_iter_end(insertions_point);
-    for (insertion_point = json_object_iter_begin(insertions_point);
-         !json_object_iter_equal(&insertion_point, &insertion_point_end);
-         json_object_iter_next(&insertion_point)) {
-
-        current_insertion_point = json_object_iter_peek_value(&insertion_point);
-        current_insertion_point_str = json_object_iter_peek_name(&insertion_point);
-
-        if (iter_anchors(current_insertion_point, vm_name, j_point) == 0) {
-            j_point->name_insertion = current_insertion_point_str;
-            j_point->name_insertion_len = strnlen(current_insertion_point_str, NAME_MAX);
-            return 0;
-        }
-
-    }
-    return -1;
-}*/
-
 static int to_lower(const char *src, size_t src_len, char *dst, size_t dst_len) {
     unsigned int i;
     if (dst_len < src_len) return -1;
@@ -327,7 +278,7 @@ static int to_lower(const char *src, size_t src_len, char *dst, size_t dst_len) 
 #define MAX(A, B) (((A) > (B)) ? (A) : (B))
 
 static int parse_permissions_pluglet(json_object *permission) {
-    int len;
+    size_t len;
     int i, j;
     int final_perm;
     const char *perm;
@@ -370,145 +321,6 @@ static int parse_permissions_pluglet(json_object *permission) {
     }
     return final_perm;
 }
-
-
-/*static int parse_manifest(json_object *plugins, json_object *insertion_point, json_object *jobs_plugins,
-                          int default_jit, const char *obj_dir, proto_ext_fun_t *api_proto,
-                          insertion_point_info_t *points_info) {
-    int jit_val;
-    int permissions;
-    int add_memcheck_insts;
-
-    int64_t extra_mem_val = 0;
-    int64_t shared_mem_val = 0;
-    const char *obj_code_str;
-    int insertion_point_id;
-
-    char obj_path[PATH_MAX];
-
-    struct insertion_json info;
-
-    struct json_object_iterator it_plugins;
-    struct json_object_iterator it_plugins_end;
-
-    struct json_object_iterator it_bytecode;
-    struct json_object_iterator it_bytecode_end;
-
-    struct json_object *extra_mem;
-    struct json_object *shared_mem;
-    struct json_object *obj_code_lst;
-    struct json_object *curr_code_obj;
-    struct json_object *name_obj;
-    struct json_object *jit;
-    struct json_object *permissions_pluglet;
-    struct json_object *memcheck_add;
-
-    const char *plugin_str;
-    const char *vm_str;
-    struct json_object *curr_plugin;
-
-    struct job_plugin_info _jinfo;
-    struct job_plugin_info *jinfo = NULL;
-    plugin_t *plugin;
-
-    it_plugins_end = json_object_iter_end(plugins);
-    for (it_plugins = json_object_iter_begin(plugins);
-         !json_object_iter_equal(&it_plugins, &it_plugins_end);
-         json_object_iter_next(&it_plugins)) {
-
-        plugin_str = json_object_iter_peek_name(&it_plugins);
-        curr_plugin = json_object_iter_peek_value(&it_plugins);
-
-
-        if (json_object_object_get_ex(curr_plugin, "extra_mem", &extra_mem)) {
-            extra_mem_val = json_object_get_int64(extra_mem);
-        }
-        if (json_object_object_get_ex(curr_plugin, "shared_mem", &shared_mem)) {
-            shared_mem_val = json_object_get_int64(shared_mem);
-        }
-
-        if (!json_object_object_get_ex(curr_plugin, "obj_code_list", &obj_code_lst)) {
-            return -1; // no bytecode to load !?
-        }
-
-        it_bytecode_end = json_object_iter_end(obj_code_lst);
-        for (it_bytecode = json_object_iter_begin(obj_code_lst);
-             !json_object_iter_equal(&it_bytecode, &it_bytecode_end);
-             json_object_iter_next(&it_bytecode)) {
-
-            memset(&info, 0, sizeof(info));
-            memset(obj_path, 0, sizeof(obj_path));
-            jit_val = default_jit;
-
-            curr_code_obj = json_object_iter_peek_value(&it_bytecode);
-            vm_str = json_object_iter_peek_name(&it_bytecode);
-
-            if (!json_object_object_get_ex(curr_code_obj, "obj", &name_obj)) return -1;
-            obj_code_str = json_object_get_string(name_obj);
-
-            if (join_path(obj_dir, obj_code_str, obj_path, PATH_MAX) <= 0) {
-                return -1;
-            }
-
-            if (json_object_object_get_ex(curr_code_obj, "jit", &jit)) {
-                jit_val = json_object_get_boolean(jit);
-            }
-            jinfo = NULL;
-            if (get_insertion_point_for_vm(insertion_point, vm_str, &info) != 0) {
-                memset(&_jinfo, 0, sizeof(_jinfo));
-                jinfo = &_jinfo;
-
-                if (is_job_plugin_json(plugin_str, jobs_plugins, jinfo) == -1) {
-                    return -1;
-                } else {
-                    fill_info_job_plugins(&info);
-                    insertion_point_id = info.id_insertion;
-                }
-            } else {
-                insertion_point_id = str_to_id_insertion_point(points_info, info.name_insertion,
-                                                               info.name_insertion_len);
-            }
-
-
-            if (json_object_object_get_ex(curr_code_obj, "permissions", &permissions_pluglet)) {
-                permissions = parse_permissions_pluglet(permissions_pluglet);
-                if (permissions == -1) {
-                    fprintf(stderr, "Unable to read permission of pluglet\n");
-                    return -1;
-                }
-
-            } else {
-                permissions = 0;
-            }
-
-            if (json_object_object_get_ex(curr_code_obj, "add_memcheck", &memcheck_add)) {
-                add_memcheck_insts = json_object_get_boolean(memcheck_add);
-            } else {
-                add_memcheck_insts = 1; // by default, we add runtime checks
-            }
-
-            if (add_extension_code(plugin_str, strnlen(plugin_str, NAME_MAX), extra_mem_val,
-                                   shared_mem_val, insertion_point_id, info.name_insertion,
-                                   info.name_insertion_len, info.anchor, info.seq, jit_val, obj_path, 0, vm_str,
-                                   strnlen(vm_str, NAME_MAX), api_proto, permissions, add_memcheck_insts) != 0) {
-                return -1;
-            }
-
-            if (jinfo != NULL) {
-                plugin = plugin_by_name(plugin_str);
-                if (!plugin) {
-                    fprintf(stderr, "Oh no! Plugin not found !");
-                    return -1;
-                }
-
-                if (add_plugin_job(plugin, insertion_point_id, jinfo->schedule) == -1) {
-                    fprintf(stderr, "Failed to add job !");
-                }
-            }
-        }
-    }
-    return 0;
-}*/
 
 int job_plugin_parser(json_object *obj_job,
                       struct obj_code_list_parser *obj_info,
@@ -761,23 +573,24 @@ int load_pluglet(const char *path, const char *extension_code_dir,
 
     if (!main_obj) {
         fprintf(stderr, "Error while reading %s: %s\n", path, json_util_get_last_err());
-        return -1;
+        goto end;
     }
 
     /* first parse global options related to the plugin */
     if (global_opts_parser(main_obj, &g_parser, extension_code_dir, strnlen(extension_code_dir, PATH_MAX)) != 0) {
         fprintf(stderr, "There were errors while parsing global plugin info\n");
-        return -1;
+        goto end;
     }
 
     /* parse obj_code_list before job and insertion point. Since they may require info from this */
     if (j_obj_get_ex(main_obj, obj_code_list)) {
         if (obj_code_list_parser(j_obj_json(obj_code_list), &o_parser,
                                  g_parser.pluglet_dir, g_parser.jit_all) != 0) {
-            return -1;
+            goto end;
         }
     } else {
-        return -1;
+        fprintf(stderr, "Missing \"obj_code_list\" field, which is required to load plugin\n");
+        goto end;
     }
 
     /* get json object related to the insertion point/job_plugin */
@@ -791,7 +604,7 @@ int load_pluglet(const char *path, const char *extension_code_dir,
     if (j_obj_json(job_plugin) == NULL && j_obj_json(insertion_points) == NULL) {
         fprintf(stderr, "Missing \"inserstion_points\" or \"job_plugin\" field!\n"
                         "At least one is required to inject the plugin !\n");
-        return -1;
+        goto end;
     }
 
     /* parse job plugin */
@@ -799,7 +612,7 @@ int load_pluglet(const char *path, const char *extension_code_dir,
         is_job_plugin = 1;
         if (job_plugin_parser(j_obj_json(job_plugin), o_parser,
                               &job_plugin_info) == -1) {
-            return -1;
+            goto end;
         }
         insertion_points_list = job_plugin_info.parser;
     }
@@ -809,16 +622,16 @@ int load_pluglet(const char *path, const char *extension_code_dir,
         if (is_job_plugin) {
             // clash
             fprintf(stderr, "The plugin cannot be a job plugin and a insertion point plugin\n");
-            return -1;
+            goto end;
         }
 
         if (insertion_points_parser(points_info,
                                     j_obj_json(insertion_points), &insertion_points_list) == -1) {
-            return -1;
+            goto end;
         }
     }
 
-    struct obj_code_list_parser *obj_code_info, *obj_tmp;
+    struct obj_code_list_parser *obj_code_info;
     /* time to add the plugin to the manager ! */
     DL_FOREACH(insertion_points_list, curr_iter) {
 
@@ -826,7 +639,7 @@ int load_pluglet(const char *path, const char *extension_code_dir,
         HASH_FIND(hh, o_parser, curr_iter->pluglet_name, curr_iter->pluglet_name_len, obj_code_info);
         if (obj_code_info == NULL) {
             fprintf(stderr, "Pluglet \"%s\" not found", curr_iter->pluglet_name);
-            return -1;
+            goto end;
         }
 
         if (add_extension_code(g_parser.plugin_name, g_parser.plugin_name_len, g_parser.extra_mem,
@@ -835,7 +648,7 @@ int load_pluglet(const char *path, const char *extension_code_dir,
                                obj_code_info->jit, obj_code_info->path_code, 0, curr_iter->pluglet_name,
                                curr_iter->pluglet_name_len, api_proto, obj_code_info->permissions,
                                obj_code_info->add_memchecks) != 0) {
-            return -1;
+            goto end;
         }
 
     }
@@ -844,20 +657,22 @@ int load_pluglet(const char *path, const char *extension_code_dir,
         plugin = plugin_by_name(g_parser.plugin_name);
         if (!plugin) {
             fprintf(stderr, "Oh no! Plugin not found !\n");
-            return -1;
+            goto end;
         }
 
         if (add_plugin_job(plugin, INSERTION_POINT_ID_RESERVED, job_plugin_info.schedule) == -1) {
             fprintf(stderr, "Failed to add job !\n");
+            goto end;
         }
     }
 
-    // TODO unload parser structs
-    free_list(insertion_points_list);
-    free_hash(obj_code_info);
-
+    /* everything is okay from here */
     ret_val = 0;
-    json_object_put(main_obj);
+
+    end:
+    if (insertion_points_list) free_list(insertion_points_list);
+    if (o_parser) free_hash(o_parser);
+    if (main_obj) json_object_put(main_obj);
     return ret_val;
 }
 
@@ -888,7 +703,7 @@ static char *str_strip(char *s, size_t max_len) {
 int load_extension_code(const char *path, const char *extension_code_dir,
                         proto_ext_fun_t *api_proto, insertion_point_info_t *points_info) {
     int ret_val = -1;
-    FILE *meta_manifest;
+    FILE *meta_manifest = NULL;
     char line[8192];
     char plugin_dir[PATH_MAX];
     char real_plugin_dir[PATH_MAX];
