@@ -103,6 +103,16 @@ void rm_file_description(int plugin_fd) {
 
 }
 
+void rm_all_file_descriptions() {
+    struct file_description *f_desc, *f_desc_tmp;
+
+    HASH_ITER(hh, fd_table, f_desc, f_desc_tmp) {
+        HASH_DELETE(hh, fd_table, f_desc);
+        interface[f_desc->type_fd].close(f_desc->fdesc);
+        free(f_desc);
+    }
+}
+
 
 int open_tcp(int af, const struct sockaddr *addr, socklen_t addrlen) {
     int sfd = -1;

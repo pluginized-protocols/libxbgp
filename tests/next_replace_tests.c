@@ -86,7 +86,7 @@ static void test_replace_first_no_fallback(void) {
     int must_next = 0;
     int must_fallback = 0;
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &my_arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
             {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 1},
             {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 2},
@@ -111,7 +111,7 @@ static void test_replace_second_no_fallback(void) {
     int must_next = 1;
     int must_fallback = 0;
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &my_arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
             {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 1},
             {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 2},
@@ -138,7 +138,7 @@ static void test_replace_chain_fallback(void) {
     int must_next = 1;
     int must_fallback = 1;
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             {.arg = &my_arg, .len=sizeof(int), .kind=kind_primitive, .type = 0},
             {.arg = &my_2arg, .len=sizeof(int), .kind=kind_primitive, .type = 1},
             {.arg = &must_next, .len=sizeof(int), .kind=kind_primitive, .type = 2},

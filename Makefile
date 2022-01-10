@@ -4,9 +4,9 @@ AR = ar
 GOTOCC = goto-gcc
 GOTOINSTRUMENT = goto-instrument
 
-CFLAGS += -march=native -mtune=native
+#CFLAGS += -march=native -mtune=native
 #CFLAGS += -O2 -g
-CFLAGS += -O0 -g3
+CFLAGS += -Og -g3 -fvar-tracking  -fvar-tracking-assignments
 CFLAGS += -std=gnu11
 CFLAGS += -Wall
 CFLAGS += -Wshadow

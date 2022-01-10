@@ -4,11 +4,13 @@ import csv
 import json
 import os
 import pathlib
+import statistics
 import subprocess
 import tempfile
 from operator import itemgetter
 from typing import Callable, TextIO
 
+import numpy as np
 import sys
 
 import matplotlib.pyplot as plt
@@ -92,7 +94,7 @@ def get_last_time(f: 'TextIO'):
     return float(tail(f)[-1])
 
 
-def make_the_boxplot(args):
+def make_the_boxplot(args, ylabel='Time (s)'):
     seq_x_boxplot = list()
     labels = list()
 
@@ -101,7 +103,7 @@ def make_the_boxplot(args):
         labels.append(scenario)
 
     plt.boxplot(seq_x_boxplot, labels=labels)
-    plt.ylabel('Time (s)')
+    plt.ylabel(ylabel)
     plt.grid(True)
     plt.show()
 
@@ -206,7 +208,125 @@ def main(args):
     return True
 
 
+def reparse_csv(csv_path):
+    config_old = [
+        {
+            'reference': 'bird_native_rr',
+            'scenarios': [('bird_rr_memcheck', 'xBIRD RR\nMemcheck'), ('bird_rr_no_memcheck', 'xBIRD RR no\nmemchecks')]
+        },
+        {
+            'reference': 'frr_native_rr',
+            'scenarios': [('frr_rr_memcheck', 'xFRR RR\nMemcheck'), ('frr_rr_no_memcheck', 'xFRR RR no\nmemchecks')]
+        },
+        {
+            'reference': 'FRR_Native',
+            'scenarios': [('frr_geo_tlv_memcheck', 'xFRR Geo\nTLV MM'),
+                          ('frr_geo_tlv_no_memcheck', 'xFRR Geo\nTLV no MM')]
+        },
+        {
+            'reference': 'BIRD_Native',
+            'scenarios': [('bird_geo_tlv_memcheck', 'xBIRD Geo\nTLV MM'),
+                          ('bird_geo_tlv_no_memcheck', 'xBIRD Geo\nTLV no MM')]
+        },
+        {
+            'reference': 'FRR_Native',
+            'scenarios': [('frr_igp_memcheck', 'xFRR\nIGP MM'), ('frr_igp_no_memcheck', 'xFRR IGP\nno MM')]
+        },
+        {
+            'reference': 'BIRD_Native',
+            'scenarios': [('bird_igp_memcheck', 'xBIRD\nIGP MM'), ('bird_igp_no_memcheck', 'xBIRD IGP\nno MM')]
+        },
+        {
+            'reference': 'frr_native_2peers',
+            'scenarios': [('frr_memcheck_vrf', 'xFRR VRF\nMemchecks'),
+                          ('frr_no_memcheck_vrf', 'xFRR VRF no\nMemchecks')]
+        },
+        {
+            'reference': 'BIRD_Native',
+            'scenarios': [('bird_pfx_valid_memcheck', 'xBIRD RPKI\nMemchecks'),
+                          ('bird_pfx_valid_no_memcheck', 'xBIRD RPKI\nno Memechecks')]
+        },
+        {
+            'reference': 'FRR_Native',
+            'scenarios': [('frr_pfx_valid_memcheck', 'xFRR RPKI\nMemchecks'),
+                          ('frr_pfx_valid_no_memcheck', 'xFRR RPKI\nno Memchecks')]
+        },
+    ]
+
+    config = [
+        {
+            'reference': 'scenario_frr_vrf_native',
+            'scenarios': [('frr_no_memcheck_vrf', 'xFRR Route\nSelection (with memchecks)'),
+                          ('frr_memcheck_vrf', 'xFRR Route\nSelection (without memchecks)')]
+        },
+    ]
+
+    cdf = ['frr_memcheck_vrf', 'frr_no_memcheck_vrf']
+
+    parsed_values = dict()
+
+    cdf_data = list()
+    final_value = list()
+
+    with open(csv_path) as f:
+        csv_reader = csv.DictReader(f)
+        for row in csv_reader:
+            scenario = row['scenario']
+            if scenario not in parsed_values:
+                parsed_values[scenario] = list()
+            parsed_values[scenario].append(float(row['time']))
+
+    for group in config:
+        ref_scenario = group['reference']
+        group_median = statistics.median(parsed_values[ref_scenario])
+        for scenario, plot_name in group['scenarios']:
+            rdata = [(time / group_median) - 1 for time in parsed_values[scenario]]
+            final_value.append(
+                (plot_name, rdata)
+            )
+            if scenario in cdf:
+                cdf_data.append(rdata)
+
+    line_feed = 'n'
+
+    for exp, process_times in final_value:
+        exp_r = exp.replace("\n", " ")
+        print(f'{exp_r} -> {statistics.median(process_times)}')
+
+    plot_vrf(cdf_data, ['Route Selection with\nmemory checks', 'Route Selection without\nmemory checks'])
+    make_the_boxplot(final_value, ylabel='Relative performance impact')
+
+
+def plot_vrf(datas, legend):
+    lin = list()
+
+    for data in datas:
+        N = len(data)
+        x = np.sort(data)
+
+        # get the cdf values of y
+        y = np.arange(N) / float(N)
+
+        if N > 0:
+            x = np.append(x, x[-1])
+            y = np.append(y, 1.0)
+
+        line, = plt.step(x, y, marker='o')
+
+        lin.append(line)
+
+    # plt.xlabel('Relative Performance Impact')
+    plt.ylabel('CDF')
+    plt.legend(lin, legend)
+    plt.show()
+
+
 if __name__ == '__main__':
+
+    reparse_csv("data/rib_vrf.csv")
+
+    exit(0)
+
     parser = argparse.ArgumentParser(description="Extract time of RIB processing")
     parser.add_argument('-d', '--dir', dest='dir', help='Where to find pcap trace. '
                                                         'This option is not necessary '

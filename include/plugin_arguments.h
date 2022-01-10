@@ -27,15 +27,15 @@ args__.args = (entries);                  \
 args__.nargs = i__;                     \
 args__;})
 
-typedef struct {
+typedef struct entry_arg_t {
     void *arg;
     size_t len;
     short kind;
     int type; // custom type defined by the protocol insertion point
-} entry_args_t;
+} entry_arg_t;
 
 typedef struct {
-    entry_args_t *args;
+    entry_arg_t *args;
     int nargs;
 } args_t;
 

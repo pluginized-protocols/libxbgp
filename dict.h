@@ -16,11 +16,17 @@
 
 typedef struct dict *dict_t;
 
-int dict_add(dict_t *dict, const char *key, size_t len_key, void *data, size_t data_len);
+void *dict_add(dict_t *dict, const char *key, size_t len_key, void *data, size_t data_len);
+
+void *dict_add_key_int(struct dict **dict, unsigned int key, void *data, size_t data_len);
 
 void *dict_get(dict_t *dict, const char *key);
 
+void *dict_get_by_int(dict_t *dict, unsigned int key);
+
 void dict_entry_del(dict_t *dict, const char *key);
+
+void dict_entry_del_key_int(struct dict **dict, unsigned int key);
 
 void dict_del(dict_t *dict);
 

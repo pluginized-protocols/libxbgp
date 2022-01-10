@@ -13,6 +13,7 @@
 #include "log.h"
 #include "ubpf_context.h"
 #include "evt_plugins.h"
+#include "plugin_socket.h"
 
 #include <stdio.h>
 #include <elf.h>
@@ -126,6 +127,7 @@ void ubpf_terminate() {
     // CLOSE logger
     logs_close();
 
+    rm_all_file_descriptions();
 
     // off listener thread TODO
 
@@ -140,7 +142,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
 
     const uint8_t *bytecode;
     size_t bytecode_len;
-    vm_container_t *vm;
+    vm_container_t *vm = NULL;
     plugin_t *p;
     insertion_point_t *point;
 
@@ -161,15 +163,15 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
     p = get_plugin_by_name(&master, plugin_name);
     if (!p) {
         p = init_plugin(extra_mem, shared_mem, plugin_name, plugin_name_len, permission);
-        if (!p) return -1;
-        if (register_plugin(&master, p) != 0) return -1;
+        if (!p) goto fail;
+        if (register_plugin(&master, p) != 0) goto fail;
     }
 
     /* 2. Get insertion point */ // todo check INSERTION POINT NAME !
     if (!insertion_point_is_registered_by_id(&master, insertion_point_id)) {
         point = new_insertion_point(insertion_point_id, insertion_point, i_pt_name);
-        if (!point) return -1;
-        if (register_insertion_point(&master, point) != 0) return -1;
+        if (!point) goto fail;
+        if (register_insertion_point(&master, point) != 0) goto fail;
     } else {
         point = get_insertion_point(&master, insertion_point_id);
     }
@@ -187,16 +189,22 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
     vm = new_vm(type_anchor, seq_anchor, point, jit, vm_name, vm_name_len, p, bytecode, bytecode_len, api_proto,
                 on_delete_vm, add_memcheck_insts);
     free(bytecode);
-    if (!vm) return -1;
-    if (register_vm(&master, vm) != 0) return -1;
+    if (!vm) goto fail;
+    if (register_vm(&master, vm) != 0) goto fail;
 
     /* 4. ADD VM to plugin */
-    if (plugin_add_vm(p, vm) != 0) return -1;
+    if (plugin_add_vm(p, vm) != 0) goto fail;
 
     /* 5. And to the insertion point */
-    if (add_vm_insertion_point(point, vm, type_anchor, seq_anchor) != 0) return -1;
+    if (add_vm_insertion_point(point, vm, type_anchor, seq_anchor) != 0) goto fail;
 
     return 0;
+
+    fail:
+
+    if (vm) shutdown_vm(vm);
+
+    return -1;
 }
 
 int remove_extension_code(const char *name) {
@@ -441,7 +449,7 @@ void *readfile(const char *path, size_t maxlen, size_t *len) {
         memset(absolute_path, 0, PATH_MAX * sizeof(char));
         realpath(path, absolute_path);
         sel_path = absolute_path;
-        file = fopen(path, "r");
+        file = fopen(sel_path, "r");
     }
 
     if (file == NULL) {

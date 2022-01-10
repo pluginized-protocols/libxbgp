@@ -96,7 +96,7 @@ int extra_info_copy_data_lst_idx(const char *key, int arr_idx, void *buf, size_t
 
 int delete_conf_arg(const char *key);
 
-int delete_all(void);
+int delete_all_extra_info(void);
 
 int extra_conf_parse_int(json_object *value, struct conf_val *val);
 

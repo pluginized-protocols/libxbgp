@@ -13,11 +13,22 @@ log file ${node.log_file}
 debug ${debug}
 %endfor
 !
-router bgp ${node.asn}
+%for vrf in node.bgp_config:
+<%
+bgp_conf = node.bgp_config[vrf]
+%>
+%if bgp_conf.is_default_vrf():
+router bgp ${bgp_conf.asn}
+%else:
+router bgp ${bgp_conf.asn} vrf ${vrf}
+%endif
   bgp router-id ${node.router_id}
   no bgp default ipv4-unicast
+  %if node.always_compare_router_id:
+  bgp bestpath compare-routerid
+  %endif
   !
-  %for neigh in node.neighbors:
+  %for neigh in bgp_conf.neighbors:
   neighbor ${neigh.ip} remote-as ${neigh.asn}
     %if neigh.description:
   neighbor ${neigh.ip} description ${neigh.description}
@@ -28,23 +39,25 @@ router bgp ${node.asn}
     %endif
   %endfor
 !
-%for af in node.af:
-address-family ${af.to_str(node.proto_suite)}
-  %for neigh in node.neighbors:
+%for af in bgp_conf.af:
+ address-family ${af.to_str(bgp_conf.proto_suite)}
+  ${af.vpn_leak(bgp_conf.proto_suite)}
+  %for neigh in bgp_conf.neighbors:
   neighbor ${neigh.ip} activate
-    %if neigh.has_acl_from_af(str(af)):
-      %for acl, direction in neigh.acl_filters[str(af)]:
-  neighbor ${neigh.ip} distribute-list ${acl.name} ${direction.to_str(node.proto_suite)}
+    %if neigh.has_acl_from_af(af.str_afi()):
+      %for acl, direction in neigh.acl_filters[af.str_afi()]:
+  neighbor ${neigh.ip} distribute-list ${acl.name} ${direction.to_str(bgp_conf.proto_suite)}
       %endfor
     %endif
-    %if node.has_routes(af):
-      %for network in node.routes[af]:
-  network ${network.to_str(node.proto_suite)}
+    %if bgp_conf.has_routes(af):
+      %for network in bgp_conf.routes[af]:
+  network ${network.to_str(bgp_conf.proto_suite)}
       %endfor
     %endif
   %endfor
-exit-address-family
+ exit-address-family
 !
+%endfor
 %endfor
 !
 %for a in acls:

@@ -36,7 +36,7 @@ static inline int check(uint64_t l UNUSED) {
 
 static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c, short d) {
 
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             [0] = {.arg = &a, .len = sizeof(a), .kind = kind_primitive, .type = 32},
             [1] = {.arg = &b, .len = sizeof(b), .kind = kind_primitive, .type = 33},
             [2] = {.arg = &c, .len = sizeof(c), .kind = kind_primitive, .type = 34},
@@ -57,7 +57,7 @@ static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c,
 }
 
 static inline void my_function_void(int *a) {
-    entry_args_t args[] = {
+    entry_arg_t args[] = {
             [0] = {.arg = a, .len = sizeof(int), .kind = kind_ptr, .type = INT_EXAMPLE},
             [1] = entry_arg_null,
     };
@@ -120,7 +120,7 @@ void test_add_plugin(void) {
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
     snprintf(path_pluglet, PATH_MAX - 19, "%s/%s", plugin_folder_path, "simple_test_api.o");
 
-    entry_args_t args[2] = {
+    entry_arg_t args[2] = {
             {.arg = &super_arg, .len = sizeof(int), .kind = kind_primitive, .type = 42},
             entry_arg_null
     };
@@ -152,13 +152,13 @@ static void test_read_json_add_plugins(void) {
     insertion_point_t *point2;
     insertion_point_t *point1;
 
-    entry_args_t args[2] = {
+    entry_arg_t args[2] = {
             {.arg = &super_arg, .len = sizeof(int), .kind = kind_primitive, .type = 42},
             entry_arg_null
     };
 
     char path_json[PATH_MAX];
-    snprintf(path_json, PATH_MAX - 14, "%s/plugins.json", plugin_folder_path);
+    snprintf(path_json, PATH_MAX - 14, "%s/meta_manifest.conf", plugin_folder_path);
     int status;
 
     status = load_extension_code(path_json, plugin_folder_path, funcs, plugins);

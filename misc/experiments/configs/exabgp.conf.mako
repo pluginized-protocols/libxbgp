@@ -5,7 +5,10 @@ process ${c} {
 }
 
 %endfor
-%for n in node.neighbors:
+<%
+bgp_conf = node.bgp_config['default']
+%>
+%for n in bgp_conf.neighbors:
 
 neighbor ${n.ip} {
  %if n.description:
@@ -13,7 +16,7 @@ neighbor ${n.ip} {
  %endif
   router-id ${node.router_id};
   local-address ${n.local_ip};
-  local-as ${node.asn};
+  local-as ${bgp_conf.asn};
   peer-as ${n.asn};
 
 <%doc>
@@ -22,7 +25,7 @@ neighbor ${n.ip} {
   %endif
 </%doc>
   family {
-   %for af in node.af:
+   %for af in bgp_conf.af:
     ${af.to_str(node.proto_suite)};
    %endfor
   }
@@ -36,12 +39,12 @@ neighbor ${n.ip} {
   }
 
   %endif
-  % if node.has_routes():
+  % if bgp_conf.has_routes():
   announce {
-   %for af in node.af:
-    %if node.has_routes(af):
+   %for af in bgp_conf.af:
+    %if bgp_conf.has_routes(af):
     ${af.afi_str(node.proto_suite)} {
-      %for route in node.routes[af]:
+      %for route in bgp_conf.routes[af]:
       ${route.to_str(node.proto_suite)};
       %endfor
     }

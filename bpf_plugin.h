@@ -76,10 +76,16 @@ int plugin_delete_vm(vm_container_t *vm);
 
 int run_plugin(plugin_t *p);
 
-int new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
+void *new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
+
+void *new_runtime_data_int_key(plugin_t *p, unsigned int key, void *data, size_t data_len);
 
 void *get_runtime_data(plugin_t *p, const char *key);
 
+void *get_runtime_data_int_key(plugin_t *p, unsigned int key);
+
 void del_runtime_data(plugin_t *p, const char *key);
+
+void del_runtime_data_int_key(plugin_t *p, unsigned int key);
 
 #endif //FRR_UBPF_BPF_PLUGIN_H

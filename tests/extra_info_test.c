@@ -32,7 +32,7 @@ static int setup(void) {
 }
 
 static int teardown(void) {
-    delete_all();
+    delete_all_extra_info();
     return 0;
 }
 

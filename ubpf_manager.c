@@ -217,7 +217,7 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
 
     if (vm->vm == NULL) {
         fprintf(stderr, "Unable to create uBPF machine\n");
-        return 0;
+        goto fail;
     }
 
     vm->pop = new_insertion_point_entry(anchor, seq, point, vm);
@@ -238,10 +238,15 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
     strncpy(vm->vm_name, name, name_len);
     vm->vm_name[name_len] = 0;
 
-    if (!start_vm(vm, api_proto)) return 0;
-    if (!inject_code_ptr(vm, obj_data, obj_len)) return 0;
+    if (!start_vm(vm, api_proto)) goto fail;
+    if (!inject_code_ptr(vm, obj_data, obj_len)) goto fail;
 
     return vm;
+
+    fail:
+
+    if (vm) shutdown_vm(vm);
+    return NULL;
 }
 
 

@@ -1,0 +1,20 @@
+{
+  "jit_all": false,
+  "name": "plugin_2",
+  "extra_mem": 8,
+  "shared_mem": 0,
+  "obj_code_list": {
+    "code_2": {
+      "obj": "invalid_rw.o",
+      "add_memcheck": false,
+      "jit": true
+    }
+  },
+  "insertion_points": {
+    "insertion_2": {
+      "replace": {
+        "0": "code_2"
+      }
+    }
+  }
+}

@@ -996,6 +996,8 @@ int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
                  "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null");
     }
 
+    parsed_url_free(p_url);
+
     // call rsync to fetch the file locally
     pid = fork();
 
