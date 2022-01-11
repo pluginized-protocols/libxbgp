@@ -72,7 +72,8 @@ SRC = ubpf_vm/vm/ubpf_jit_x86_64.c \
       ./url_parser.c \
       ./plugin_socket.c \
       ./event.c \
-      ./evt_plugins.c
+      ./evt_plugins.c \
+      ./context_function.c
 
 
 SRC_TESTS = $(shell find ./tests -name "*.c" -not -path "./tests/plugins/*")
@@ -109,7 +110,8 @@ HDR = ./bpf_plugin.h \
       include/tools_ubpf_api.h \
       include/ubpf_mempool_hdr.h \
       include/ubpf_prefix.h \
-      include/ubpf_public.h
+      include/ubpf_public.h \
+      ./context_function.h
 
 
 LIBUBPF_A = libubpf.a

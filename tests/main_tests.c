@@ -26,6 +26,7 @@
 #include "permissions_test.h"
 #include "runtime_memcheck_test.h"
 #include "job_plugins_tests.h"
+#include "ffi_closure_tests.h"
 
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 
@@ -121,6 +122,7 @@ int main(int argc, char *argv[]) {
 
     if ((internal_tests() != CUE_SUCCESS) ||
         (tree_tests() != CUE_SUCCESS) ||
+        (ffi_closure_tests() != CUE_SUCCESS) ||
         (test_socket_api(plugin_folder_path) != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
