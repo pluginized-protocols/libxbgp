@@ -16,6 +16,11 @@ struct ubpf_closure *make_closure(api_function *fn, int args_nb,
     ffi_closure *closure_ = NULL;
     void *code;
 
+    if (args_nb > 0 && args_type == NULL) {
+        fprintf(stderr, "In function: %s, args_type should not be NULL if args_nb > 0\n", __FUNCTION__);
+        goto end;
+    }
+
     closure = malloc(sizeof(*closure) + (args_nb * sizeof(ffi_type *)));
     if (!closure) {
         perror("Malloc");

@@ -26,6 +26,7 @@ void api_name_closure(name)(ffi_cif *cif UNUSED, void *ret, void **ARGS, void *u
 
 #define def_fun_api_void(name, ...) \
 void api_name_closure(name)(ffi_cif *cif UNUSED, void *ret UNUSED, void **ARGS, void *usr_data) { \
+    ((void) ARGS);  /* silent compiler */                               \
     context_t *ctx = usr_data;\
     name(ctx,##__VA_ARGS__);   \
 }

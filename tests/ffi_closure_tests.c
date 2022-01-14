@@ -7,6 +7,13 @@
 #include <CUnit/CUnit.h>
 #include <context_function.h>
 
+static uint64_t my_u64 = 0;
+
+static void my_closure_void(context_t *ctx) {
+    my_u64 = *ctx->return_val;
+    /* modify return val, add 5 */
+    *ctx->return_val += 5;
+}
 
 static uint64_t my_closure_fn(context_t *ctx, int a, int b) {
     return a + b + *ctx->return_val;
@@ -20,6 +27,9 @@ static int my_closure_fn_ptr(context_t *ctx, const int *a) {
 static def_fun_api(my_closure_fn, uint64_t, *(int *) ARGS[0], *(int *) ARGS[1])
 
 static def_fun_api(my_closure_fn_ptr, int, *(int **) ARGS[0])
+
+/* test FFI no args closure/no return value */
+static def_fun_api_void(my_closure_void);
 
 
 static int setup(void) {
@@ -94,6 +104,29 @@ static void test_simple_closure_pointer(void) {
     free_closure(closure);
 }
 
+static void test_void_closure_no_args(void) {
+    closure_t *closure;
+    uint64_t fake_return_val = 2142;
+    uint64_t original_return_val;
+
+    original_return_val = fake_return_val;
+
+    closure = make_closure(api_name_closure(my_closure_void), 0,
+                           NULL, &ffi_type_void,
+                           &(context_t) {.return_val = &fake_return_val,});
+
+    CU_ASSERT_PTR_NOT_NULL_FATAL(closure);
+
+    /* make sure my_u64 is un-init */
+    my_u64 = 0;
+    ((void (*)(void)) closure->fn)();
+
+    CU_ASSERT_EQUAL(my_u64, original_return_val);
+    CU_ASSERT_EQUAL(fake_return_val, 2147);
+
+    free_closure(closure);
+}
+
 CU_ErrorCode ffi_closure_tests(void) {
     CU_pSuite pSuite = NULL;
 
@@ -110,7 +143,8 @@ CU_ErrorCode ffi_closure_tests(void) {
     }
 
     if ((NULL == CU_add_test(pSuite, "Execute Closure", test_simple_closure)) ||
-        (NULL == CU_add_test(pSuite, "Execute Closure Pointer args", test_simple_closure_pointer))) {
+        (NULL == CU_add_test(pSuite, "Execute Closure Pointer args", test_simple_closure_pointer)) ||
+        (NULL == CU_add_test(pSuite, "Execute Closure No Args, void return val", test_void_closure_no_args))) {
         CU_cleanup_registry();
         return CU_get_error();
     }
