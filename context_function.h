@@ -15,14 +15,20 @@
 
 #define api_name_closure(name) closure_##name
 
-#define def_fun_api(name, ...) \
+#define def_fun_api(name, ret_val_type, ...) \
 void api_name_closure(name)(ffi_cif *cif UNUSED, void *ret, void **ARGS, void *usr_data) { \
-    uint64_t ret_val;          \
+    ((void) ARGS);                                         \
+    ret_val_type ret_val;          \
     context_t *ctx = usr_data;\
-    ret_val = name(ctx, __VA_ARGS__);          \
-    *(uint64_t *) ret = ret_val; \
+    ret_val = name(ctx,##__VA_ARGS__);          \
+    *(ret_val_type *) ret = ret_val; \
 }
 
+#define def_fun_api_void(name, ...) \
+void api_name_closure(name)(ffi_cif *cif UNUSED, void *ret UNUSED, void **ARGS, void *usr_data) { \
+    context_t *ctx = usr_data;\
+    name(ctx,##__VA_ARGS__);   \
+}
 
 typedef struct ubpf_closure closure_t;
 

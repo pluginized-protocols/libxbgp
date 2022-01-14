@@ -71,6 +71,8 @@ int add_two(context_t *ctx UNUSED, int a) {
     return a + 2;
 }
 
+static def_fun_api(add_two, int, *(int *) ARGS[0]);
+
 static int set_int_example(context_t *ctx, int type_arg, int new_int_val) {
     int *int_from_args = get_arg_from_type(ctx, type_arg);
     if (!int_from_args) return -1;
@@ -79,15 +81,48 @@ static int set_int_example(context_t *ctx, int type_arg, int new_int_val) {
     return 0;
 }
 
+def_fun_api(set_int_example, int, *(int *) ARGS[0], *(int *) ARGS[1])
+
 static void post_function_call(context_t *ctx) {
     plugin_set_post = ctx->pop->point->id;
 }
 
+def_fun_api_void(post_function_call)
+
 
 static proto_ext_fun_t funcs[] = {
-        {.name = "add_two", .fn = add_two, .attributes = HELPER_ATTR_NONE},
-        {.name = "set_int_example", .fn = set_int_example, .attributes = HELPER_ATTR_NONE},
-        {.name = "post_function_call", .fn = post_function_call, .attributes = HELPER_ATTR_NONE},
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint
+                },
+                .return_type = &ffi_type_sint,
+                .name = "add_two",
+                .args_nb = 1,
+                .fn = add_two,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(add_two)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint,
+                        &ffi_type_sint,
+                },
+                .return_type = &ffi_type_sint,
+                .name = "set_int_example",
+                .args_nb = 2,
+                .fn = set_int_example,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(set_int_example)
+        },
+        {
+                .args_type = NULL,
+                .args_nb = 0,
+                .return_type = &ffi_type_void,
+                .name = "post_function_call",
+                .fn = post_function_call,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(post_function_call)
+        },
         proto_ext_func_null
 };
 
@@ -114,7 +149,7 @@ void test_add_plugin(void) {
     int status;
     insertion_point_t *point;
     int super_arg = 40;
-    uint64_t ret_val;
+    uint64_t ret_val = 0;
 
     char path_pluglet[PATH_MAX];
     memset(path_pluglet, 0, PATH_MAX * sizeof(char));
@@ -134,7 +169,7 @@ void test_add_plugin(void) {
                                 BPF_REPLACE, 0, 0, path_pluglet, 0,
                                 "simple_test_api", 15, funcs, 0, 1);
 
-    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
     point = insertion_point(1);
     CU_ASSERT_PTR_NOT_NULL_FATAL(point);
 

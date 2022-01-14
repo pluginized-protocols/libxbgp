@@ -116,7 +116,7 @@ static inline void rd_init(void) {
 
 #define itostr(i, str, str_len) ({                    \
     char *ret__ = NULL;                               \
-    int ss__;                                         \
+    typeof(str_len) ss__;                                         \
     memset(str, 0, str_len);                          \
     ss__ = snprintf(str, (str_len) - 1, "%u", i);     \
     if (ss__ < (str_len)-1) {                         \

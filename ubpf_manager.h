@@ -11,9 +11,16 @@
 #include "uthash.h"
 #include "bpf_plugin.h"
 #include "insertion_point.h"
+#include "context_function.h"
 
 
 typedef struct context context_t;
+
+struct api_functions {
+    struct api_functions *next;
+    struct api_functions *prev;
+    closure_t *closure;
+};
 
 typedef struct vm_container {
     struct ubpf_vm *vm;
@@ -26,6 +33,8 @@ typedef struct vm_container {
     uint8_t add_memcheck_inst;
     ubpf_jit_fn fun;
     struct insertion_point_entry *pop;
+
+    struct api_functions *api_closures;
 
     UT_hash_handle hh; // hh hash-table all vms
     UT_hash_handle hh_plugin; // for plugins
@@ -75,6 +84,10 @@ void start_ubpf_plugin_listener(proto_ext_fun_t *fn);
 int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn, int fn_permissions);
 
 int check_perms(int fun_perms, int plugin_perms);
+
+int add_closure(vm_container_t *vmc, closure_t *closure);
+
+void remove_closures(vm_container_t *vmc);
 
 
 #endif //FRR_THESIS_UBPF_MANAGER_H

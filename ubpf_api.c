@@ -2,27 +2,20 @@
 // Created by thomas on 4/11/18.
 //
 
-#include <libgen.h>
 #include <linux/limits.h>
 #include <sys/un.h>
 #include <include/plugin_arguments.h>
 #include "include/ebpf_mod_struct.h"
-#include <json-c/json_object.h>
 #include <ubpf_api.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
 #include <stdio.h>
 #include <time.h>
-#include <sys/time.h>
 #include <arpa/inet.h>
-#include "ubpf_context.h"
 
 #include "include/tools_ubpf_api.h"
 #include "include/global_info_str.h"
 #include "bpf_plugin.h"
 #include <unistd.h>
 
-#include "stdarg.h"
 #include "plugin_extra_configuration.h"
 #include "url_parser.h"
 #include "log.h"
@@ -37,10 +30,7 @@
 #include <wait.h>
 #include <sys/stat.h>
 #include <ffi.h>
-
-
-
-
+#include "context_function.h"
 
 uint16_t super_ntohs(context_t *ctx, uint16_t value) {
     ((void) (ctx));
@@ -53,6 +43,8 @@ uint16_t super_ntohs(context_t *ctx, uint16_t value) {
 #    error unsupported endianness
 #endif
 }
+
+static def_fun_api(super_ntohs, uint16_t, *(uint16_t *) ARGS[0]);
 
 
 uint32_t super_ntohl(context_t *ctx, uint32_t value) {
@@ -69,6 +61,8 @@ uint32_t super_ntohl(context_t *ctx, uint32_t value) {
 #endif
 }
 
+static def_fun_api(super_ntohl, uint32_t, *(uint32_t *) ARGS[0]);
+
 uint64_t super_ntohll(context_t *ctx, uint64_t value) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return (
@@ -81,6 +75,8 @@ uint64_t super_ntohll(context_t *ctx, uint64_t value) {
 #    error unsupported endianness
 #endif
 }
+
+static def_fun_api(super_ntohll, uint64_t, *(uint64_t *) ARGS[0])
 
 uint16_t super_htons(context_t *ctx __attribute__((unused)), uint16_t val) {
 #if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
@@ -95,6 +91,8 @@ uint16_t super_htons(context_t *ctx __attribute__((unused)), uint16_t val) {
 #error unsupported endianness
 #endif
 }
+
+static def_fun_api(super_htons, uint64_t, *(uint16_t *) ARGS[0])
 
 uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val) {
 #if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
@@ -111,6 +109,8 @@ uint32_t super_htonl(context_t *ctx __attribute__((unused)), uint32_t val) {
 #endif
 }
 
+static def_fun_api(super_htonl, uint64_t, *(uint32_t *) ARGS[0])
+
 uint64_t super_htonll(context_t *ctx, uint64_t val) {
 #if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
     return (
@@ -123,13 +123,116 @@ uint64_t super_htonll(context_t *ctx, uint64_t val) {
 #endif
 }
 
+static def_fun_api(super_htonll, uint64_t, *(uint64_t *) ARGS[0])
 
-int __super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
 
+static inline int fill_variadic_arguments(ffi_type **types, void **values, struct vargs *args) {
     int i;
+
+    for (i = 0; i < args->nb_args; i++) {
+        switch (args->args[i].type) {
+            case VT_S8:
+                types[i] = &ffi_type_sint8;
+                values[i] = &args->args[i].val.s8;
+                break;
+            case VT_U8:
+                types[i] = &ffi_type_uint8;
+                values[i] = &args->args[i].val.u8;
+                break;
+            case VT_S16:
+                types[i] = &ffi_type_sint16;
+                values[i] = &args->args[i].val.s16;
+                break;
+            case VT_U16:
+                types[i] = &ffi_type_uint16;
+                values[i] = &args->args[i].val.u16;
+                break;
+            case VT_S32:
+                types[i] = &ffi_type_sint32;
+                values[i] = &args->args[i].val.s32;
+                break;
+            case VT_U32:
+                types[i] = &ffi_type_uint32;
+                values[i] = &args->args[i].val.u32;
+                break;
+            case VT_S64:
+                types[i] = &ffi_type_sint64;
+                values[i] = &args->args[i].val.s64;
+                break;
+            case VT_U64:
+                types[i] = &ffi_type_sint64;
+                values[i] = &args->args[i].val.u64;
+                break;
+            case VT_FLOAT:
+                types[i] = &ffi_type_float;
+                values[i] = &args->args[i].val.fvalue;
+                break;
+            case VT_DOUBLE:
+                types[i] = &ffi_type_double;
+                values[i] = &args->args[i].val.dvalue;
+                break;
+            case VT_LONGDOUBLE:
+                types[i] = &ffi_type_longdouble;
+                values[i] = &args->args[i].val.ldvalue;
+                break;
+            case VT_POINTER:
+                types[i] = &ffi_type_pointer;
+                values[i] = &args->args[i].val.s8;
+                break;
+            case VT_UCHAR:
+                types[i] = &ffi_type_uchar;
+                values[i] = &args->args[i].val.uchar;
+                break;
+            case VT_SCHAR:
+                types[i] = &ffi_type_schar;
+                values[i] = &args->args[i].val.schar;
+                break;
+            case VT_USHORT:
+                types[i] = &ffi_type_ushort;
+                values[i] = &args->args[i].val.ushort;
+                break;
+            case VT_SSHORT:
+                types[i] = &ffi_type_sshort;
+                values[i] = &args->args[i].val.sshort;
+                break;
+            case VT_UINT:
+                types[i] = &ffi_type_uint;
+                values[i] = &args->args[i].val.uint;
+                break;
+            case VT_SINT:
+                types[i] = &ffi_type_sint;
+                values[i] = &args->args[i].val.sint;
+                break;
+            case VT_SLONG:
+                types[i] = &ffi_type_slong;
+                values[i] = &args->args[i].val.slong;
+                break;
+            case VT_ULONG:
+                types[i] = &ffi_type_ulong;
+                values[i] = &args->args[i].val.ulong;
+                break;
+            case VT_ULLONG:
+                types[i] = &ffi_type_uint64;
+                values[i] = &args->args[i].val.ullong;
+                break;
+            case VT_SLLONG:
+                types[i] = &ffi_type_sint64;
+                values[i] = &args->args[i].val.sllong;
+                break;
+            default:
+                return -1;
+        }
+    }
+    return 0;
+}
+
+static def_fun_api(super_log, int, *(const char **) ARGS[0], *(struct vargs **) ARGS[1])
+
+int super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
+    int ret_val = 0;
     ffi_cif CIF;
-    ffi_type **types;
-    void **values;
+    ffi_type **types = NULL;
+    void **values = NULL;
 
     if (*msg < 1 || *msg > 8) {
         // bad formatted msg, abort
@@ -139,139 +242,68 @@ int __super_log(UNUSED context_t *vm_ctx, const char *msg, struct vargs *args) {
     types = (ffi_type **) malloc((args->nb_args + 1) * sizeof(ffi_type *));
     values = (void **) malloc((args->nb_args + 1) * sizeof(void *));
 
+    if (!types || !values) {
+        goto end;
+    }
+
     // msg parameter of log_msg
     types[0] = &ffi_type_pointer;
     values[0] = &msg;
 
-    for (i = 0; i < args->nb_args; i++) {
-        switch (args->args[i].type) {
-            case VT_S8:
-                types[1 + i] = &ffi_type_sint8;
-                values[1 + i] = &args->args[i].val.s8;
-                break;
-            case VT_U8:
-                types[1 + i] = &ffi_type_uint8;
-                values[1 + i] = &args->args[i].val.u8;
-                break;
-            case VT_S16:
-                types[1 + i] = &ffi_type_sint16;
-                values[1 + i] = &args->args[i].val.s16;
-                break;
-            case VT_U16:
-                types[1 + i] = &ffi_type_uint16;
-                values[1 + i] = &args->args[i].val.u16;
-                break;
-            case VT_S32:
-                types[1 + i] = &ffi_type_sint32;
-                values[1 + i] = &args->args[i].val.s32;
-                break;
-            case VT_U32:
-                types[1 + i] = &ffi_type_uint32;
-                values[1 + i] = &args->args[i].val.u32;
-                break;
-            case VT_S64:
-                types[1 + i] = &ffi_type_sint64;
-                values[1 + i] = &args->args[i].val.s64;
-                break;
-            case VT_U64:
-                types[1 + i] = &ffi_type_sint64;
-                values[1 + i] = &args->args[i].val.u64;
-                break;
-            case VT_FLOAT:
-                types[1 + i] = &ffi_type_float;
-                values[1 + i] = &args->args[i].val.fvalue;
-                break;
-            case VT_DOUBLE:
-                types[1 + i] = &ffi_type_double;
-                values[1 + i] = &args->args[i].val.dvalue;
-                break;
-            case VT_LONGDOUBLE:
-                types[1 + i] = &ffi_type_longdouble;
-                values[1 + i] = &args->args[i].val.ldvalue;
-                break;
-            case VT_POINTER:
-                types[1 + i] = &ffi_type_pointer;
-                values[1 + i] = &args->args[i].val.s8;
-                break;
-            case VT_UCHAR:
-                types[1 + i] = &ffi_type_uchar;
-                values[1 + i] = &args->args[i].val.uchar;
-                break;
-            case VT_SCHAR:
-                types[1 + i] = &ffi_type_schar;
-                values[1 + i] = &args->args[i].val.schar;
-                break;
-            case VT_USHORT:
-                types[1 + i] = &ffi_type_ushort;
-                values[1 + i] = &args->args[i].val.ushort;
-                break;
-            case VT_SSHORT:
-                types[1 + i] = &ffi_type_sshort;
-                values[1 + i] = &args->args[i].val.sshort;
-                break;
-            case VT_UINT:
-                types[1 + i] = &ffi_type_uint;
-                values[1 + i] = &args->args[i].val.uint;
-                break;
-            case VT_SINT:
-                types[1 + i] = &ffi_type_sint;
-                values[1 + i] = &args->args[i].val.sint;
-                break;
-            case VT_SLONG:
-                types[1 + i] = &ffi_type_slong;
-                values[1 + i] = &args->args[i].val.slong;
-                break;
-            case VT_ULONG:
-                types[1 + i] = &ffi_type_ulong;
-                values[1 + i] = &args->args[i].val.ulong;
-                break;
-            case VT_ULLONG:
-                types[1 + i] = &ffi_type_uint64;
-                values[1 + i] = &args->args[i].val.ullong;
-                break;
-            case VT_SLLONG:
-                types[1 + i] = &ffi_type_sint64;
-                values[1 + i] = &args->args[i].val.sllong;
-                break;
-            default:
-                return 0;
-        }
+    // get variadic arguments contained in args
+    if (fill_variadic_arguments(types + 1, values + 1, args) != 0) {
+        goto end;
     }
 
     if (ffi_prep_cif_var(&CIF, FFI_DEFAULT_ABI, 1,
                          args->nb_args + 1, &ffi_type_void, types) == FFI_OK) {
         ffi_call(&CIF, FFI_FN(msg_log), NULL, values);
 
+    } else {
+        goto end;
     }
 
-    free(types);
-    free(values);
+    /* everything went well so far */
+    ret_val = 1;
 
-    return 1;
+    end:
+    if (types) free(types);
+    if (values) free(values);
+    return ret_val;
 }
 
-void *__ctx_malloc(context_t *vm_ctx, size_t size) {
+static def_fun_api(ctx_malloc, void *, *(uint64_t *) ARGS[0])
+
+void *ctx_malloc(context_t *vm_ctx, size_t size) {
     return mem_alloc(&vm_ctx->p->mem.mgr_heap, size);
 }
 
-void *__ctx_calloc(context_t *vm_ctx, size_t nmemb, size_t size) {
+static def_fun_api(ctx_calloc, void *, *(uint64_t *) ARGS[0], *(uint64_t *) ARGS[1])
+
+void *ctx_calloc(context_t *vm_ctx, uint64_t nmemb, uint64_t size) {
     void *ptr;
-    ptr = __ctx_malloc(vm_ctx, nmemb * size);
+    ptr = ctx_malloc(vm_ctx, nmemb * size);
 
     if (!ptr) return NULL;
     memset(ptr, 0, nmemb * size);
     return ptr;
 }
 
-void *__ctx_realloc(context_t *vm_ctx, void *ptr, size_t size) {
+static def_fun_api(ctx_realloc, void *, *(void **) ARGS[0], *(uint64_t *) ARGS[1])
+
+void *ctx_realloc(context_t *vm_ctx, void *ptr, uint64_t size) {
     return mem_realloc(&vm_ctx->p->mem.mgr_heap, ptr, size);
 }
 
-void __ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
+static def_fun_api_void(ctx_free, *(void **) ARGS[0])
+
+void ctx_free(UNUSED context_t *vm_ctx, UNUSED void *ptr) {
     mem_free(&vm_ctx->p->mem.mgr_heap, ptr);
 }
 
-void *__ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
+static def_fun_api(ctx_shmnew, void *, *(key_t *) ARGS[0], *(uint64_t *) ARGS[1])
+
+void *ctx_shmnew(context_t *vm_ctx, key_t key, uint64_t size) {
     void *addr;
     addr = shared_new(&vm_ctx->p->mem.mgr_shared_heap,
                       &vm_ctx->p->mem.shared_blocks, key, size);
@@ -280,17 +312,23 @@ void *__ctx_shmnew(context_t *vm_ctx, key_t key, size_t size) {
     return addr;
 }
 
-void *__ctx_shmget(context_t *vm_ctx, key_t key) {
+static def_fun_api(ctx_shmget, void *, *(key_t *) ARGS[0])
+
+void *ctx_shmget(context_t *vm_ctx, key_t key) {
     return shared_get(&vm_ctx->p->mem.mgr_shared_heap,
                       &vm_ctx->p->mem.shared_blocks, key);
 }
 
-void __ctx_shmrm(context_t *vm_ctx, key_t key) {
+static def_fun_api_void(ctx_shmrm, *(key_t *) ARGS[0])
+
+void ctx_shmrm(context_t *vm_ctx, key_t key) {
     shared_rm(&vm_ctx->p->mem.mgr_shared_heap,
               &vm_ctx->p->mem.shared_blocks, key);
 }
 
-int __get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
+static def_fun_api(get_time, int, *(struct timespec **) ARGS[0])
+
+int get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
 
     memset(spec, 0, sizeof(*spec));
 
@@ -302,21 +340,43 @@ int __get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
     return 0;
 }
 
-clock_t __bpf_clock(UNUSED context_t *vm_ctx) {
-    return clock();
+static def_fun_api(ebpf_print_intern, int, *(const char **) ARGS[0], *(struct vargs **) ARGS[1])
+
+int ebpf_print_intern(UNUSED context_t *vm_ctx, const char *format, struct vargs *args) {
+    ffi_cif CIF;
+    ffi_type **types = NULL;
+    void **values = NULL;
+    int rvalue = 0;
+
+    types = malloc((args->nb_args + 1) * sizeof(ffi_type *));
+    values = malloc((args->nb_args + 1) * sizeof(void *));
+
+    if (!values || !types) goto end;
+
+    /* printf 1st argument */
+    types[0] = &ffi_type_pointer;
+    values[0] = &format;
+
+    if (fill_variadic_arguments(types, values, args) != 0) {
+        goto end;
+    }
+
+    if (ffi_prep_cif_var(&CIF, FFI_DEFAULT_ABI, 1,
+                         args->nb_args + 1, &ffi_type_sint, types) == FFI_OK) {
+        ffi_call(&CIF, FFI_FN(printf), &rvalue, values);
+    } else {
+        goto end;
+    }
+
+    end:
+    if (types) free(types);
+    if (values) free(values);
+    return rvalue;
 }
 
+static def_fun_api(next, int)
 
-void __ebpf_print(UNUSED context_t *vm_ctx, const char *format, ...) {
-
-    va_list vars;
-    va_start(vars, format);
-    vfprintf(stderr, format, vars);
-    va_end(vars);
-
-}
-
-int __next(context_t *vm_ctx) {
+int next(context_t *vm_ctx) {
     return run_replace_next_replace_function(vm_ctx);
 }
 
@@ -428,7 +488,10 @@ number(char *str, uint64_t num, uint base, int size, int precision, int type, in
     return str;
 }
 
-int __ebpf_bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
+static def_fun_api(ebpf_bvsnprintf, int, *(char **) ARGS[0], *(int *) ARGS[1], *(const char **) ARGS[2],
+            *(uintptr_t **) ARGS[3])
+
+int ebpf_bvsnprintf(UNUSED context_t *ctx, char *buf, int size, const char *fmt, uintptr_t *args) {
     int curr_args;
     int len, i;
     uint64_t num;
@@ -710,12 +773,14 @@ typedef int word;        /* "word" used for optimal copy speed */
 #define    wsize    sizeof(word)
 #define    wmask    (wsize - 1)
 
+static def_fun_api(ebpf_memcpy, void *, *(void **) ARGS[0], *(const void **) ARGS[1], *(uint64_t *) ARGS[2])
+
 /*
  * Copy a block of memory, handling overlap.
  * This is the routine that actually implements
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
-void *__ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size_t length) {
+void *ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, uint64_t length) {
     char *dst = dst0;
     const char *src = src0;
     size_t t;
@@ -784,7 +849,9 @@ void *__ebpf_memcpy(UNUSED context_t *vm_ctx, void *dst0, const void *src0, size
 }
 
 
-void *__get_arg(context_t *vm_ctx, int type) {
+static def_fun_api(get_arg, void *, *(int *) ARGS[0])
+
+void *get_arg(context_t *vm_ctx, int type) {
     int i;
     uint8_t *ret_arg;
     // fprintf(stderr, "Ptr ctx at %s call --> %p\n", __FUNCTION__, vm_ctx);
@@ -805,31 +872,16 @@ void *__get_arg(context_t *vm_ctx, int type) {
     return NULL;
 }
 
-
-/*static int in6addr_cmp(const struct in6_addr *addr1,
-                       const struct in6_addr *addr2) {
-    size_t i;
-    const uint8_t *p1, *p2;
-
-    p1 = (const uint8_t *) addr1;
-    p2 = (const uint8_t *) addr2;
-
-    for (i = 0; i < sizeof(struct in6_addr); i++) {
-        if (p1[i] > p2[i])
-            return 1;
-        else if (p1[i] < p2[i])
-            return -1;
-    }
-    return 0;
-}*/
+static def_fun_api_void(membound_fail, *(uint64_t *) ARGS[0], *(uint64_t *) ARGS[1], *(uint64_t *) ARGS[2])
 
 void membound_fail(context_t *ctx __attribute__((unused)), uint64_t val, uint64_t mem_ptr, uint64_t stack_ptr) {
     fprintf(stderr, "Out of bound access with val 0x%lx, start of mem is 0x%lx, top of stack is 0x%lx\n", val, mem_ptr,
             stack_ptr);
 }
 
+static def_fun_api(ebpf_sqrt, uint64_t, *(uint64_t *) ARGS[0], *(unsigned int *) ARGS[2])
 
-uint64_t __ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned int precision) {
+uint64_t ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigned int precision) {
 
     double s_half;
     double s;
@@ -844,31 +896,44 @@ uint64_t __ebpf_sqrt(context_t *ctx __attribute__((unused)), uint64_t a, unsigne
     return res;
 }
 
-int __ebpf_memcmp(context_t *ctx UNUSED, const void *s1, const void *s2, size_t n) {
+static def_fun_api(ebpf_memcmp, int, *(const void **) ARGS[0], *(const void **) ARGS[1], *(uint64_t *) ARGS[2])
 
+int ebpf_memcmp(context_t *ctx UNUSED, const void *s1, const void *s2, uint64_t n) {
     return memcmp(s1, s2, n);
-
 }
 
-int __get_extra_info_value(context_t *ctx UNUSED, struct global_info *info, void *buf, size_t len_buf) {
+static def_fun_api(get_extra_info_value, int, *(struct global_info **) ARGS[0], *(void **) ARGS[1],
+                   *(uint64_t *) ARGS[2])
+
+int get_extra_info_value(context_t *ctx UNUSED, struct global_info *info, void *buf, uint64_t len_buf) {
     return extra_info_copy_data(info, buf, len_buf);
 }
 
-int __get_extra_info_lst_idx(context_t *ctx UNUSED, struct global_info *info, int arr_idx, struct global_info *value) {
+static def_fun_api(get_extra_info_lst_idx, int, *(struct global_info **) ARGS[0], *(int *) ARGS[1],
+                   *(struct global_info **) ARGS[2])
+
+int get_extra_info_lst_idx(context_t *ctx UNUSED, struct global_info *info, int arr_idx, struct global_info *value) {
     return get_info_lst_idx(info, arr_idx, value);
 }
 
-int __get_extra_info_dict(context_t *ctx UNUSED, struct global_info *info, const char *key, struct global_info *value) {
+static def_fun_api(get_extra_info_dict, int, *(struct global_info **) ARGS[0], *(const char **) ARGS[1],
+                   *(struct global_info **) ARGS[2])
+
+int get_extra_info_dict(context_t *ctx UNUSED, struct global_info *info, const char *key, struct global_info *value) {
     if (!key) return -1;
     return get_info_dict(info, key, value);
 }
 
-int __get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
+static def_fun_api(get_extra_info, int, *(const char **) ARGS[0], *(struct global_info **) ARGS[1])
+
+int get_extra_info(context_t *ctx UNUSED, const char *key, struct global_info *info) {
     return get_global_info(key, info);
 }
 
-int __ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, size_t len) {
+static def_fun_api(ebpf_inet_ntop, int, *(uint8_t **) ARGS[0], *(int *) ARGS[1], *(char **) ARGS[2],
+                   *(uint64_t *) ARGS[3])
 
+int ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf, uint64_t len) {
     struct in_addr ipv4;
     struct in6_addr ipv6;
     void *ip;
@@ -891,7 +956,10 @@ int __ebpf_inet_ntop(context_t *ctx UNUSED, uint8_t *ipaddr, int type, char *buf
     return 0;
 }
 
-int __ebpf_inet_pton(UNUSED context_t *ctx, int af, const char *src, void *dst, size_t buf_len) {
+static def_fun_api(ebpf_inet_pton, int, *(int *) ARGS[0], *(const char **) ARGS[1], *(void **) ARGS[2],
+                   *(uint64_t *) ARGS[3])
+
+int ebpf_inet_pton(UNUSED context_t *ctx, int af, const char *src, void *dst, uint64_t buf_len) {
     int s;
     size_t min_len;
     unsigned char buf[sizeof(struct in6_addr)];
@@ -950,7 +1018,9 @@ static inline int build_src_rsync(struct parsed_url *url, char *buf, size_t len)
     return 0;
 }
 
-int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
+static def_fun_api(fetch_file, int, *(char **) ARGS[0], *(const char **) ARGS[1])
+
+int fetch_file(context_t *ctx UNUSED, char *url, const char *dest) {
     pid_t pid;
     int ret, wstatus;
     char src[PATH_MAX];
@@ -958,8 +1028,8 @@ int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
     char *id_file;
     char ssh_info[PATH_MAX];
     char *mod_path;
-    int prev_size;
-    int i;
+    unsigned int prev_size;
+    unsigned int i;
 
     p_url = parse_url(url);
     if (!p_url) {
@@ -1033,20 +1103,28 @@ int fetch_file(context_t *ctx UNUSED, char *url, char *dest) {
     return 0;
 }
 
+static def_fun_api(sk_open, int, *(sk_type_t *) ARGS[0], *(int *) ARGS[1], *(const struct sockaddr **) ARGS[2],
+                   *(socklen_t *) ARGS[3])
 
-int __sk_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
+int sk_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
     return ctx_open(proto, af, addr, len);
 }
 
-int __sk_write(UNUSED context_t *ctx, int sfd, const void *buf, size_t len) {
+static def_fun_api(sk_write, int, *(int *) ARGS[0], *(const void **) ARGS[1], *(uint64_t *) ARGS[2])
+
+int sk_write(UNUSED context_t *ctx, int sfd, const void *buf, uint64_t len) {
     return ctx_write(sfd, buf, len);
 }
 
-int __sk_read(UNUSED context_t *ctx, int sfd, void *buf, size_t len) {
+static def_fun_api(sk_read, int, *(int *) ARGS[0], *(void **) ARGS[1], *(uint64_t *) ARGS[2])
+
+int sk_read(UNUSED context_t *ctx, int sfd, void *buf, uint64_t len) {
     return ctx_read(sfd, buf, len);
 }
 
-int __sk_close(UNUSED context_t *ctx, int sfd) {
+static def_fun_api(sk_close, int, *(int *) ARGS[0])
+
+int sk_close(UNUSED context_t *ctx, int sfd) {
     return ctx_close(sfd);
 }
 
@@ -1076,6 +1154,7 @@ struct inject_pluglet_args {
     int seq;
 };
 
+/*
 int inject_pluglet(context_t *ctx, struct inject_pluglet_args *arg) {
     int insertion_point_id;
     int anchor_id;
@@ -1106,11 +1185,400 @@ int inject_pluglet(context_t *ctx, struct inject_pluglet_args *arg) {
 
     return -1;
 }
+ */
 
-int __reschedule_plugin(context_t *ctx, time_t *time) {
+static def_fun_api(reschedule_plugin, int, *(time_t **) ARGS[0])
+
+int reschedule_plugin(context_t *ctx, time_t *time) {
     if (!is_job_plugin(ctx->p)) {
         return -1;
     }
 
     return reschedule_job(ctx->p, time);
 }
+
+
+proto_ext_fun_t base_api_fun__[] = {
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint16},
+                .return_type= &ffi_type_uint16,
+                .fn= super_ntohs,
+                .args_nb= 1,
+                .name="ebpf_ntohs",
+                .attributes=HELPER_ATTR_NONE,
+                .closure_fn=api_name_closure(super_ntohs),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint32},
+                .return_type = &ffi_type_uint32,
+                .fn = super_ntohl,
+                .args_nb = 1,
+                .name = "ebpf_ntohl",
+                .attributes= HELPER_ATTR_NONE,
+                .closure_fn=api_name_closure(super_ntohl),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint64},
+                .return_type = &ffi_type_uint64,
+                .fn = super_ntohll,
+                .args_nb = 1,
+                .name = "ebpf_ntohll",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(super_ntohll)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint16},
+                .return_type= &ffi_type_uint16,
+                .fn= super_htons,
+                .args_nb= 1,
+                .name="ebpf_htons",
+                .attributes=HELPER_ATTR_NONE,
+                .closure_fn=api_name_closure(super_htons),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint32},
+                .return_type = &ffi_type_uint32,
+                .fn = super_ntohl,
+                .args_nb = 1,
+                .name = "ebpf_htonl",
+                .attributes= HELPER_ATTR_NONE,
+                .closure_fn=api_name_closure(super_htonl),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint64},
+                .return_type = &ffi_type_uint64,
+                .fn = super_ntohll,
+                .args_nb = 1,
+                .name = "ebpf_htonll",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(super_htonll)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_pointer, &ffi_type_pointer},
+                .return_type = &ffi_type_sint,
+                .fn = super_log,
+                .args_nb = 2,
+                .name = "super_log",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(super_log)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint64},
+                .return_type = &ffi_type_pointer,
+                .fn = ctx_malloc,
+                .args_nb = 1,
+                .name = "ctx_malloc",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ctx_malloc),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_uint64, &ffi_type_uint64},
+                .return_type = &ffi_type_pointer,
+                .fn = ctx_calloc,
+                .args_nb = 2,
+                .name = "ctx_calloc",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ctx_calloc),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_pointer, &ffi_type_uint64},
+                .return_type = &ffi_type_pointer,
+                .fn = ctx_realloc,
+                .args_nb = 2,
+                .name = "ctx_realloc",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ctx_realloc),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_pointer},
+                .return_type = &ffi_type_void,
+                .fn = ctx_free,
+                .args_nb = 1,
+                .name = "ctx_free",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ctx_free),
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_sint, &ffi_type_uint64},
+                .return_type = &ffi_type_pointer,
+                .fn = ctx_shmnew,
+                .args_nb = 2,
+                .name = "ctx_shmnew",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn= api_name_closure(ctx_shmnew)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_sint},
+                .return_type = &ffi_type_pointer,
+                .fn = ctx_shmget,
+                .args_nb = 1,
+                .name = "ctx_shmget",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn= api_name_closure(ctx_shmget)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_sint},
+                .return_type = &ffi_type_void,
+                .fn = ctx_shmrm,
+                .args_nb = 1,
+                .name = "ctx_shmrm",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn= api_name_closure(ctx_shmrm)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_pointer},
+                .return_type =  &ffi_type_sint,
+                .fn = get_time,
+                .args_nb = 1,
+                .name =  "get_time",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_time)
+        },
+        {
+                .args_type =  (ffi_type *[]) {&ffi_type_pointer, &ffi_type_pointer},
+                .return_type = &ffi_type_sint,
+                .fn =  ebpf_print_intern,
+                .args_nb = 2,
+                .name = "ebpf_print_intern",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ebpf_print_intern)
+        },
+        {
+                .args_type = NULL,
+                .return_type = &ffi_type_sint,
+                .fn = next,
+                .args_nb = 0,
+                .name = "next",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(next)
+        },
+        {
+                .args_type =  (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_sint,
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                },
+                .return_type = &ffi_type_sint,
+                .fn = ebpf_bvsnprintf,
+                .args_nb = 4,
+                .name = "ebpf_bvsnprintf",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ebpf_bvsnprintf)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                        &ffi_type_uint64,
+                },
+                .return_type = &ffi_type_pointer,
+                .fn = ebpf_memcpy,
+                .args_nb = 3,
+                .name = "ebpf_memcpy",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ebpf_memcpy)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_sint,},
+                .return_type = &ffi_type_pointer,
+                .fn = get_arg,
+                .args_nb = 1,
+                .name = "get_arg",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_arg)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_uint64,
+                        &ffi_type_uint64,
+                        &ffi_type_uint64
+                },
+                .return_type = &ffi_type_void,
+                .fn = membound_fail,
+                .args_nb = 3,
+                .name = "membound_fail",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(membound_fail)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_uint64,
+                        &ffi_type_uint
+                },
+                .return_type = &ffi_type_uint64,
+                .fn = ebpf_sqrt,
+                .args_nb = 2,
+                .name = "ebpf_sqrt",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ebpf_sqrt)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                        &ffi_type_uint64,
+                },
+                .return_type = &ffi_type_sint,
+                .fn = ebpf_memcmp,
+                .args_nb = 3,
+                .name = "ebpf_memcmp",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(ebpf_memcmp)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                        &ffi_type_uint64,
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 3,
+                .fn = get_extra_info_value,
+                .name = "get_extra_info_value",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_extra_info_value)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_sint,
+                        &ffi_type_pointer
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 3,
+                .fn = get_extra_info_lst_idx,
+                .name = "get_extra_info_lst_idx",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_extra_info_lst_idx)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 3,
+                .fn =      get_extra_info_dict,
+                .name = "get_extra_info_dict",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_extra_info_dict)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_pointer
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 2,
+                .fn = get_extra_info,
+                .name = "get_extra_info",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_extra_info)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_sint,
+                        &ffi_type_pointer,
+                        &ffi_type_uint64
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 4,
+                .fn = ebpf_inet_ntop,
+                .name = "ebpf_inet_ntop",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn =api_name_closure(ebpf_inet_ntop)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint,
+                        &ffi_type_pointer,
+                        &ffi_type_pointer,
+                        &ffi_type_uint64
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 4,
+                .fn = ebpf_inet_pton,
+                .name = "ebpf_inet_pton",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn =api_name_closure(ebpf_inet_pton)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                        &ffi_type_pointer
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 2,
+                .fn = fetch_file,
+                .name = "fetch_file",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(fetch_file)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint, // enums are as large as int
+                        &ffi_type_sint,
+                        &ffi_type_pointer,
+                        &ffi_type_uint
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 4,
+                .fn = sk_open,
+                .name = "sk_open",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(sk_open)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint,
+                        &ffi_type_pointer,
+                        &ffi_type_uint
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 3,
+                .fn = sk_write,
+                .name = "sk_write",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(sk_write)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint,
+                        &ffi_type_pointer,
+                        &ffi_type_uint
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 3,
+                .fn = sk_read,
+                .name = "sk_read",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(sk_read)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint,
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 1,
+                .fn = sk_close,
+                .name = "sk_close",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(sk_close)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_pointer,
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 1,
+                .fn = reschedule_plugin,
+                .name = "reschedule_plugin",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(reschedule_plugin)
+        }
+};
+
+const int base_api_fun_len__ = sizeof(base_api_fun__) / sizeof(base_api_fun__[0]);

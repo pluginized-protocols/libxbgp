@@ -6,6 +6,7 @@
 #define FRR_UBPF_EBPF_MOD_STRUCT_H
 
 #include <stddef.h>
+#include <ffi.h>
 
 /* attribute for helper functions */
 #define HELPER_ATTR_NONE 0
@@ -30,8 +31,14 @@ extern struct perms valid_perms[];
 
 typedef struct proto_ext_fun {
     void *fn;
+    void (*closure_fn) (ffi_cif *, void *ret, void **args, void *ctx);
     const char *name;
     int attributes;
+
+    int args_nb;
+    ffi_type *return_type;
+    ffi_type **args_type;
+
 } proto_ext_fun_t;
 
 #define TYPE_MSG_MONITOR 1
@@ -47,8 +54,14 @@ typedef struct insertion_point_info {
 } insertion_point_info_t;
 
 #define insertion_point_info_null {.insertion_point_str = NULL, .insertion_point_id = 0}
-#define proto_ext_func_null {.fn = NULL, .name = NULL, .attributes = 0}
-#define proto_ext_func_is_null(a) (((a)->fn == NULL) && ((a)->name == NULL) && ((a)->attributes == 0))
+#define proto_ext_func_null {.fn = NULL, .name = NULL, .attributes = 0, \
+                             .args_type = NULL, .return_type = NULL, \
+                             .args_nb = 0, .closure_fn = NULL }
+
+#define proto_ext_func_is_null(a) (((a)->fn == NULL) &&       \
+             ((a)->name == NULL) && ((a)->attributes == 0) &&     \
+             ((a)->args_nb == 0) && ((a)->args_type == NULL) &&         \
+             ((a)->return_type == NULL) && ((a)->closure_fn == NULL))
 
 #define is_insertion_point_info_null(info) (((info)->insertion_point_str == NULL) && ((info)->insertion_point_id == 0))
 

@@ -7,10 +7,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <limits.h>
-#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <assert.h>
 
 
 #include "tree_test.h"
@@ -71,13 +70,21 @@ static inline int stderr_to_dev_null(void) {
     return std_stream_to_file(STDERR_FILENO, "/dev/null");
 }
 
+static inline void usage(const char *prog_name) {
+    fprintf(stderr, "usage: %s -p <elf plugin test folder> [-d]\n"
+                   "    -p <path>: Path to the ELF plugin files used to perform tests\n"
+                   "    -d: debug mode. Do not redirect stderr to /dev/null",
+                   prog_name);
+}
+
 
 int main(int argc, char *argv[]) {
     int c;
     int option_index = 0;
 
-    char *plugin_folder_path;
+    char *plugin_folder_path = NULL;
     int have_folder = 0;
+    int redirection = 1;
 
 
     static struct option long_options[] = {
@@ -87,7 +94,7 @@ int main(int argc, char *argv[]) {
 
 
     while (1) {
-        c = getopt_long(argc, argv, "p:",
+        c = getopt_long(argc, argv, "p:d",
                         long_options, &option_index);
         if (c == -1) break;
 
@@ -100,7 +107,11 @@ int main(int argc, char *argv[]) {
                 printf("%s\n", plugin_folder_path);
                 have_folder = 1;
                 break;
+            case 'd':
+                redirection = 0;
+                break;
             default:
+                usage(argv[0]);
                 return EXIT_FAILURE;
         }
 
@@ -111,8 +122,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (stderr_to_dev_null() == -1) {
-        return EXIT_FAILURE;
+    assert(plugin_folder_path != NULL);
+
+    if (redirection) {
+        if (stderr_to_dev_null() == -1) {
+            return EXIT_FAILURE;
+        }
     }
 
 

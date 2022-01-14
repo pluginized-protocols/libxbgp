@@ -29,7 +29,7 @@
 
 static char plugin_folder_path[PATH_MAX - NAME_MAX];
 
-static proto_ext_fun_t funcs[] = {};
+static proto_ext_fun_t funcs[] = { proto_ext_func_null };
 
 static insertion_point_info_t plugins[] = {
         {.insertion_point_str = "send_monitoring_data", .insertion_point_id = 1},

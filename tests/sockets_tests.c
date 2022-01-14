@@ -19,7 +19,7 @@ static insertion_point_info_t plugins[] = {
         insertion_point_info_null
 };
 
-static proto_ext_fun_t funcs[] = {};
+static proto_ext_fun_t funcs[] = { proto_ext_func_null };
 
 static pid_t tcp_server = -1;
 

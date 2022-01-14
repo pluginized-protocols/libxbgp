@@ -6,7 +6,7 @@ GOTOINSTRUMENT = goto-instrument
 
 #CFLAGS += -march=native -mtune=native
 #CFLAGS += -O2 -g
-CFLAGS += -Og -g3 -fvar-tracking  -fvar-tracking-assignments
+CFLAGS += -O0 -g3 -fvar-tracking  -fvar-tracking-assignments
 CFLAGS += -std=gnu11
 CFLAGS += -Wall
 CFLAGS += -Wshadow

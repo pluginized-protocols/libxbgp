@@ -139,6 +139,8 @@ static inline int get_real_path(const char *base_dir, const char *decoded_path, 
     char tmp_path[PATH_MAX];
     const char *working_path;
 
+    assert(out_len >= PATH_MAX);
+
     if (!absolute_path(decoded_path)) {
         if (join_path(base_dir, decoded_path, tmp_path, sizeof(tmp_path)) < 0) {
             fprintf(stderr, "Join path too long!\n");
@@ -279,7 +281,7 @@ static int to_lower(const char *src, size_t src_len, char *dst, size_t dst_len) 
 
 static int parse_permissions_pluglet(json_object *permission) {
     size_t len;
-    int i, j;
+    unsigned int i, j;
     int final_perm;
     const char *perm;
     char lower_perm_str[16];
@@ -322,7 +324,7 @@ static int parse_permissions_pluglet(json_object *permission) {
     return final_perm;
 }
 
-int job_plugin_parser(json_object *obj_job,
+static int job_plugin_parser(json_object *obj_job,
                       struct obj_code_list_parser *obj_info,
                       struct job_plugin_parser *j_parser) {
 
@@ -360,7 +362,7 @@ int job_plugin_parser(json_object *obj_job,
 
 /* p_parser will be dynamically allocated inside this function !
  * Must be freed when not needed anymore */
-int insertion_points_parser(insertion_point_info_t *point_info,
+static int insertion_points_parser(insertion_point_info_t *point_info,
                             json_object *insertion_points,
                             struct insertion_point_parser **p_parser) {
     struct json_object_iterator curr_insertion_point_iter;
@@ -390,7 +392,7 @@ int insertion_points_parser(insertion_point_info_t *point_info,
     return 0;
 }
 
-int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list_parser **o_parser,
+static int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list_parser **o_parser,
                          const char *base_dir, int default_jit) {
     assert(*o_parser == NULL);
 
@@ -398,15 +400,15 @@ int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list_parser
     struct json_object_iterator obj_iter_end;
 
     struct obj_code_list_parser *curr_code;
-    j_obj(obj_code); // TODO parse obj list
+    j_obj(obj_code);
     const char *name_code;
     size_t name_code_len;
 
-    j_obj(int, jit);
+    j_obj(jit);
     j_obj(const char *, obj);
-    size_t path_code_len;
+    int path_code_len;
     j_obj(permissions);
-    j_obj(json_bool, add_memcheck);
+    j_obj(add_memcheck);
 
     obj_iter_end = json_object_iter_end(obj_code_list);
 
@@ -465,17 +467,17 @@ int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list_parser
     return 0;
 }
 
-int global_opts_parser(json_object *main_json, struct global_opts_parser *g_parser,
+static int global_opts_parser(json_object *main_json, struct global_opts_parser *g_parser,
                        const char *default_base_dir, size_t base_dir_len) {
     assert(g_parser != NULL);
     assert(main_json != NULL);
 
     /* how much memory should be given to the plugin (in bytes) */
     uint64_t tmp_mem_val;
-    j_obj(int, extra_mem);
-    j_obj(int, shared_mem);
+    j_obj(extra_mem);
+    j_obj(shared_mem);
     /* all pluglet should be transpiled to x86 ? */
-    j_obj(int, jit_all);
+    j_obj(jit_all);
     /* override default pluglet dir */
     j_obj(const char *, obj_dir);
     size_t obj_dir_len;
@@ -493,6 +495,7 @@ int global_opts_parser(json_object *main_json, struct global_opts_parser *g_pars
     /* 2. Parse obj dir */
     if (j_obj_get_ex(main_json, obj_dir)) {
         obj_dir_len = json_object_get_string_len(j_obj_json(obj_dir));
+        j_obj_val(obj_dir) = json_object_get_string(j_obj_json(obj_dir));
         if (obj_dir_len > sizeof(g_parser->pluglet_dir) - 1) {
             fprintf(stderr, "\"obj_dir\" path is too long %zu > %lu\n",
                     obj_dir_len, sizeof(g_parser->pluglet_dir));
@@ -553,7 +556,7 @@ int global_opts_parser(json_object *main_json, struct global_opts_parser *g_pars
     return 0;
 }
 
-int load_pluglet(const char *path, const char *extension_code_dir,
+static int load_pluglet(const char *path, const char *extension_code_dir,
                  proto_ext_fun_t *api_proto, insertion_point_info_t *points_info) {
     int ret_val = -1;
     int is_job_plugin = 0;

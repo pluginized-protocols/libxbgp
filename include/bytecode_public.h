@@ -87,16 +87,19 @@ ebpf_bvsnprintf(str, size, format, (uintptr_t[]){NUMARGS_SPRINTF__(__VA_ARGS__),
 #define LOG_SLLONG(i) ((struct vtype) {.val = {.sllong = (i)}, .type = VT_SLLONG})
 #define LOG_ULLONG(i) ((struct vtype) {.val = {.ullong = (i)}, .type = VT_ULLONG})
 
-#define log_msg(format, ...) ({                       \
+#define var_fun(fun_name, format, ...) ({             \
       struct vargs __vargs__ = {                      \
           .nb_args = NUMARGS_LOGMSG(__VA_ARGS__),     \
           .args = (struct vtype[]) {                  \
               __VA_ARGS__                             \
           }                                           \
       };                                              \
-      super_log(format, &__vargs__);                  \
+      fun_name(format, &__vargs__);                  \
 })
 
+#define log_msg(format, ...) var_fun(super_log, format,##__VA_ARGS__)
+
+#define ebpf_print(format, ...) var_fun(ebpf_print_intern, format,##__VA_ARGS__)
 
 /**
  * Send data pointed by the first argument to the monitoring thread.
@@ -116,7 +119,7 @@ extern clock_t bpf_clock(void);
 
 extern void *ebpf_memcpy(void *dst0, const void *src0, size_t length);
 
-extern void ebpf_print(const char *format, ...);
+extern void ebpf_print_intern(const char *format, ...);
 
 extern void set_error(const char *reason, size_t len);
 

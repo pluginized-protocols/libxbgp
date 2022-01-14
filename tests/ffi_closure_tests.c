@@ -17,9 +17,9 @@ static int my_closure_fn_ptr(context_t *ctx, const int *a) {
     return (*ctx->return_val + *a) % 2 == 0;
 }
 
-static def_fun_api(my_closure_fn, *(int *) ARGS[0], *(int *) ARGS[1])
+static def_fun_api(my_closure_fn, uint64_t, *(int *) ARGS[0], *(int *) ARGS[1])
 
-static def_fun_api(my_closure_fn_ptr, *(int **) ARGS[0])
+static def_fun_api(my_closure_fn_ptr, int, *(int **) ARGS[0])
 
 
 static int setup(void) {

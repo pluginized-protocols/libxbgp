@@ -6,7 +6,7 @@
 #include "tree.h"
 #include <string.h>
 #include "utlist.h"
-
+#include "tools_ubpf_api.h"
 
 struct tree_node *new_node(uint32_t key, void *value, int color, size_t val_len, size_t n_size) {
 
@@ -259,7 +259,7 @@ int tree_iterator_has_next(struct tree_iterator *it) {
     return it->tree == NULL;
 }
 
-inline void rm_tree_iterator(struct tree_iterator *it) {
+inline void rm_tree_iterator(struct tree_iterator *it UNUSED) {
     return;
 }
 
