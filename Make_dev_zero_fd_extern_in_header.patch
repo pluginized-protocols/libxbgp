@@ -1,0 +1,17 @@
+Index: ptmalloc3/malloc-private.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/ptmalloc3/malloc-private.h b/ptmalloc3/malloc-private.h
+--- a/ptmalloc3/malloc-private.h	(revision 55e14f75882b97cd6fd3dbf579207b521ee2bf20)
++++ b/ptmalloc3/malloc-private.h	(date 1642089738614)
+@@ -38,7 +38,7 @@
+ */
+ #include <fcntl.h> /* for O_RDWR */
+ #define MMAP_FLAGS           (MAP_PRIVATE)
+-static int dev_zero_fd = -1; /* Cached file descriptor for /dev/zero. */
++extern int dev_zero_fd; /* Cached file descriptor for /dev/zero. */
+ #define CALL_MMAP(s) ((dev_zero_fd < 0) ? \
+            (dev_zero_fd = open("/dev/zero", O_RDWR), \
+             mmap(0, (s), PROT_READ|PROT_WRITE, MMAP_FLAGS, dev_zero_fd, 0)) : \
