@@ -1,7 +1,7 @@
 //
 // Created by thomas on 15/02/21.
 //
-#include "socket_tests.h"
+#include "sockets_tests.h"
 
 #include <ubpf_public.h>
 #include <plugins_manager.h>

@@ -14,6 +14,9 @@
 #include "context_hdr.h"
 #include "ubpf_mempool_hdr.h"
 
+#include <xbgp_compliant_api/xbgp_common.h>
+#include <xbgp_compliant_api/xbgp_api_function_helper.h>
+
 
 typedef struct insertion_point insertion_point_t;
 typedef struct log_config log_config_t;
@@ -37,9 +40,9 @@ extern int extra_info_from_json(const char *path, const char *key);
 
 
 /* manipulating memory of plugins in helper functions */
-extern void *__ctx_malloc(context_t *vm_ctx, size_t size);
+extern void *ctx_malloc(context_t *vm_ctx, size_t size);
 
-#define __ctx_calloc(vm_ctx, nmemb, size) ({ \
+#define ctx_calloc(vm_ctx, nmemb, size) ({ \
   void *ptr__;                               \
   ptr__ = __ctx_malloc((vm_ctx), (nmemb) * (size));      \
   if (ptr__) {                               \

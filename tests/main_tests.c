@@ -20,7 +20,7 @@
 #include "next_replace_tests.h"
 #include "extra_info_test.h"
 #include "extra_info_big.h"
-#include "socket_tests.h"
+#include "sockets_tests.h"
 #include "utils_tests.h"
 #include "permissions_test.h"
 #include "runtime_memcheck_test.h"
