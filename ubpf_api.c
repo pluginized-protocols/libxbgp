@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 
 #include "include/tools_ubpf_api.h"
-#include "include/global_info_str.h"
+#include "include/plugin_arguments.h"
 #include "bpf_plugin.h"
 #include <unistd.h>
 

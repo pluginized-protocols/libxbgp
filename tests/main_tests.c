@@ -86,6 +86,8 @@ int main(int argc, char *argv[]) {
     int have_folder = 0;
     int redirection = 1;
 
+    CU_ErrorCode err;
+
 
     static struct option long_options[] = {
             {"plugin-folder", required_argument, 0, 'p'},
@@ -154,11 +156,10 @@ int main(int argc, char *argv[]) {
     }
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
-    CU_basic_run_tests();
+    err = CU_basic_run_tests();
 
     CU_basic_show_failures(CU_get_failure_list());
     printf("\n");
     CU_cleanup_registry();
-    return EXIT_SUCCESS;
-
+    return err == CUE_SUCCESS ? EXIT_SUCCESS : EXIT_FAILURE;
 }

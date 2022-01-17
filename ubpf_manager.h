@@ -14,7 +14,7 @@
 #include "context_function.h"
 
 
-typedef struct context context_t;
+//typedef struct context context_t;
 
 struct api_functions {
     struct api_functions *next;

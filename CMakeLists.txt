@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.15)
 project(libxbgp_vm C)
 
+find_package(PkgConfig)
+find_package (Threads)
+
 set(CMAKE_C_STANDARD 11)
 set(TESTS_DIR "${CMAKE_SOURCE_DIR}/tests")
-set(PLUGIN_TESTS_DIR "${TEST_DIR}/plugins")
+set(PLUGIN_TESTS_DIR "${TESTS_DIR}/plugins")
 set(MICHELFRALLOC_DIR "${CMAKE_SOURCE_DIR}/memalloc")
 set(UBPF_VM_DIR "${CMAKE_SOURCE_DIR}/ubpf_vm/vm")
 
@@ -30,10 +33,7 @@ include_directories(ubpf_vm/vm)
 include_directories(ubpf_vm/vm/inc)
 include_directories(xbgp_deps)
 
-set(CMAKE_C_FLAGS "-std=gnu11 -O2 -Wall -Wshadow
-                   -Wextra -Wwrite-strings -Wcast-qual
-                   -Wmissing-prototypes -Wmissing-declarations
-                   -Wpointer-arith -Wbad-function-cast ${CC_WARNING_FLAGS} ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "-Wall -Wshadow -Wextra -Wwrite-strings -Wcast-qual -Wmissing-prototypes -Wmissing-declarations -Wpointer-arith -Wbad-function-cast ${CC_WARNING_FLAGS} ${CMAKE_C_FLAGS}")
 
 add_library(xbgp
         ${UBPF_VM_SOURCES}
@@ -76,7 +76,20 @@ add_executable(libxbgp_tests ${TESTS_DIR}/main_tests.c
         ${TESTS_DIR}/tree_test.c ${TESTS_DIR}/tree_test.h
         ${TESTS_DIR}/ubpf_manager_test.c ${TESTS_DIR}/ubpf_manager_test.h)
 
-target_link_libraries(libxbgp_tests xbgp)
+
+pkg_check_modules(JSON-C REQUIRED json-c)
+pkg_check_modules(FFI REQUIRED libffi)
+pkg_check_modules(CUNIT REQUIRED cunit)
+
+CHECK_LIBRARY_EXISTS(m sin "" HAVE_LIB_M)
+
+if (HAVE_LIB_M)
+    set(EXTRA_LIBS ${EXTRA_LIBS} m)
+endif (HAVE_LIB_M)
+
+target_link_libraries(libxbgp_tests ${FFI_LIBRARIES}
+        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} m xbgp)
+
 
 enable_testing()
 add_test(Working_uBPF_VM libxbgp_tests -p ${PLUGIN_TESTS_DIR})

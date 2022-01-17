@@ -7,11 +7,11 @@
 
 #include "ubpf_manager.h"
 #include "plugin_socket.h"
+#include <xbgp_compliant_api/xbgp_common_vm_defs.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <include/global_info_str.h>
 
 #define OFFSET_UNIX_EPOCH_TO_NTP 2208988800
 #define SOCKET_PATH "\0monitor_ubpf_plug.socket"
