@@ -1,7 +1,7 @@
 CC = clang
 LLC = llc
 
-CFLAGS += -I../../include
+CFLAGS += -I../../xbgp_deps
 CFLAGS += -I../..
 CFLAGS += -fno-stack-protector
 CFLAGS += -Wall -Wextra

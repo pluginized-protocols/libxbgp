@@ -3,7 +3,7 @@
 //
 
 
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 int set_int_example(int pos_args, int new_int_val);
 

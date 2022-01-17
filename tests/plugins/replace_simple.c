@@ -2,7 +2,7 @@
 // Created by twirtgen on 3/12/19.
 //
 
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 uint64_t main_replace_simple() {
 

@@ -1,4 +1,4 @@
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 uint64_t establish_simple_tcp_conn(args_t *args UNUSED);
 

@@ -17,9 +17,11 @@ set(UBPF_VM_SOURCES
 
 # Ugly hack since I don't want to have many includes for libxbgp...
 # MICHELFRALLOC generates 2 static libs for 3 object files only...
-add_custom_command(OUTPUT "${MICHELFRALLOC_DIR}/michelfralloc.o ${MICHELFRALLOC_DIR}/sbrk.o ${MICHELFRALLOC_DIR}/ptmalloc3/malloc.o"
-        COMMAND make
-        WORKING_DIRECTORY ${MICHELFRALLOC_DIR}
+add_custom_command(OUTPUT ${MICHELFRALLOC_DIR}/michelfralloc.o
+                          ${MICHELFRALLOC_DIR}/sbrk.o
+                          ${MICHELFRALLOC_DIR}/ptmalloc3/malloc.o
+                   COMMAND make
+                   WORKING_DIRECTORY ${MICHELFRALLOC_DIR}
         )
 
 set(MICHELFRA_OBJS
@@ -84,11 +86,16 @@ pkg_check_modules(CUNIT REQUIRED cunit)
 CHECK_LIBRARY_EXISTS(m sin "" HAVE_LIB_M)
 
 if (HAVE_LIB_M)
-    set(EXTRA_LIBS ${EXTRA_LIBS} m)
+    set(LIBM m)
 endif (HAVE_LIB_M)
 
+add_custom_target(gen_ebpf_test_obj COMMAND make
+        WORKING_DIRECTORY ${PLUGIN_TESTS_DIR})
+
 target_link_libraries(libxbgp_tests ${FFI_LIBRARIES}
-        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} m xbgp)
+        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM} xbgp)
+
+add_dependencies(libxbgp_tests gen_ebpf_test_obj)
 
 
 enable_testing()

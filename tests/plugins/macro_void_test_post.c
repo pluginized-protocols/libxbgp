@@ -1,7 +1,7 @@
 //
 // Created by twirtgen on 6/12/19.
 //
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 void post_function_call(void);
 

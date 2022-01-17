@@ -2,7 +2,7 @@
 // Created by twirtgen on 8/01/20.
 //
 
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 uint64_t ebpf_main() {
 
