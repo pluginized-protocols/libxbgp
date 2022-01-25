@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(libxbgp_vm C)
 
 find_package(PkgConfig)
-find_package (Threads)
+find_package(Threads)
 
 set(CMAKE_C_STANDARD 11)
 set(TESTS_DIR "${CMAKE_SOURCE_DIR}/tests")
@@ -92,8 +92,8 @@ endif (HAVE_LIB_M)
 add_custom_target(gen_ebpf_test_obj COMMAND make
         WORKING_DIRECTORY ${PLUGIN_TESTS_DIR})
 
-target_link_libraries(libxbgp_tests ${FFI_LIBRARIES}
-        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM} xbgp)
+target_link_libraries(libxbgp_tests xbgp ${FFI_LIBRARIES}
+        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM})
 
 add_dependencies(libxbgp_tests gen_ebpf_test_obj)
 
