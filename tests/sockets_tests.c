@@ -1,7 +1,7 @@
 //
 // Created by thomas on 15/02/21.
 //
-#include "socket_tests.h"
+#include "sockets_tests.h"
 
 #include <ubpf_public.h>
 #include <plugins_manager.h>
@@ -19,7 +19,7 @@ static insertion_point_info_t plugins[] = {
         insertion_point_info_null
 };
 
-static proto_ext_fun_t funcs[] = {};
+static proto_ext_fun_t funcs[] = { proto_ext_func_null };
 
 static pid_t tcp_server = -1;
 

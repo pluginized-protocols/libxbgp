@@ -2,7 +2,7 @@
 // Created by thomas on 6/07/21.
 //
 
-#include "include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 
 int set_value1(int a);

@@ -2,7 +2,7 @@
 // Created by thomas on 8/05/20.
 //
 
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 // test_replace_first_no_fallback
 

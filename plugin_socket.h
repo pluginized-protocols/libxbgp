@@ -11,7 +11,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include "include/global_info_str.h"
 
 struct file_description {
     int our_fd;

@@ -6,6 +6,7 @@
 #include "plugin_socket.h"
 #include "uthash.h"
 #include "log.h"
+#include <xbgp_compliant_api/xbgp_common_vm_defs.h>
 
 #define interface_null {.open=NULL, .send=NULL, .close=NULL, .receive=NULL}
 

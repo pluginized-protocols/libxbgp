@@ -2,7 +2,7 @@
 // Created by thomas on 29/04/21.
 //
 
-#include "include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 uint64_t macro_void_test() {
 

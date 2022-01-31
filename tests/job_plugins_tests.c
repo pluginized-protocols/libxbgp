@@ -11,6 +11,7 @@
 #include <event.h>
 #include <static_injection.h>
 #include "tools_ubpf_api.h"
+#include "context_function.h"
 
 #define compute_time(...) ({   \
   long __start__, __end__;     \
@@ -46,11 +47,15 @@ static int set_value(context_t *ctx UNUSED, int a) {
     return value;
 }
 
+static def_fun_api(set_value, int, *(int *) ARGS[0])
+
 static int set_value1(context_t *ctx UNUSED, int a) {
     value1 = a;
     event_broadcast(event);
     return value1;
 }
+
+static def_fun_api(set_value1, int, *(int *) ARGS[0])
 
 static int set_value2(context_t *ctx UNUSED, int a) {
     value2 = a;
@@ -58,11 +63,43 @@ static int set_value2(context_t *ctx UNUSED, int a) {
     return value2;
 }
 
+static def_fun_api(set_value2, int, *(int *) ARGS[0])
+
 
 static proto_ext_fun_t funcs[] = {
-        {.name = "set_value", .fn = set_value, .attributes = HELPER_ATTR_NONE},
-        {.name = "set_value1", .fn = set_value1, .attributes = HELPER_ATTR_NONE},
-        {.name = "set_value2", .fn = set_value2, .attributes = HELPER_ATTR_NONE},
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 1,
+                .name = "set_value",
+                .fn = set_value,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn  = api_name_closure(set_value)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 1,
+                .name = "set_value1",
+                .fn = set_value1,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn  = api_name_closure(set_value1)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint
+                },
+                .return_type = &ffi_type_sint,
+                .args_nb = 1,
+                .name = "set_value2",
+                .fn = set_value2,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn  = api_name_closure(set_value2)
+        },
         proto_ext_func_null
 };
 

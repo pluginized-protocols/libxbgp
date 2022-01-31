@@ -14,6 +14,9 @@
 #include "context_hdr.h"
 #include "ubpf_mempool_hdr.h"
 
+#include <xbgp_compliant_api/xbgp_common.h>
+#include <xbgp_compliant_api/xbgp_api_function_helper.h>
+
 
 typedef struct insertion_point insertion_point_t;
 typedef struct log_config log_config_t;
@@ -37,11 +40,11 @@ extern int extra_info_from_json(const char *path, const char *key);
 
 
 /* manipulating memory of plugins in helper functions */
-extern void *__ctx_malloc(context_t *vm_ctx, size_t size);
+extern void *ctx_malloc(context_t *vm_ctx, size_t size);
 
-#define __ctx_calloc(vm_ctx, nmemb, size) ({ \
+#define ctx_calloc(vm_ctx, nmemb, size) ({ \
   void *ptr__;                               \
-  ptr__ = __ctx_malloc((vm_ctx), (nmemb) * (size));      \
+  ptr__ = ctx_malloc((vm_ctx), (nmemb) * (size));      \
   if (ptr__) {                               \
       memset(ptr__, 0, (nmemb) * (size));    \
   }                                          \
@@ -62,6 +65,8 @@ extern void del_runtime_data_int_key(plugin_t *p, unsigned int key);
 
 extern int load_extension_code(const char *path, const char *extension_code_dir, proto_ext_fun_t *api_proto,
                                insertion_point_info_t *points_info);
+
+extern args_t *get_args_from_context(context_t *ctx);
 
 #define INSERTION_POINT __plugin_point__
 #define VM_RETURN_VALUE ___ret_call___

@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include "tools_ubpf_api.h"
 
 /**
  * BUMP ALLOC
@@ -71,7 +72,7 @@ static inline void michelfra_reset(mem_context_t *pool) {
 }
 
 
-void bump_init(mem_context_t *pool, void *mem_area, uint32_t mem_size) {
+static void bump_init(mem_context_t *pool, void *mem_area, uint32_t mem_size) {
     memset(pool, 0, sizeof(*pool));
 
     init_bump(&pool->bump, mem_size, mem_area);
@@ -81,12 +82,12 @@ static inline void *bump_malloc(mem_context_t *pool, size_t size) {
     return bump_alloc(&pool->bump, size);
 }
 
-static inline void bump_free(mem_context_t *pool, void *ptr) {
+static inline void bump_free(mem_context_t *pool UNUSED, void *ptr UNUSED) {
     // bump is stack like. Thus, unable to free
     // memory
 }
 
-static inline void *bump_realloc(mem_context_t *pool, void *ptr, size_t size) {
+static inline void *bump_realloc(mem_context_t *pool UNUSED, void *ptr UNUSED, size_t size UNUSED) {
     return NULL; // realloc unsupported for bump memory
 }
 
@@ -139,7 +140,7 @@ int init_memory_manager(struct memory_manager *mgr, mem_type_t mem_type) {
     return 0;
 }
 
-void destroy_memory_manager(struct memory_manager *mgr) {
+void destroy_memory_manager(struct memory_manager *mgr UNUSED) {
     // for now, nothing is dynamically allocated inside the
     // memory manager
     return;
@@ -202,7 +203,7 @@ void *shared_new(struct memory_manager *mgr, map_shared_t **shared, key_t key, s
     return block;
 }
 
-void *shared_get(struct memory_manager *mgr, map_shared_t **shared, key_t key) {
+void *shared_get(struct memory_manager *mgr UNUSED, map_shared_t **shared, key_t key) {
     map_shared_t *shared_block;
 
     HASH_FIND_INT(*shared, &key, shared_block);

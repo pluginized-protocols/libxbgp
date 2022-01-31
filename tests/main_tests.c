@@ -7,10 +7,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <limits.h>
-#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <assert.h>
 
 
 #include "tree_test.h"
@@ -21,11 +20,12 @@
 #include "next_replace_tests.h"
 #include "extra_info_test.h"
 #include "extra_info_big.h"
-#include "socket_tests.h"
+#include "sockets_tests.h"
 #include "utils_tests.h"
 #include "permissions_test.h"
 #include "runtime_memcheck_test.h"
 #include "job_plugins_tests.h"
+#include "ffi_closure_tests.h"
 
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 
@@ -70,13 +70,23 @@ static inline int stderr_to_dev_null(void) {
     return std_stream_to_file(STDERR_FILENO, "/dev/null");
 }
 
+static inline void usage(const char *prog_name) {
+    fprintf(stderr, "usage: %s -p <elf plugin test folder> [-d]\n"
+                   "    -p <path>: Path to the ELF plugin files used to perform tests\n"
+                   "    -d: debug mode. Do not redirect stderr to /dev/null",
+                   prog_name);
+}
+
 
 int main(int argc, char *argv[]) {
     int c;
     int option_index = 0;
 
-    char *plugin_folder_path;
+    char *plugin_folder_path = NULL;
     int have_folder = 0;
+    int redirection = 1;
+
+    CU_ErrorCode err;
 
 
     static struct option long_options[] = {
@@ -86,7 +96,7 @@ int main(int argc, char *argv[]) {
 
 
     while (1) {
-        c = getopt_long(argc, argv, "p:",
+        c = getopt_long(argc, argv, "p:d",
                         long_options, &option_index);
         if (c == -1) break;
 
@@ -99,7 +109,11 @@ int main(int argc, char *argv[]) {
                 printf("%s\n", plugin_folder_path);
                 have_folder = 1;
                 break;
+            case 'd':
+                redirection = 0;
+                break;
             default:
+                usage(argv[0]);
                 return EXIT_FAILURE;
         }
 
@@ -110,8 +124,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (stderr_to_dev_null() == -1) {
-        return EXIT_FAILURE;
+    assert(plugin_folder_path != NULL);
+
+    if (redirection) {
+        if (stderr_to_dev_null() == -1) {
+            return EXIT_FAILURE;
+        }
     }
 
 
@@ -121,6 +139,7 @@ int main(int argc, char *argv[]) {
 
     if ((internal_tests() != CUE_SUCCESS) ||
         (tree_tests() != CUE_SUCCESS) ||
+        (ffi_closure_tests() != CUE_SUCCESS) ||
         (test_socket_api(plugin_folder_path) != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
@@ -137,11 +156,10 @@ int main(int argc, char *argv[]) {
     }
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
-    CU_basic_run_tests();
+    err = CU_basic_run_tests();
 
     CU_basic_show_failures(CU_get_failure_list());
     printf("\n");
     CU_cleanup_registry();
-    return EXIT_SUCCESS;
-
+    return err == CUE_SUCCESS ? EXIT_SUCCESS : EXIT_FAILURE;
 }

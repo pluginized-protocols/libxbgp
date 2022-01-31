@@ -9,7 +9,9 @@
 #include "plugin_arguments.h"
 #include "ebpf_mod_struct.h"
 
-typedef struct context context_t;
+#include <xbgp_compliant_api/xbgp_common.h>
+#include <xbgp_compliant_api/xbgp_api_function_helper.h>
+
 typedef struct plugin plugin_t;
 
 

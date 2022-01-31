@@ -2,7 +2,7 @@
 // Created by thomas on 29/11/19.
 //
 
-#include "../../include/bytecode_public.h"
+#include <xbgp_compliant_api/xbgp_plugin_api.h>
 
 int add_two(int a);
 

@@ -7,9 +7,9 @@
 
 #include <json-c/json_object.h>
 #include <netinet/in.h>
-#include <include/global_info_str.h>
 #include "uthash.h"
 #include "utlist.h"
+#include <xbgp_compliant_api/xbgp_common_vm_defs.h>
 
 #define MAX_STR_BUF_PFX 45
 

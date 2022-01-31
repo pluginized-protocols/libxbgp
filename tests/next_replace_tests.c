@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <bpf_plugin.h>
 #include <plugins_manager.h>
+#include "context_function.h"
 
 static char plugin_folder_path[PATH_MAX];
 static int return_value = -1;
@@ -30,14 +31,26 @@ static void set_return_value(context_t *ctx __attribute__((unused)), int a) {
     return_value = a;
 }
 
+static def_fun_api_void(set_return_value, *(int *) ARGS[0])
+
 static insertion_point_info_t insertion_points[] = {
         {.insertion_point_str = "replace_chain", .insertion_point_id = 1},
         insertion_point_info_null
 };
 
 static proto_ext_fun_t funcs[] = {
-        {.fn = set_return_value, .name = "set_return_value"},
-        {NULL},
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint,
+                },
+                .return_type = &ffi_type_void,
+                .args_nb = 1,
+                .fn = set_return_value,
+                .name = "set_return_value",
+                .closure_fn = api_name_closure(set_return_value),
+                .attributes = HELPER_ATTR_NONE
+        },
+        proto_ext_func_null,
 };
 
 static inline int arg_check(uint64_t ret) {
@@ -46,13 +59,10 @@ static inline int arg_check(uint64_t ret) {
 
 
 static int setup(void) {
-
     int ret, i;
-
     char path[PATH_MAX];
 
     ret = init_plugin_manager(funcs, ".", insertion_points, 0, NULL);
-
     if (ret != 0) return -1;
 
     const char *elf_files[] = {

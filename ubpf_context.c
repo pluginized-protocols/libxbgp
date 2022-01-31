@@ -19,3 +19,9 @@ int free_context(context_t *ctx) {
     free(ctx);
     return 0;
 }
+
+args_t *get_args_from_context(context_t *ctx) {
+    if (!ctx) return NULL;
+
+    return ctx->args;
+}

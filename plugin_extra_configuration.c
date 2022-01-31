@@ -5,7 +5,6 @@
 #include <json-c/json_object_iterator.h>
 #include "plugin_extra_configuration.h"
 #include "ubpf_memory_pool.h"
-#include "include/global_info_str.h"
 #include <string.h>
 #include <json-c/json.h>
 #include <arpa/inet.h>

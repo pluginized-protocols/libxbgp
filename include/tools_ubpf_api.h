@@ -17,13 +17,13 @@
  * by the manager. If the function has to return
  * a specific value --> TODO
  */
-enum RESERVED_RETURN_VAL {
+/*enum RESERVED_RETURN_VAL {
     BPF_UNDEF = 0,
     BPF_CONTINUE, // continue the execution of the mode (ONLY in PRE or POST mode)
     BPF_FAILURE, // the uBPF code has badly terminated. On PRE and POST mode, continue the execution of other modes
     BPF_SUCCESS, // the uBPF code has successfully terminated. On PRE and POST, tells to the manager to return (other mode are skipped)
     BPF_MAX_RESERVED_RETURN_VAL
-};
+};*/
 
 #ifndef UNUSED
 #define UNUSED __attribute__((unused))
@@ -34,9 +34,9 @@ enum RESERVED_RETURN_VAL {
     void *ret; \
     args_t *fargs; \
     ret = NULL; \
-    fargs = ctx->args; \
+    fargs = get_args_from_context(ctx); \
     for (_i = 0; _i < fargs->nargs; _i++) { \
-        if (fargs->args[_i].type == type_arg) { \
+        if (fargs->args[_i].type == (type_arg)) { \
             ret = fargs->args[_i].arg; \
             break; \
         } \
