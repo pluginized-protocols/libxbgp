@@ -34,9 +34,9 @@
     void *ret; \
     args_t *fargs; \
     ret = NULL; \
-    fargs = ctx->args; \
+    fargs = get_args_from_context(ctx); \
     for (_i = 0; _i < fargs->nargs; _i++) { \
-        if (fargs->args[_i].type == type_arg) { \
+        if (fargs->args[_i].type == (type_arg)) { \
             ret = fargs->args[_i].arg; \
             break; \
         } \

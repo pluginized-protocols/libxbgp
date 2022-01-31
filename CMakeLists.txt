@@ -35,7 +35,25 @@ include_directories(ubpf_vm/vm)
 include_directories(ubpf_vm/vm/inc)
 include_directories(xbgp_deps)
 
-set(CMAKE_C_FLAGS "-Wall -Wshadow -Wextra -Wwrite-strings -Wcast-qual -Wmissing-prototypes -Wmissing-declarations -Wpointer-arith -Wbad-function-cast ${CC_WARNING_FLAGS} ${CMAKE_C_FLAGS}")
+# set default build type if not specified by user
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE debug)
+endif()
+
+set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_WARNING_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wshadow")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wwrite-strings")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-qual")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-prototypes")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-declarations")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wbad-function-cast")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
+
 
 add_library(xbgp
         ${UBPF_VM_SOURCES}

@@ -44,7 +44,7 @@ extern void *ctx_malloc(context_t *vm_ctx, size_t size);
 
 #define ctx_calloc(vm_ctx, nmemb, size) ({ \
   void *ptr__;                               \
-  ptr__ = __ctx_malloc((vm_ctx), (nmemb) * (size));      \
+  ptr__ = ctx_malloc((vm_ctx), (nmemb) * (size));      \
   if (ptr__) {                               \
       memset(ptr__, 0, (nmemb) * (size));    \
   }                                          \
@@ -65,6 +65,8 @@ extern void del_runtime_data_int_key(plugin_t *p, unsigned int key);
 
 extern int load_extension_code(const char *path, const char *extension_code_dir, proto_ext_fun_t *api_proto,
                                insertion_point_info_t *points_info);
+
+extern args_t *get_args_from_context(context_t *ctx);
 
 #define INSERTION_POINT __plugin_point__
 #define VM_RETURN_VALUE ___ret_call___
