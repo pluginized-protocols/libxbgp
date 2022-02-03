@@ -180,9 +180,6 @@ static int iter_anchors(json_object *insertion_point,
                         size_t insertion_point_name_len,
                         insertion_point_info_t *points_info,
                         struct insertion_point_parser **p_parser) {
-
-    assert(*p_parser == NULL);
-
     j_obj(const char *, anchor);
     anchor_t num_anchor;
     j_obj(const char *, seq);
