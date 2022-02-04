@@ -357,7 +357,7 @@ int ebpf_print_intern(UNUSED context_t *vm_ctx, const char *format, struct vargs
     types[0] = &ffi_type_pointer;
     values[0] = &format;
 
-    if (fill_variadic_arguments(types, values, args) != 0) {
+    if (fill_variadic_arguments(types + 1, values + 1, args) != 0) {
         goto end;
     }
 
