@@ -42,6 +42,8 @@ endif()
 
 set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
 
+set(CMAKE_C_FLAGS_DEBUG  "-O0 -gdwarf -g3")
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_WARNING_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wshadow")
