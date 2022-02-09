@@ -79,7 +79,7 @@ add_library(xbgp
         ubpf_memory_pool.c ubpf_memory_pool.h
         ubpf_misc.c ubpf_misc.h
         url_parser.c url_parser.h
-        uthash.h utlist.h)
+        uthash.h utlist.h jhash.h)
 
 add_executable(libxbgp_tests ${TESTS_DIR}/main_tests.c
         ${TESTS_DIR}/extra_info_big.c ${TESTS_DIR}/extra_info_big.h
