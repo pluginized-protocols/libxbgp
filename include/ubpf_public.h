@@ -28,7 +28,7 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir,
 
 extern int run_pre_functions(insertion_point_t *p, args_t *args, uint64_t *ret);
 
-extern int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, uint64_t return_code);
+extern int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, const uint64_t *return_code);
 
 extern int run_replace_function(insertion_point_t *p, args_t *args, uint64_t *ret);
 
@@ -94,8 +94,8 @@ do {                                                                            
 } while(0)
 
 #define RETURN_ARG(return_val) do { \
-    uint64_t _tmp_ = return_val; \
-    run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL, MAP_RET_TO_VM(_tmp_));\
+    uint64_t _tmp_ = MAP_RET_TO_VM(return_val); \
+    run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL, &_tmp_);\
     return return_val;\
 } while(0)
 
@@ -117,33 +117,31 @@ do {                                                \
    run_pre_functions(INSERTION_POINT, &FULL_ARGS, NULL);\
 } while(0)
 
-#define CALL_ALL(insertion_id, args, args_vm_check, default_ret_val, map_ret_to_vm, on_err, ...) do {\
-  uint64_t VM_RETURN_VALUE = 0; \
-  args_t FULL_ARGS;                                                                                  \
-  uint64_t (*MAP_RET_TO_VM)(uint64_t) = map_ret_to_vm; \
-  int ___ubpf_the_err___ = 0; \
-  int ___ubpf_status___ = 0; \
-  FULL_ARGS = build_args(args);\
-  insertion_point_t *INSERTION_POINT = insertion_point(insertion_id);\
-  if (!INSERTION_POINT) {___ubpf_the_err___ = 1;}\
-  if (!___ubpf_the_err___) { \
-     run_pre_functions(INSERTION_POINT, &FULL_ARGS, NULL);\
-     ___ubpf_status___ = run_replace_function(INSERTION_POINT, &FULL_ARGS, &VM_RETURN_VALUE);\
-     if (___ubpf_status___ != 0) {___ubpf_the_err___ = 1;}\
-     else if (!args_vm_check(VM_RETURN_VALUE)) {___ubpf_the_err___ = 1;}\
-  } \
-  if (___ubpf_the_err___) {\
-    {on_err} \
-  } else {\
-     {__VA_ARGS__} \
-  }\
-  if (!___ubpf_the_err___) { \
-      RETURN(default_ret_val);\
-  }\
-  return default_ret_val;\
+#define CALL(insertion_id, args, args_vm_check, map_ret_to_vm, on_err, ...) do { \
+    uint64_t VM_RETURN_VALUE = 0;                                                 \
+    args_t FULL_ARGS;                                                             \
+    uint64_t (*MAP_RET_TO_VM)(uint64_t) = map_ret_to_vm;                          \
+    int ___vm_err___ = 0;                                                         \
+    int ___vm_status___ = 0;                                                      \
+    FULL_ARGS = build_args(args);                                                 \
+    insertion_point_t *INSERTION_POINT =  insertion_point(insertion_id);          \
+    if (!INSERTION_POINT) { ___vm_err___ = 1; }                                   \
+    if (!___vm_err___) {                                                          \
+        run_pre_functions(INSERTION_POINT, &FULL_ARGS, NULL);                     \
+        ___vm_status___ = run_replace_function(INSERTION_POINT, &FULL_ARGS, &VM_RETURN_VALUE); \
+        if (___vm_status___ != 0) { ___vm_err___ = 1; }                           \
+        else if (!args_vm_check(VM_RETURN_VALUE)) { ___vm_err___ = 1; }           \
+    }                                                                             \
+    if (___vm_err___) {                                                           \
+        do {                                                                      \
+            on_err                                                                \
+        } while(0);                                                               \
+    } else {                                                                      \
+        do {                                                                      \
+            __VA_ARGS__                                                           \
+        } while(0);                                                               \
+    }                                                                             \
+    run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL, NULL);                  \
 } while(0)
-
-#define CALL_ALL_VOID(insertion_id, args, args_vm_check, on_err, ...) \
-    CALL_ALL(insertion_id, args, args_vm_check, , on_err, __VA_ARGS__)
 
 #endif //FRR_UBPF_PUBLIC_H

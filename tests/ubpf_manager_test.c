@@ -49,7 +49,7 @@ static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c,
             entry_arg_null
     };
 
-    CALL_ALL(3, args, check, 1, map_ret_val, {
+    CALL(3, args, check, map_ret_val, {
 
         int temp = a * b;
         int temp2 = b + c;
@@ -66,7 +66,7 @@ static inline void my_function_void(int *a) {
             [0] = {.arg = a, .len = sizeof(int), .kind = kind_ptr, .type = INT_EXAMPLE},
             [1] = entry_arg_null,
     };
-    CALL_ALL_VOID(1, args, check, NULL, {
+    CALL(1, args, check, NULL, {
         *a = 42;
     });
 }
@@ -86,13 +86,13 @@ static int set_int_example(context_t *ctx, int type_arg, int new_int_val) {
     return 0;
 }
 
-def_fun_api(set_int_example, int, *(int *) ARGS[0], *(int *) ARGS[1])
+static def_fun_api(set_int_example, int, *(int *) ARGS[0], *(int *) ARGS[1])
 
 static void post_function_call(context_t *ctx) {
     plugin_set_post = ctx->pop->point->id;
 }
 
-def_fun_api_void(post_function_call)
+static def_fun_api_void(post_function_call)
 
 
 static inline void set_replace_var(context_t *ctx UNUSED, int var) {

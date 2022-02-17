@@ -203,10 +203,11 @@ int run_pre_functions(insertion_point_t *p, args_t *args, uint64_t *ret) {
     return run_insertion_point(p, args, BPF_PRE, ret, &info);
 }
 
-int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, uint64_t real_return_code) {
+int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, const uint64_t *real_return_code) {
     if (!p) return -1;
     exec_info_t info = {
-            .replace_return_value = real_return_code,
+            .return_val_set = real_return_code != NULL,
+            .replace_return_value = real_return_code ? *real_return_code : 0,
             .insertion_point_id = p->id,
     };
     return run_insertion_point(p, args, BPF_POST, ret, &info);
