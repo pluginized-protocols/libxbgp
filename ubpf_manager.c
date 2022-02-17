@@ -257,18 +257,25 @@ void shutdown_vm(vm_container_t *vmc) {
     free(vmc);
 }
 
-int run_injected_code(vm_container_t *vmc, uint64_t *ret_val) {
-
+int run_injected_code(vm_container_t *vmc, uint64_t *ret_val, exec_info_t *info) {
     uint64_t ret;
     int this_fun_ret;
+    exec_info_t *in_vm_info;
 
     vmc->ctx->return_val = ret_val;
 
+    in_vm_info = ctx_malloc(vmc->ctx, sizeof(*info));
+    if (!in_vm_info) {
+        msg_log("Unable to allocate memory in vm\n");
+        return -1;
+    }
+    memcpy(in_vm_info, info, sizeof(*info));
+
     // arguments are accessed via helper functions
     if (vmc->jit) { // NON INTERPRETED MODE
-        ret = vmc->fun(NULL, 0);
+        ret = vmc->fun(in_vm_info, sizeof(*in_vm_info));
     } else {
-        ret = ubpf_exec(vmc->vm, NULL, 0);
+        ret = ubpf_exec(vmc->vm, in_vm_info, sizeof(*in_vm_info));
     }
 
     if (ret == UINT64_MAX) {

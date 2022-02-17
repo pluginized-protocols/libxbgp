@@ -129,14 +129,14 @@ int plugin_delete_vm(vm_container_t *vm) {
     return 0;
 }
 
-int run_plugin(plugin_t *p) {
+int run_plugin(plugin_t *p, exec_info_t *info) {
     vm_container_t *vm, *tmp;
     uint64_t ret_val;
 
     if (!p) return -1;
 
     HASH_ITER(hh_plugin, p->vms, vm, tmp) {
-        if (run_injected_code(vm, &ret_val) == -1) {
+        if (run_injected_code(vm, &ret_val, info) == -1) {
             return -1;
         }
     }

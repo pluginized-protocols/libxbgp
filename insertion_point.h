@@ -76,7 +76,7 @@ int flush_insertion_points(insertion_point_t **hash_table);
 
 int run_pre_functions(insertion_point_t *p, args_t *args, uint64_t *ret);
 
-int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret);
+int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, uint64_t real_return_code);
 
 int run_replace_function(insertion_point_t *p, args_t *args, uint64_t *ret);
 

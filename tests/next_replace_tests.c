@@ -111,7 +111,7 @@ static void test_replace_first_no_fallback(void) {
     }, {
                           CU_ASSERT_EQUAL(VM_RETURN_VALUE, EXIT_SUCCESS);
                           CU_ASSERT_EQUAL(return_value, 42);
-                      })
+                      });
     reset_ret_val();
 }
 
@@ -136,7 +136,7 @@ static void test_replace_second_no_fallback(void) {
     }, {
                           CU_ASSERT_EQUAL(VM_RETURN_VALUE, EXIT_SUCCESS);
                           CU_ASSERT_EQUAL(return_value, 222);
-                      })
+                      });
 
     reset_ret_val();
 }
@@ -166,7 +166,7 @@ static void test_replace_chain_fallback(void) {
     }, {
                           // THIS CODE IS NOT ALLOWED TO BE EXECUTED !
                           CU_FAIL_FATAL("The VM must fallback to the default code")
-                      })
+                      });
 
     reset_ret_val();
 

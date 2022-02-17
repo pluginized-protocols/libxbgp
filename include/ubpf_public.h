@@ -28,7 +28,7 @@ init_plugin_manager(proto_ext_fun_t *api_proto, const char *var_state_dir,
 
 extern int run_pre_functions(insertion_point_t *p, args_t *args, uint64_t *ret);
 
-extern int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret);
+extern int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, uint64_t return_code);
 
 extern int run_replace_function(insertion_point_t *p, args_t *args, uint64_t *ret);
 
@@ -71,9 +71,10 @@ extern args_t *get_args_from_context(context_t *ctx);
 #define INSERTION_POINT __plugin_point__
 #define VM_RETURN_VALUE ___ret_call___
 #define FULL_ARGS __fargs__
+#define MAP_RET_TO_VM __map_ret_to_vm__
 
 #define CALL_REPLACE_ONLY(insertion_id, args, arg_vm_check, on_err, ...)            \
-{                                                                                   \
+do {                                                                                   \
     uint64_t VM_RETURN_VALUE = 0;                                                   \
     int ___ubpf_status___ = 0;                                                      \
     int ___ubpf_the_err___ = 0;                                                     \
@@ -90,12 +91,23 @@ extern args_t *get_args_from_context(context_t *ctx);
     } else {                                                                        \
        {__VA_ARGS__}                                                                \
     }                                                                               \
-}
+} while(0)
 
-#define RETURN(return_val) {\
-    run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL);\
+#define RETURN_ARG(return_val) do { \
+    uint64_t _tmp_ = return_val; \
+    run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL, MAP_RET_TO_VM(_tmp_));\
     return return_val;\
-}
+} while(0)
+
+#define RETURN_VOID() do { \
+    run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL, 0); \
+    return;                                                   \
+} while(0)
+
+#define RETURN__(_1, N, NAME, ...) NAME
+
+#define RETURN(...) RETURN__(1, ##__VA_ARGS__, RETURN_ARG, RETURN_VOID)(__VA_ARGS__);
+
 
 #define CALL_PRE(insertion_id, args) \
 do {                                                \
@@ -105,9 +117,10 @@ do {                                                \
    run_pre_functions(INSERTION_POINT, &FULL_ARGS, NULL);\
 } while(0)
 
-#define CALL_ALL(insertion_id, args, args_vm_check, default_ret_val, on_err, ...){\
+#define CALL_ALL(insertion_id, args, args_vm_check, default_ret_val, map_ret_to_vm, on_err, ...) do {\
   uint64_t VM_RETURN_VALUE = 0; \
-  args_t FULL_ARGS;\
+  args_t FULL_ARGS;                                                                                  \
+  uint64_t (*MAP_RET_TO_VM)(uint64_t) = map_ret_to_vm; \
   int ___ubpf_the_err___ = 0; \
   int ___ubpf_status___ = 0; \
   FULL_ARGS = build_args(args);\
@@ -128,7 +141,7 @@ do {                                                \
       RETURN(default_ret_val);\
   }\
   return default_ret_val;\
-}
+} while(0)
 
 #define CALL_ALL_VOID(insertion_id, args, args_vm_check, on_err, ...) \
     CALL_ALL(insertion_id, args, args_vm_check, , on_err, __VA_ARGS__)

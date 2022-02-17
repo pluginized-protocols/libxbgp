@@ -12,9 +12,12 @@
 #include <memalloc/michelfralloc.h>
 
 #define MIN_MICHELFRA_MEM_SIZE (4096)
+#define MIN_MEM_SIZE_PLUGIN MIN_MICHELFRA_MEM_SIZE
+
+#define ONE_IF_ZERO(x) ((x) == 0 ? 1 : (x))
 
 #define MEM_ALIGN(x) \
-  ((((x) + MIN_MICHELFRA_MEM_SIZE - 1) / MIN_MICHELFRA_MEM_SIZE) * MIN_MICHELFRA_MEM_SIZE)
+  ((((ONE_IF_ZERO(x) - 1) | ((MIN_MEM_SIZE_PLUGIN) - 1)) + 1))
 
 typedef plugin_dynamic_memory_pool_t michelfra_mem_t;
 

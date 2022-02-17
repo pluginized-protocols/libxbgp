@@ -19,7 +19,15 @@
 extern proto_ext_fun_t base_api_fun__[];
 extern const int base_api_fun_len__;
 
+/**
+ * Returns a monotonic time
+ */
 int get_time(context_t *vm_ctx, struct timespec *spec);
+
+/**
+ * Returns wall time (NTP).
+ */
+int get_realtime(context_t *vm_ctx UNUSED, struct timespec *spec);
 
 void *ebpf_memcpy(context_t *vm_ctx, void *dst0, const void *src0, uint64_t length);
 
@@ -88,5 +96,7 @@ int sk_read(context_t *ctx, int sfd, void *buf, uint64_t len);
 int sk_close(context_t *ctx, int sfd);
 
 int reschedule_plugin(context_t *ctx, time_t *time);
+
+int whereami(context_t *ctx);
 
 #endif //FRR_THESIS_UBPF_API_H

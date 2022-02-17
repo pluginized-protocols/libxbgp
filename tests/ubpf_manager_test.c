@@ -21,10 +21,11 @@
   snprintf(expl, STRING_MAX, "CU_ASSERT_EQUAL(actual %lu, expected %s)", (actu), #expected);\
   CU_assertImplementation(((actual) == (expected)), __LINE__, (expl), __FILE__, "", CU_FALSE); }
 
-
 enum custom_user_type {
     INT_EXAMPLE = 0,
 };
+
+static int replace_var = -1;
 
 static int plugin_set_post = 0;
 
@@ -32,6 +33,10 @@ static char plugin_folder_path[PATH_MAX - NAME_MAX - 1];
 
 static inline int check(uint64_t l UNUSED) {
     return 1;
+}
+
+static inline uint64_t map_ret_val(uint64_t ret) {
+    return ret;
 }
 
 static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c, short d) {
@@ -44,7 +49,7 @@ static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c,
             entry_arg_null
     };
 
-    CALL_ALL(3, args, check, 1, {
+    CALL_ALL(3, args, check, 1, map_ret_val, {
 
         int temp = a * b;
         int temp2 = b + c;
@@ -53,7 +58,7 @@ static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c,
         RETURN(temp * temp2 * temp4);
     }, {
                  RETURN(VM_RETURN_VALUE);
-             })
+             });
 }
 
 static inline void my_function_void(int *a) {
@@ -61,9 +66,9 @@ static inline void my_function_void(int *a) {
             [0] = {.arg = a, .len = sizeof(int), .kind = kind_ptr, .type = INT_EXAMPLE},
             [1] = entry_arg_null,
     };
-    CALL_ALL_VOID(1, args, check, {
+    CALL_ALL_VOID(1, args, check, NULL, {
         *a = 42;
-    })
+    });
 }
 
 
@@ -88,6 +93,13 @@ static void post_function_call(context_t *ctx) {
 }
 
 def_fun_api_void(post_function_call)
+
+
+static inline void set_replace_var(context_t *ctx UNUSED, int var) {
+    replace_var = var;
+}
+
+static def_fun_api_void(set_replace_var, *(int *) ARGS[0])
 
 
 static proto_ext_fun_t funcs[] = {
@@ -122,6 +134,17 @@ static proto_ext_fun_t funcs[] = {
                 .fn = post_function_call,
                 .attributes = HELPER_ATTR_NONE,
                 .closure_fn = api_name_closure(post_function_call)
+        },
+        {
+                .args_type = (ffi_type *[]) {
+                        &ffi_type_sint
+                },
+                .args_nb = 1,
+                .return_type = &ffi_type_void,
+                .name = "set_replace_var",
+                .fn = set_replace_var,
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(set_replace_var)
         },
         proto_ext_func_null
 };
@@ -214,7 +237,7 @@ static void test_read_json_add_plugins(void) {
     XCU_ASSERT_EQUAL(ret_val, 22)
     run_replace_function(point2, &fargs, &ret_val);
     XCU_ASSERT_EQUAL(ret_val, 32)
-    run_post_functions(point2, &fargs, &ret_val);
+    run_post_functions(point2, &fargs, &ret_val, 0);
     XCU_ASSERT_EQUAL(ret_val, 42)
 
 
@@ -242,6 +265,30 @@ static void test_macro_function(void) {
     CU_ASSERT_EQUAL(status, 0)
     return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
     XCU_ASSERT_EQUAL(return_value, 10) // plugin should only make a sum (instead of weird computation)
+
+
+    CU_ASSERT_EQUAL(remove_plugin("my_plugin"), 0);
+}
+
+static void test_macro_post_return_value(void) {
+    int return_value, status;
+    char path_pluglet[PATH_MAX];
+
+    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
+    snprintf(path_pluglet, PATH_MAX - 20, "%s/%s", plugin_folder_path, "post_fun_macro.o");
+
+    status = add_extension_code("my_plugin", 9, 64,
+                                0, 3, "macro_test", 10,
+                                BPF_POST, 0, 0, path_pluglet, 0,
+                                "fun_vm", 6, funcs, 0, 1);
+
+    CU_ASSERT_EQUAL(status, 0);
+
+    // should not execute any plugins
+    return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
+    CU_ASSERT_EQUAL(return_value, 30);
+    /* check if ret val passed to plugin is*/
+    XCU_ASSERT_EQUAL(replace_var, 31);
 
     CU_ASSERT_EQUAL(remove_plugin("my_plugin"), 0);
 }
@@ -302,6 +349,7 @@ CU_ErrorCode ubpf_manager_tests(const char *plugin_folder) {
     if ((NULL == CU_add_test(pSuite, "Adding plugin and execute it", test_add_plugin)) ||
         (NULL == CU_add_test(pSuite, "Reading json plugin and execute it", test_read_json_add_plugins)) ||
         (NULL == CU_add_test(pSuite, "\"Pluginize\" function with macro", test_macro_function)) ||
+        (NULL == CU_add_test(pSuite, "Check if retval is passed to post pluglet", test_macro_post_return_value)) ||
         (NULL == CU_add_test(pSuite, "Setter and void function macro", macro_void_example_with_set))) {
         CU_cleanup_registry();
         return CU_get_error();

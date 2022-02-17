@@ -77,7 +77,7 @@ void shutdown_vm(vm_container_t *vmc);
  * @param mem_len size of the memory pointed by mem
  * @return the result of the execution of the loaded code
  */
-int run_injected_code(vm_container_t *vmc, uint64_t *ret_val);
+int run_injected_code(vm_container_t *vmc, uint64_t *ret_val, exec_info_t *info);
 
 void start_ubpf_plugin_listener(proto_ext_fun_t *fn);
 

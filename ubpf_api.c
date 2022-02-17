@@ -340,6 +340,19 @@ int get_time(UNUSED context_t *vm_ctx, struct timespec *spec) {
     return 0;
 }
 
+static def_fun_api(get_realtime, int, *(struct timespec **) ARGS[0]);
+
+int get_realtime(context_t *vm_ctx UNUSED, struct timespec *spec) {
+
+    if (!spec) return -1;
+
+    if (clock_gettime(CLOCK_REALTIME, spec) != 0) {
+        perror("Clock gettime");
+        return -1;
+    }
+    return 0;
+}
+
 static def_fun_api(ebpf_print_intern, int, *(const char **) ARGS[0], *(struct vargs **) ARGS[1])
 
 int ebpf_print_intern(UNUSED context_t *vm_ctx, const char *format, struct vargs *args) {
@@ -1197,6 +1210,12 @@ int reschedule_plugin(context_t *ctx, time_t *time) {
     return reschedule_job(ctx->p, time);
 }
 
+static def_fun_api(whereami, int)
+
+int whereami(context_t *ctx) {
+    return ctx->pop->point->id;
+}
+
 
 proto_ext_fun_t base_api_fun__[] = {
         {
@@ -1333,6 +1352,15 @@ proto_ext_fun_t base_api_fun__[] = {
                 .name =  "get_time",
                 .attributes = HELPER_ATTR_NONE,
                 .closure_fn = api_name_closure(get_time)
+        },
+        {
+                .args_type = (ffi_type *[]) {&ffi_type_pointer},
+                .return_type =  &ffi_type_sint,
+                .fn = get_realtime,
+                .args_nb = 1,
+                .name =  "get_realtime",
+                .attributes = HELPER_ATTR_NONE,
+                .closure_fn = api_name_closure(get_realtime)
         },
         {
                 .args_type =  (ffi_type *[]) {&ffi_type_pointer, &ffi_type_pointer},
@@ -1578,6 +1606,15 @@ proto_ext_fun_t base_api_fun__[] = {
                 .name = "reschedule_plugin",
                 .attributes = HELPER_ATTR_NONE,
                 .closure_fn = api_name_closure(reschedule_plugin)
+        },
+        {
+            .args_type = NULL,
+            .return_type = &ffi_type_sint,
+            .args_nb = 0,
+            .fn = whereami,
+            .name = "whereami",
+            .attributes = HELPER_ATTR_NONE,
+            .closure_fn = api_name_closure(whereami)
         }
 };
 

@@ -42,7 +42,8 @@ struct context {
     uint64_t *return_val;
     int return_value_set;
     int fallback;
-    args_t *args; // arguments passed to the VM
+    args_t *args; // arguments passed to the VM (but hidden and accessible through API only)
+    exec_info_t *info; // argument accessible directly on the VM
     plugin_t *p;
     struct insertion_point_entry *pop; // point of presence of this VM
     struct vm_container *vm;

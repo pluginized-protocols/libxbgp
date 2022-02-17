@@ -10,6 +10,7 @@
 #include "shared_memory.h"
 #include "uthash.h"
 #include "dict.h"
+#include "xbgp_compliant_api/xbgp_common_vm_defs.h"
 
 #define MAX_HEAP_PLUGIN 1048576 // 1MB
 #define MAX_SIZE_ARGS_PLUGIN 512 // 512B must be checked before memcpy args
@@ -74,7 +75,7 @@ int plugin_add_vm(plugin_t *p, vm_container_t *vm);
 
 int plugin_delete_vm(vm_container_t *vm);
 
-int run_plugin(plugin_t *p);
+int run_plugin(plugin_t *p, exec_info_t *info);
 
 void *new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
 

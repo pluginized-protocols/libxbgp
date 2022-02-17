@@ -150,7 +150,7 @@ int add_post_vm(insertion_point_t *point, vm_container_t *vm, int seq) {
 }
 
 static inline int
-run_insertion_point(insertion_point_t *point, args_t *args, int type, uint64_t *ret) {
+run_insertion_point(insertion_point_t *point, args_t *args, int type, uint64_t *ret, exec_info_t *info) {
 
     vm_container_t *curr_vm, *tmp;
     vm_container_t *entry_table;
@@ -161,8 +161,10 @@ run_insertion_point(insertion_point_t *point, args_t *args, int type, uint64_t *
             entry_table = point->replace.replace_vms;
             if (entry_table) {
                 entry_table->ctx->args = args; /* set args */
-                exec_ok = run_injected_code(entry_table, ret);
+                entry_table->ctx->info = info;
+                exec_ok = run_injected_code(entry_table, ret, info);
                 entry_table->ctx->args = NULL; /* unset args */
+                entry_table->ctx->info = NULL;
                 return exec_ok;
             }
             return -1;
@@ -180,8 +182,10 @@ run_insertion_point(insertion_point_t *point, args_t *args, int type, uint64_t *
         HASH_ITER(hh_insertion_point, entry_table, curr_vm, tmp) {
 
             curr_vm->ctx->args = args; /* set args */
-            exec_ok = run_injected_code(curr_vm, ret);
+            entry_table->ctx->info = info;
+            exec_ok = run_injected_code(curr_vm, ret, info);
             curr_vm->ctx->args = NULL; /* unset args */
+            entry_table->ctx->info = NULL;
 
             if (exec_ok != 0) return -1;
         }
@@ -193,17 +197,27 @@ run_insertion_point(insertion_point_t *point, args_t *args, int type, uint64_t *
 
 int run_pre_functions(insertion_point_t *p, args_t *args, uint64_t *ret) {
     if (!p) return -1;
-    return run_insertion_point(p, args, BPF_PRE, ret);
+    exec_info_t info = {
+            .insertion_point_id = p->id,
+    };
+    return run_insertion_point(p, args, BPF_PRE, ret, &info);
 }
 
-int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret) {
+int run_post_functions(insertion_point_t *p, args_t *args, uint64_t *ret, uint64_t real_return_code) {
     if (!p) return -1;
-    return run_insertion_point(p, args, BPF_POST, ret);
+    exec_info_t info = {
+            .replace_return_value = real_return_code,
+            .insertion_point_id = p->id,
+    };
+    return run_insertion_point(p, args, BPF_POST, ret, &info);
 }
 
 int run_replace_function(insertion_point_t *p, args_t *args, uint64_t *ret) {
     if (!p) return -1;
-    return run_insertion_point(p, args, BPF_REPLACE, ret);
+    exec_info_t info = {
+            .insertion_point_id = p->id,
+    };
+    return run_insertion_point(p, args, BPF_REPLACE, ret, &info);
 }
 
 
@@ -232,7 +246,7 @@ int run_replace_next_replace_function(context_t *ctx) {
     /* set arguments + return value for next replace VM*/
     next_vm->ctx->return_val = ctx->return_val;
     next_vm->ctx->args = ctx->args;
-    return_val = run_injected_code(next_vm, ctx->return_val);
+    return_val = run_injected_code(next_vm, ctx->return_val, ctx->info);
     /* propagate context when backtrack */
     ctx->return_value_set = next_vm->ctx->return_value_set;
     ctx->fallback = next_vm->ctx->fallback;
