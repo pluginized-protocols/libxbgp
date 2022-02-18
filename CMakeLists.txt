@@ -20,7 +20,7 @@ set(UBPF_VM_SOURCES
 add_custom_command(OUTPUT ${MICHELFRALLOC_DIR}/michelfralloc.o
                           ${MICHELFRALLOC_DIR}/sbrk.o
                           ${MICHELFRALLOC_DIR}/ptmalloc3/malloc.o
-                   COMMAND make
+                   COMMAND make clean && make
                    WORKING_DIRECTORY ${MICHELFRALLOC_DIR}
         )
 
