@@ -39,7 +39,7 @@ static struct log_config *current_log_list = NULL;
 static char *current_syslog_name; /* NULL -> syslog closed */
 
 
-static inline struct log_config *new_log_config() {
+static inline struct log_config *new_log_config(void) {
     struct log_config *lc = calloc(1, sizeof(struct log_config));
 
     if (!lc) return NULL;

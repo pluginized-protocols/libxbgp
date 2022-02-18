@@ -39,7 +39,7 @@ static struct interface_fn {
 };
 
 
-static inline int next_free_id() {
+static inline int next_free_id(void) {
     int curr_cnt = 0;
     struct file_description *curr;
 

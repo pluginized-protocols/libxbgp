@@ -45,7 +45,7 @@ static inline int job_cmp(void *job1_, void *job2_) {
     return diff;
 }
 
-static inline time_t monotime() {
+static inline time_t monotime(void) {
     struct timespec ts;
 
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {

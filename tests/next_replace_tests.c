@@ -13,7 +13,7 @@
 static char plugin_folder_path[PATH_MAX];
 static int return_value = -1;
 
-static const char *format_code_path() {
+static const char *format_code_path(void) {
     size_t len;
     len = strnlen(plugin_folder_path, PATH_MAX);
 
@@ -23,7 +23,7 @@ static const char *format_code_path() {
 
 }
 
-static inline void reset_ret_val() {
+static inline void reset_ret_val(void) {
     return_value = -1;
 }
 
