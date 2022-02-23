@@ -11,6 +11,7 @@
 
 #include <xbgp_compliant_api/xbgp_common.h>
 #include <xbgp_compliant_api/xbgp_api_function_helper.h>
+#include <xbgp_compliant_api/xbgp_common_vm_defs.h>
 
 typedef struct plugin plugin_t;
 
