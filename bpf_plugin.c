@@ -65,6 +65,8 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
     if (sheap_size > 0) {
         p->mem.has_shared_heap = 1;
 
+        init_shared_hash(&p->mem.shared_blocks);
+
         if (init_memory_manager(&p->mem.mgr_shared_heap, MICHELFRA_MEM) != 0) {
             return NULL;
         }
@@ -83,9 +85,9 @@ static inline void destroy_plugin__(plugin_t *p, int free_p) {
     vm_container_t *curr_vm, *tmp;
     if (!p) return;
 
+    destroy_shared_map(&p->mem.mgr_shared_heap, &p->mem.shared_blocks);
     destroy_memory_manager(&p->mem.mgr_heap);
     destroy_memory_manager(&p->mem.mgr_shared_heap);
-    destroy_shared_map(&p->mem.shared_blocks);
     free(p->mem.master_block);
 
     HASH_ITER(hh_plugin, p->vms, curr_vm, tmp) {

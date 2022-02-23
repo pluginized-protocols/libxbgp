@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "tools_ubpf_api.h"
+#include "tommy.h"
 
 /**
  * BUMP ALLOC
@@ -174,12 +175,26 @@ void mem_reset(struct memory_manager *mgr) {
 
 ///* shared memory related functions *///
 
-void *shared_new(struct memory_manager *mgr, map_shared_t **shared, key_t key, size_t size) {
+static inline int search_shared_block(const void *arg, const void *obj) {
+    const int *arg_id = arg;
+    const map_shared_t *elem = obj;
 
+    return *arg_id != elem->id;
+}
+
+void init_shared_hash(tommy_hashdyn *hashdyn) {
+    if (!hashdyn) return;
+    tommy_hashdyn_init(hashdyn);
+}
+
+void *shared_new(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key, size_t size) {
     uint8_t *block;
     map_shared_t *shared_block;
 
-    HASH_FIND_INT(*shared, &key, shared_block);
+    uint32_t hash_key = tommy_inthash_u32(key);
+
+    shared_block = tommy_hashdyn_search(shared, search_shared_block,
+                                        &key, hash_key);
 
     if (shared_block) return NULL; // key already assigned, this is so sad :/
 
@@ -199,38 +214,51 @@ void *shared_new(struct memory_manager *mgr, map_shared_t **shared, key_t key, s
     shared_block->id = key;
     shared_block->data = block;
 
-    HASH_ADD_INT(*shared, id, shared_block);
+    tommy_hashdyn_insert(shared, &shared_block->hash_node,
+                         shared_block, hash_key);
     return block;
 }
 
-void *shared_get(struct memory_manager *mgr UNUSED, map_shared_t **shared, key_t key) {
+void *shared_get(struct memory_manager *mgr UNUSED, tommy_hashdyn *shared, key_t key) {
     map_shared_t *shared_block;
 
-    HASH_FIND_INT(*shared, &key, shared_block);
+    uint32_t hash_key = tommy_inthash_u32(key);
 
-    if (!*shared) return NULL; // key not assigned in a shared block;
+    shared_block = tommy_hashdyn_search(shared, search_shared_block,
+                                        &key, hash_key);
 
-    return (*shared)->data;
+    if (!shared_block) return NULL; // key not assigned in a shared block;
+
+    return shared_block->data;
 }
 
-void shared_rm(struct memory_manager *mgr, map_shared_t **shared, key_t key) {
+void shared_rm(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key) {
     map_shared_t *shared_block;
 
-    HASH_FIND_INT(*shared, &key, shared_block);
-    if (!*shared) return; // key not assigned in a shared block;
+    uint32_t hash_key = tommy_inthash_u32(key);
 
-    mgr->free(&mgr->memory_ctx, (*shared)->data);
-    HASH_DEL(*shared, shared_block);
+    shared_block = tommy_hashdyn_search(shared, search_shared_block,
+                                        &key, hash_key);
+
+    if (!shared_block) return;
+
+    mgr->free(&mgr->memory_ctx, shared_block->data);
+    tommy_hashdyn_remove_existing(shared, &shared_block->hash_node);
     free(shared_block);
 }
 
 
-void destroy_shared_map(map_shared_t **mp) {
-    if (!mp || !*mp) return;
+static inline void free_map_shared_t(void *mgr, void* obj) {
+    map_shared_t *ms = obj;
+    struct memory_manager *manager = mgr;
 
-    map_shared_t *curr, *tmp;
-    HASH_ITER(hh, *mp, curr, tmp) {
-        HASH_DEL(*mp, curr);
-        free(curr);
-    }
+    manager->free(&manager->memory_ctx, ms->data);
+    free(ms);
+}
+
+void destroy_shared_map(struct memory_manager *mgr, tommy_hashdyn *shared) {
+    if (!shared) return;
+
+    tommy_hashdyn_foreach_arg(shared, free_map_shared_t, mgr);
+    tommy_hashdyn_done(shared);
 }

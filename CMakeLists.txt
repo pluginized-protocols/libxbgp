@@ -9,6 +9,7 @@ set(TESTS_DIR "${CMAKE_SOURCE_DIR}/tests")
 set(PLUGIN_TESTS_DIR "${TESTS_DIR}/plugins")
 set(MICHELFRALLOC_DIR "${CMAKE_SOURCE_DIR}/memalloc")
 set(UBPF_VM_DIR "${CMAKE_SOURCE_DIR}/ubpf_vm/vm")
+set(TOMMYDS_DIR "${CMAKE_SOURCE_DIR}/tommyds")
 
 set(UBPF_VM_SOURCES
         ${UBPF_VM_DIR}/ubpf_jit_x86_64.c
@@ -29,11 +30,18 @@ set(MICHELFRA_OBJS
         "${MICHELFRALLOC_DIR}/sbrk.o"
         "${MICHELFRALLOC_DIR}/ptmalloc3/malloc.o")
 
+add_custom_command(OUTPUT ${TOMMYDS_DIR}/tommy.o
+        COMMAND make
+        WORKING_DIRECTORY ${TOMMYDS_DIR})
+
+set(TOMMYDS_OBJS "${TOMMYDS_DIR}/tommy.o")
+
 include_directories(.)
 include_directories(include)
 include_directories(ubpf_vm/vm)
 include_directories(ubpf_vm/vm/inc)
 include_directories(xbgp_deps)
+include_directories(tommyds/tommyds)
 
 # set default build type if not specified by user
 if(NOT CMAKE_BUILD_TYPE)
@@ -60,6 +68,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 add_library(xbgp
         ${UBPF_VM_SOURCES}
         ${MICHELFRA_OBJS}
+        ${TOMMYDS_OBJS}
         bpf_plugin.c bpf_plugin.h
         context_function.c context_function.h
         dict.c dict.h

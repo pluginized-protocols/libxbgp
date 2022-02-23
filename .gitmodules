@@ -9,3 +9,7 @@
 	path = xbgp_deps
 	url = https://github.com/pluginized-protocols/xbgp_plugins.git
 	branch = master
+[submodule "tommyds"]
+	path = tommyds
+	url = https://github.com/amadvance/tommyds.git
+	branch = master

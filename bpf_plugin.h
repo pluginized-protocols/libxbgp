@@ -11,6 +11,7 @@
 #include "uthash.h"
 #include "dict.h"
 #include "xbgp_compliant_api/xbgp_common_vm_defs.h"
+#include "tommy.h"
 
 #define MAX_HEAP_PLUGIN 1048576 // 1MB
 #define MAX_SIZE_ARGS_PLUGIN 512 // 512B must be checked before memcpy args
@@ -34,7 +35,7 @@ typedef struct plugin {
 
         struct memory_manager mgr_heap;
         struct memory_manager mgr_shared_heap;
-        map_shared_t *shared_blocks;
+        tommy_hashdyn shared_blocks;
     } mem;
 
     dict_t runtime_dict;

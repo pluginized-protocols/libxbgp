@@ -10,6 +10,7 @@
 #include "uthash.h"
 #include <sys/ipc.h>
 #include <memalloc/michelfralloc.h>
+#include "tommy.h"
 
 #define MIN_MICHELFRA_MEM_SIZE (4096)
 #define MIN_MEM_SIZE_PLUGIN MIN_MICHELFRA_MEM_SIZE
@@ -87,19 +88,19 @@ void mem_reset(struct memory_manager *mgr);
 
 
 typedef struct map_shared {
-    UT_hash_handle hh;
+    tommy_hashdyn_node hash_node;
     int id;
     uint8_t *data;
 } map_shared_t;
 
-//void init_shared_map(map_shared_t *map);
+void init_shared_hash(tommy_hashdyn *hashdyn);
 
-void destroy_shared_map(map_shared_t **map);
+void destroy_shared_map(struct memory_manager *mgr, tommy_hashdyn *shared);
 
-void *shared_new(struct memory_manager *mgr, map_shared_t **shared, key_t key, size_t size);
+void *shared_new(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key, size_t size);
 
-void *shared_get(struct memory_manager *mgr, map_shared_t **shared, key_t key);
+void *shared_get(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key);
 
-void shared_rm(struct memory_manager *mgr, map_shared_t **shared, key_t key);
+void shared_rm(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key);
 
 #endif //FRR_UBPF_SHARED_MEMORY_H
