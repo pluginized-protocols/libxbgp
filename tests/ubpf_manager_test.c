@@ -49,7 +49,7 @@ static inline int my_very_super_function_to_pluginize(int a, char b, uint32_t c,
             entry_arg_null
     };
 
-    CALL(3, args, check, map_ret_val, {
+    CALL_ALL(3, args, check, map_ret_val, {
 
         int temp = a * b;
         int temp2 = b + c;
@@ -66,7 +66,7 @@ static inline void my_function_void(int *a) {
             [0] = {.arg = a, .len = sizeof(int), .kind = kind_ptr, .type = INT_EXAMPLE},
             [1] = entry_arg_null,
     };
-    CALL(1, args, check, NULL, {
+    CALL_ALL(1, args, check, NULL, {
         *a = 42;
     });
 }
