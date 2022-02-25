@@ -1116,28 +1116,28 @@ int fetch_file(context_t *ctx UNUSED, char *url, const char *dest) {
     return 0;
 }
 
-static def_fun_api(sk_open, int, *(sk_type_t *) ARGS[0], *(int *) ARGS[1], *(const struct sockaddr **) ARGS[2],
+static def_fun_api(sock_open, int, *(sk_type_t *) ARGS[0], *(int *) ARGS[1], *(const struct sockaddr **) ARGS[2],
                    *(socklen_t *) ARGS[3])
 
-int sk_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
+int sock_open(UNUSED context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len) {
     return ctx_open(proto, af, addr, len);
 }
 
-static def_fun_api(sk_write, int, *(int *) ARGS[0], *(const void **) ARGS[1], *(uint64_t *) ARGS[2])
+static def_fun_api(sock_write, int, *(int *) ARGS[0], *(const void **) ARGS[1], *(uint64_t *) ARGS[2])
 
-int sk_write(UNUSED context_t *ctx, int sfd, const void *buf, uint64_t len) {
+int sock_write(UNUSED context_t *ctx, int sfd, const void *buf, uint64_t len) {
     return ctx_write(sfd, buf, len);
 }
 
-static def_fun_api(sk_read, int, *(int *) ARGS[0], *(void **) ARGS[1], *(uint64_t *) ARGS[2])
+static def_fun_api(sock_read, int, *(int *) ARGS[0], *(void **) ARGS[1], *(uint64_t *) ARGS[2])
 
-int sk_read(UNUSED context_t *ctx, int sfd, void *buf, uint64_t len) {
+int sock_read(UNUSED context_t *ctx, int sfd, void *buf, uint64_t len) {
     return ctx_read(sfd, buf, len);
 }
 
-static def_fun_api(sk_close, int, *(int *) ARGS[0])
+static def_fun_api(sock_close, int, *(int *) ARGS[0])
 
-int sk_close(UNUSED context_t *ctx, int sfd) {
+int sock_close(UNUSED context_t *ctx, int sfd) {
     return ctx_close(sfd);
 }
 
@@ -1554,10 +1554,10 @@ proto_ext_fun_t base_api_fun__[] = {
                 },
                 .return_type = &ffi_type_sint,
                 .args_nb = 4,
-                .fn = sk_open,
-                .name = "sk_open",
+                .fn = sock_open,
+                .name = "sock_open",
                 .attributes = HELPER_ATTR_NONE,
-                .closure_fn = api_name_closure(sk_open)
+                .closure_fn = api_name_closure(sock_open)
         },
         {
                 .args_type = (ffi_type *[]) {
@@ -1567,10 +1567,10 @@ proto_ext_fun_t base_api_fun__[] = {
                 },
                 .return_type = &ffi_type_sint,
                 .args_nb = 3,
-                .fn = sk_write,
-                .name = "sk_write",
+                .fn = sock_write,
+                .name = "sock_write",
                 .attributes = HELPER_ATTR_NONE,
-                .closure_fn = api_name_closure(sk_write)
+                .closure_fn = api_name_closure(sock_write)
         },
         {
                 .args_type = (ffi_type *[]) {
@@ -1580,10 +1580,10 @@ proto_ext_fun_t base_api_fun__[] = {
                 },
                 .return_type = &ffi_type_sint,
                 .args_nb = 3,
-                .fn = sk_read,
-                .name = "sk_read",
+                .fn = sock_read,
+                .name = "sock_read",
                 .attributes = HELPER_ATTR_NONE,
-                .closure_fn = api_name_closure(sk_read)
+                .closure_fn = api_name_closure(sock_read)
         },
         {
                 .args_type = (ffi_type *[]) {
@@ -1591,10 +1591,10 @@ proto_ext_fun_t base_api_fun__[] = {
                 },
                 .return_type = &ffi_type_sint,
                 .args_nb = 1,
-                .fn = sk_close,
-                .name = "sk_close",
+                .fn = sock_close,
+                .name = "sock_close",
                 .attributes = HELPER_ATTR_NONE,
-                .closure_fn = api_name_closure(sk_close)
+                .closure_fn = api_name_closure(sock_close)
         },
         {
                 .args_type = (ffi_type *[]) {

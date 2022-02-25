@@ -87,13 +87,13 @@ int fetch_file(context_t *ctx, char *url, const char *dest);
 
 int super_log(context_t *vm_ctx, const char *msg, struct vargs *args);
 
-int sk_open(context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len);
+int sock_open(context_t *ctx, sk_type_t proto, int af, const struct sockaddr *addr, socklen_t len);
 
-int sk_write(context_t *ctx, int sfd, const void *buf, uint64_t len);
+int sock_write(context_t *ctx, int sfd, const void *buf, uint64_t len);
 
-int sk_read(context_t *ctx, int sfd, void *buf, uint64_t len);
+int sock_read(context_t *ctx, int sfd, void *buf, uint64_t len);
 
-int sk_close(context_t *ctx, int sfd);
+int sock_close(context_t *ctx, int sfd);
 
 int reschedule_plugin(context_t *ctx, time_t *time);
 
