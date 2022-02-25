@@ -117,7 +117,7 @@ do {                                                \
    run_pre_functions(INSERTION_POINT, &FULL_ARGS, NULL);\
 } while(0)
 
-#define CALL(insertion_id, args, args_vm_check, map_ret_to_vm, on_err, ...) do { \
+#define CALL_ALL(insertion_id, args, args_vm_check, map_ret_to_vm, on_err, ...) do { \
     uint64_t VM_RETURN_VALUE = 0;                                                 \
     args_t FULL_ARGS;                                                             \
     uint64_t (*MAP_RET_TO_VM)(uint64_t) = map_ret_to_vm;                          \
