@@ -130,7 +130,7 @@ static void test_one_job_plugin(void) {
     status = add_extension_code("job1", 4, 0,
                                 0, 1, "job_plugins", 11,
                                 BPF_REPLACE, 0, 0, path_pluglet, 0,
-                                "job1_vm", 7, funcs, 0, 1);
+                                "job1_vm", 7, funcs, 0, 1, BUMP_MEM);
 
     CU_ASSERT_EQUAL_FATAL(status, 0)
 
@@ -164,7 +164,7 @@ static void test_one_job_plugin_reschedule(void) {
     status = add_extension_code("job1", 4, 32,
                                 256, 1, "job_plugins", 11,
                                 BPF_REPLACE, 0, 0, path_pluglet, 0,
-                                "job2_vm", 7, funcs, 0, 1);
+                                "job2_vm", 7, funcs, 0, 1, BUMP_MEM);
 
     CU_ASSERT_EQUAL_FATAL(status, 0)
 
@@ -219,7 +219,7 @@ static void test_two_jobs_plugin_manifest(void) {
     status = add_extension_code("job1", 4, 0,
                                 0, 1, "job_plugins", 11,
                                 BPF_REPLACE, 0, 0, path_job, 0,
-                                "job2_vm", 7, funcs, 0, 1);
+                                "job2_vm", 7, funcs, 0, 1, MICHELFRA_MEM);
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -229,7 +229,7 @@ static void test_two_jobs_plugin_manifest(void) {
     status = add_extension_code("job2", 4, 0,
                                 0, 1, "job_plugins", 11,
                                 BPF_REPLACE, 0, 0, path_job, 0,
-                                "job42_vm", 8, funcs, 0, 1);
+                                "job42_vm", 8, funcs, 0, 1, MICHELFRA_MEM);
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 

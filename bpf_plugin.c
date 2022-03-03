@@ -14,7 +14,8 @@
 #include <assert.h>
 
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permissions) {
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name,
+                      size_t name_len, int permissions, mem_type_t memtype) {
 
     size_t total_allowed_mem;
     uint8_t *super_block;
@@ -51,8 +52,7 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
     if (heap_size > 0) {
         p->mem.has_heap = 1;
 
-        // TODO give to the user the ability to change memory type
-        if (init_memory_manager(&p->mem.mgr_heap, MICHELFRA_MEM) != 0) {
+        if (init_memory_manager(&p->mem.mgr_heap, memtype) != 0) {
             return NULL;
         }
 

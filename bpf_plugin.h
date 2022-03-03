@@ -54,7 +54,9 @@ typedef struct plugin {
 
 } plugin_t;
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permission);
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size,
+                      const char *name, size_t name_len,
+                      int permission, mem_type_t mem_mgt);
 
 /**
  * Increase the reference counter by one.

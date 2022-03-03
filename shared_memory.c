@@ -117,6 +117,28 @@ static const struct memory_manager mem_mgrs[] = {
         }
 };
 
+static struct {
+    const char *str;
+    size_t str_len;
+    mem_type_t type;
+} memtype_info[] = {
+        {.str = "michelfra", .type = MICHELFRA_MEM, .str_len = 9},
+        {.str = "bump", .type = BUMP_MEM, .str_len = 4}
+};
+
+mem_type_t str_memtype_to_enum(const char *memtype) {
+    size_t array_len;
+    size_t i;
+
+    array_len = sizeof(memtype_info) / sizeof(memtype_info[0]);
+    for (i = 0; i < array_len; i++) {
+        if (strncmp(memtype_info[i].str, memtype, memtype_info[i].str_len) == 0) {
+            return memtype_info[i].type;
+        }
+    }
+    return MIN_MEM;
+}
+
 
 int init_memory_manager(struct memory_manager *mgr, mem_type_t mem_type) {
 

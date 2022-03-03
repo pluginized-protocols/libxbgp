@@ -62,7 +62,7 @@ do {                                                                            
     status = add_extension_code("plugin_1", 8, 8,                                                               \
                                 0, 1, "insertion_1", 11,                                                        \
                                 BPF_REPLACE, 0, 1, path_pluglet, 0,                                             \
-                                "simple_test", 11, funcs, 0, runtime_memcheck);                                 \
+                                "simple_test", 11, funcs, 0, runtime_memcheck, BUMP_MEM);                       \
                                                                                                                 \
     CU_ASSERT_EQUAL_FATAL(status, 0);                                                                           \
     point = insertion_point(1);                                                                                 \

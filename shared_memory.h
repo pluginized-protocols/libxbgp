@@ -71,6 +71,10 @@ typedef enum MEM_TYPE {
 } mem_type_t;
 
 
+
+mem_type_t str_memtype_to_enum(const char *memtype);
+
+
 int init_memory_manager(struct memory_manager *mgr, mem_type_t mem_type);
 
 void destroy_memory_manager(struct memory_manager *mgr);

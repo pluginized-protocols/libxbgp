@@ -13,13 +13,16 @@
       ]
     },
     "pre_simple_zero": {
-      "obj": "pre_simple_zero.o"
+      "obj": "pre_simple_zero.o",
+      "memory_mgmt": "michelfra"
     },
     "replace_simple": {
-      "obj": "replace_simple.o"
+      "obj": "replace_simple.o",
+      "memory_mgmt": "bump"
     },
     "post_simple": {
-      "obj": "post_simple.o"
+      "obj": "post_simple.o",
+      "memory_mgmt": "michelfra"
     }
   },
   "insertion_points": {

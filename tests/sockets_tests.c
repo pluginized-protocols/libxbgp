@@ -91,7 +91,7 @@ static void tcp_communication_plugin(void) {
     status = add_extension_code("example_tcp", 11, 128,
                                 0, 1, "tcp_socket_test",
                                 15, BPF_REPLACE, 0, 0,
-                                path_pluglet, 0, "super_vm", 8, funcs, 0, 1);
+                                path_pluglet, 0, "super_vm", 8, funcs, 0, 1, BUMP_MEM);
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
     pt = insertion_point(1);
