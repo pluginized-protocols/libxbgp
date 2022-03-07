@@ -138,7 +138,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
                        int insertion_point_id, const char *insertion_point, size_t i_pt_name, anchor_t type_anchor,
                        int seq_anchor, int jit, const char *obj_path_code, size_t len_obj_path_code,
                        const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission,
-                       int add_memcheck_insts, mem_type_t memory_mgt) {
+                       int add_memcheck_insts, mem_type_t memory_mgt, int use_libffi) {
 
     const uint8_t *bytecode;
     size_t bytecode_len;
@@ -187,7 +187,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
     }
 
     vm = new_vm(type_anchor, seq_anchor, point, jit, vm_name, vm_name_len, p, bytecode, bytecode_len, api_proto,
-                on_delete_vm, add_memcheck_insts);
+                on_delete_vm, add_memcheck_insts, use_libffi);
     free(bytecode);
     if (!vm) goto fail;
     if (register_vm(&master, vm) != 0) goto fail;

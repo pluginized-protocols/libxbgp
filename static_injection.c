@@ -407,6 +407,7 @@ static int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list
     j_obj(permissions);
     j_obj(add_memcheck);
     j_obj(const char *, memory_mgmt);
+    j_obj(int, use_libffi);
     mem_type_t mt;
 
     obj_iter_end = json_object_iter_end(obj_code_list);
@@ -445,6 +446,13 @@ static int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list
             curr_code->memory_mgt = mt;
         } else {
             curr_code->memory_mgt = BUMP_MEM;
+        }
+
+        if (j_obj_get_ex(j_obj_json(obj_code), use_libffi)) {
+            j_obj_val(use_libffi) = json_object_get_boolean(j_obj_json(use_libffi));
+            curr_code->use_libffi = j_obj_val(use_libffi);
+        } else {
+            curr_code->use_libffi = 0;
         }
 
         if (!j_obj_get_ex(j_obj_json(obj_code), obj)) {
@@ -661,7 +669,7 @@ static int load_pluglet(const char *path, const char *extension_code_dir,
                                curr_iter->name_insertion_len, curr_iter->anchor, curr_iter->seq,
                                obj_code_info->jit, obj_code_info->path_code, 0, curr_iter->pluglet_name,
                                curr_iter->pluglet_name_len, api_proto, obj_code_info->permissions,
-                               obj_code_info->add_memchecks, obj_code_info->memory_mgt) != 0) {
+                               obj_code_info->add_memchecks, obj_code_info->memory_mgt, obj_code_info->use_libffi) != 0) {
             goto end;
         }
 

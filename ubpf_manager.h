@@ -34,6 +34,7 @@ typedef struct vm_container {
     ubpf_jit_fn fun;
     struct insertion_point_entry *pop;
 
+    uint8_t use_libffi;
     struct api_functions *api_closures;
 
     UT_hash_handle hh; // hh hash-table all vms
@@ -57,7 +58,7 @@ typedef struct vm_container {
 vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8_t jit,
                        const char *name, size_t name_len, plugin_t *p,
                        const uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
-                       void (*on_delete)(void *), int add_memcheck_insts);
+                       void (*on_delete)(void *), int add_memcheck_insts, int use_libffi);
 
 /**
  * Destroy an uBPF machine. Memory related to the structure is not freed.

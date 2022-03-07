@@ -76,7 +76,7 @@ static int setup(void) {
         if (add_extension_code("gros minet", 10, 512,
                                0, 1, "replace_chain",
                                13, BPF_REPLACE, i, 0, path, 0, elf_files[i],
-                               strlen(elf_files[i]), funcs, 0, 1, BUMP_MEM) != 0) {
+                               strlen(elf_files[i]), funcs, 0, 1, BUMP_MEM, 0) != 0) {
             return -1;
         }
     }

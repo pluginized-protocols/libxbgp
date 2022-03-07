@@ -42,6 +42,7 @@ struct obj_code_list_parser {
     int permissions;
     int memory_mgt;
     int add_memchecks;
+    int use_libffi;
 
     size_t path_len;
     char path_code[PATH_MAX];

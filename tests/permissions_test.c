@@ -186,7 +186,7 @@ static void permissions_test(void) {
         status = add_extension_code("perm_test", 14, 8,
                                     0, 1, "default_point", 13,
                                     BPF_REPLACE, 0, 0, path, 0,
-                                    "super_test", 10, funcs, tests[i].perms, 1, BUMP_MEM);
+                                    "super_test", 10, funcs, tests[i].perms, 1, BUMP_MEM, 0);
 
 
         CU_ASSERT_EQUAL(status, tests[i].should_fail ? -1 : 0);

@@ -14,15 +14,18 @@
     },
     "pre_simple_zero": {
       "obj": "pre_simple_zero.o",
-      "memory_mgmt": "michelfra"
+      "memory_mgmt": "michelfra",
+      "use_libffi": true
     },
     "replace_simple": {
       "obj": "replace_simple.o",
-      "memory_mgmt": "bump"
+      "memory_mgmt": "bump",
+      "use_libffi": false
     },
     "post_simple": {
       "obj": "post_simple.o",
-      "memory_mgmt": "michelfra"
+      "memory_mgmt": "michelfra",
+      "use_libffi": true
     }
   },
   "insertion_points": {
