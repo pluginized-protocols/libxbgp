@@ -1,11 +1,5 @@
-Index: ptmalloc3/malloc-private.h
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/ptmalloc3/malloc-private.h b/ptmalloc3/malloc-private.h
---- a/ptmalloc3/malloc-private.h	(revision 55e14f75882b97cd6fd3dbf579207b521ee2bf20)
-+++ b/ptmalloc3/malloc-private.h	(date 1642089738614)
+--- memalloc/ptmalloc3/malloc-private.h	2022-03-08 16:59:07.293831383 +0100
++++ memalloc/ptmalloc3/malloc-private.h.pt	2022-03-08 16:59:02.940467051 +0100
 @@ -38,7 +38,7 @@
  */
  #include <fcntl.h> /* for O_RDWR */
