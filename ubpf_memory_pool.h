@@ -70,6 +70,11 @@ int get_mempool_data(struct mem_pool *mp, uint32_t type, struct mempool_data *da
 
 void delete_mempool(struct mem_pool *mp);
 
+/**
+ * Get a "unique" key for the current memory pool
+ */
+uint32_t jhash_mempool(struct mem_pool *mp);
+
 struct mem_pool_it *new_mempool_iterator(struct mem_pool *mp);
 
 void delete_mempool_iterator(struct mem_pool_it *it);

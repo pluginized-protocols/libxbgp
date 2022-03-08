@@ -10,12 +10,28 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <limits.h>
+#include "tommy.h"
 
-struct conf_arg *global_conf = NULL;
+#define get_conf_arg_entry(hashtable, func, key) ({ \
+    struct conf_arg *__the_arg;\
+    uint32_t __hash_key = tommy_strhash_u32(0, key);                    \
+    __the_arg = tommy_hashdyn_search(hashtable, func, \
+                                   key, __hash_key);                    \
+    __the_arg;                           \
+})
+
+#define set_entry_hash_table(hashtable, conf_arg) do { \
+    uint32_t __hash_key =  tommy_strhash_u32(0, (conf_arg)->key); \
+    tommy_hashdyn_insert(hashtable, &((conf_arg)->hash_node), \
+                         conf_arg, __hash_key);\
+} while(0)
+
+static tommy_hashdyn global_conf;
+static tommy_hashdyn *global_conf__ = NULL;
 
 
-const char *type_arg_char_key = "type_arg";
-const char *arg_char_key = "arg";
+static const char *type_arg_char_key = "type_arg";
+static const char *arg_char_key = "arg";
 
 struct json_conf_parse {
     const char *str;
@@ -44,6 +60,21 @@ struct json_conf_parse val_parsers[] = {
         [conf_val_type_max] = null_json_conf_parse,
 };
 
+static inline int search_conf_arg(const void *arg, const void *obj) {
+    const char *key = arg;
+    const struct conf_arg *elem = obj;
+
+    return strcmp(key, elem->key);
+}
+
+static inline void init_global_conf(void) {
+    if (global_conf__) return;
+
+    tommy_hashdyn_init(&global_conf);
+    global_conf__ = &global_conf;
+}
+
+
 static struct conf_arg *new_conf_arg(const char *key, size_t len_key) {
     struct conf_arg *arg;
     arg = calloc(1, sizeof(*arg) + len_key + 1);
@@ -65,7 +96,8 @@ static struct conf_arg *new_conf_arg(const char *key, size_t len_key) {
 int delete_conf_arg(const char *key) {
     struct conf_arg *the_arg;
 
-    HASH_FIND_STR(global_conf, key, the_arg);
+    the_arg = get_conf_arg_entry(&global_conf, search_conf_arg, key);
+
     if (!the_arg) return -1; // not found
 
     delete_current_info(the_arg->val);
@@ -73,32 +105,32 @@ int delete_conf_arg(const char *key) {
     return 0;
 }
 
-int delete_all_extra_info() {
-    if (!global_conf) return 0;
-    struct conf_arg *curr_arg, *tmp;
-    HASH_ITER(hh, global_conf, curr_arg, tmp) {
-        HASH_DEL(global_conf, curr_arg);
-        delete_current_info(curr_arg->val);
-        free(curr_arg);
-    }
+static inline void free_conf_arg(void* obj) {
+    struct conf_arg *arg = obj;
 
-    global_conf = NULL;
+    delete_current_info(arg->val);
+    free(arg);
+
+}
+
+int delete_all_extra_info() {
+    tommy_hashdyn_foreach(&global_conf, free_conf_arg);
+    tommy_hashdyn_done(&global_conf);
+    global_conf__ = NULL;
     return 0;
 }
 
 struct conf_val *get_extra_from_key(const char *key) {
     struct conf_arg *the_arg;
-    HASH_FIND_STR(global_conf, key, the_arg);
-
+    the_arg = get_conf_arg_entry(&global_conf, search_conf_arg, key);
     if (!the_arg) return NULL;
 
     return the_arg->val;
 }
 
 int get_global_info(const char *key, struct global_info *info) {
-
     struct conf_arg *the_arg;
-    HASH_FIND_STR(global_conf, key, the_arg);
+    the_arg = get_conf_arg_entry(&global_conf, search_conf_arg, key);
 
     if (!the_arg) return -1;
 
@@ -126,16 +158,17 @@ int get_info_lst_idx(struct global_info *info, unsigned int array_idx, struct gl
 int get_info_dict(struct global_info *info, const char *key, struct global_info *value) {
 
     struct conf_val *val;
-    dict *curr_dict;
+    struct conf_arg *entry;
     if (info->type != conf_val_type_dict) return -1;
 
     val = info->hidden_ptr;
 
-    HASH_FIND_STR(val->val.dict, key, curr_dict);
-    if (!curr_dict) return -1;
+    entry = get_conf_arg_entry(&val->val.dict, search_conf_arg, key);
 
-    value->type = curr_dict->val->type;
-    value->hidden_ptr = curr_dict->val;
+    if (!entry) return -1;
+
+    value->type = entry->val->type;
+    value->hidden_ptr = entry->val;
     return 0;
 }
 
@@ -337,9 +370,8 @@ int extra_conf_parse_list(json_object *value, struct conf_val *val) {
 }
 
 int extra_conf_parse_dict(json_object *value, struct conf_val *val) {
-
     val->type = conf_val_type_dict;
-    val->val.dict = NULL;
+    tommy_hashdyn_init(&val->val.dict);
 
     const char *current_key;
     size_t key_len;
@@ -352,7 +384,7 @@ int extra_conf_parse_dict(json_object *value, struct conf_val *val) {
     const char *type_nested_val;
     int type_nested_val_len;
 
-    dict *new_hash;
+    struct conf_arg *new_entry;
 
     it_value_info_end = json_object_iter_end(value);
 
@@ -371,12 +403,12 @@ int extra_conf_parse_dict(json_object *value, struct conf_val *val) {
         type_nested_val = json_object_get_string(nested_val_type);
         type_nested_val_len = json_object_get_string_len(nested_val_type);
 
-        new_hash = new_conf_arg(current_key, key_len);
-        if (!new_hash) return -1;
+        new_entry = new_conf_arg(current_key, key_len);
+        if (!new_entry) return -1;
 
-        HASH_ADD_STR(val->val.dict, key, new_hash);
+        set_entry_hash_table(&val->val.dict, new_entry);
 
-        if (parse_current_info(type_nested_val, type_nested_val_len, nested_val, new_hash->val) != 0) return -1;
+        if (parse_current_info(type_nested_val, type_nested_val_len, nested_val, new_entry->val) != 0) return -1;
     }
     return 0;
 }
@@ -443,16 +475,10 @@ int extra_conf_parse_delete_list(struct conf_val *val) {
 }
 
 int extra_conf_delete_dict(struct conf_val *val) {
-
     if (val->type != conf_val_type_dict) return -1;
 
-    dict *curr_arg, *tmp;
-
-    HASH_ITER(hh, val->val.dict, curr_arg, tmp) {
-        HASH_DEL(val->val.dict, curr_arg);
-        delete_current_info(curr_arg->val);
-        free(curr_arg);
-    }
+    tommy_hashdyn_foreach(&val->val.dict, free_conf_arg);
+    tommy_hashdyn_done(&val->val.dict);
     free(val);
     return 0;
 }
@@ -546,7 +572,6 @@ int extra_info_from_json(const char *path, const char *key) {
 }
 
 int json_parse_extra_info(json_object *manifest) {
-
     if (!manifest) return -1;
 
     const char *current_key;
@@ -560,11 +585,13 @@ int json_parse_extra_info(json_object *manifest) {
     struct json_object_iterator it_value_info;
     struct json_object_iterator it_value_info_end;
 
+    init_global_conf();
+
 
     it_value_info_end = json_object_iter_end(manifest);
 
 
-    int len_str_key;
+    size_t len_str_key;
     struct conf_arg *new_arg;
 
     for (it_value_info = json_object_iter_begin(manifest);
@@ -591,7 +618,7 @@ int json_parse_extra_info(json_object *manifest) {
 
         new_arg = new_conf_arg(current_key, len_str_key);
         if (!new_arg) return -1;
-        HASH_ADD_STR(global_conf, key, new_arg);
+        set_entry_hash_table(&global_conf, new_arg);
 
         type_arg_str = json_object_get_string(type_arg);
         type_arg_str_len = json_object_get_string_len(type_arg);

@@ -78,7 +78,7 @@ void send_monitoring_record_test(void) {
     };
 
     status = add_extension_code("monitoring_example", 18, 64, 0, 1, "point", 5, BPF_REPLACE,
-                                0, 0, path_pluglet, 0, "send_monit", 10, funcs, 0, 1);
+                                0, 0, path_pluglet, 0, "send_monit", 10, funcs, 0, 1, MICHELFRA_MEM, 1);
 
     fargs.args = args;
     fargs.nargs = 1;
@@ -111,7 +111,7 @@ static void send_multiple_records_test(void) {
     fargs.args = args;
 
     status = add_extension_code("multiple_monitoring", 19, 64, 0, 3, "point", 5, BPF_REPLACE,
-                                0, 0, path_pluglet, 0, "multiple_send", 13, funcs, 0, 1);
+                                0, 0, path_pluglet, 0, "multiple_send", 13, funcs, 0, 1, BUMP_MEM, 0);
     CU_ASSERT_EQUAL(status, 0)
     point = insertion_point(3);
     run_replace_function(point, &fargs, &ret_val);
@@ -139,7 +139,7 @@ static void send_multiple_records_type_test(void) {
     fargs.nargs = 1;
 
     status = add_extension_code("multiple_record", 15, 64, 0, 2, "point", 5, BPF_REPLACE, 0, 0,
-                                path_pluglet, 0, "the_vm_name", 11, funcs, 0, 1);
+                                path_pluglet, 0, "the_vm_name", 11, funcs, 0, 1, MICHELFRA_MEM, 0);
     CU_ASSERT_EQUAL(status, 0)
 
     point = insertion_point(2);

@@ -26,7 +26,7 @@ uint64_t establish_simple_tcp_conn(args_t *args UNUSED) {
         return EXIT_FAILURE;
     }
 
-    sfd = sk_open(PLUGIN_SOCKET_TCP, AF_INET6, (struct sockaddr *) &add, sizeof(add));
+    sfd = sock_open(PLUGIN_SOCKET_TCP, AF_INET6, (struct sockaddr *) &add, sizeof(add));
     if (sfd < 0) {
         log_msg(L_ERR "Unable to open TCP socket\n");
         return EXIT_FAILURE;
@@ -34,17 +34,17 @@ uint64_t establish_simple_tcp_conn(args_t *args UNUSED) {
 
     zzz_net = ebpf_htonl(*zzz);
 
-    if (sk_write(sfd, &zzz_net, sizeof(zzz_net)) == -1) {
+    if (sock_write(sfd, &zzz_net, sizeof(zzz_net)) == -1) {
         log_msg(L_ERR "Unable to write on TCP socket");
         return EXIT_FAILURE;
     }
-    if (sk_read(sfd, &zzz_recv, sizeof(zzz_recv)) == -1) {
+    if (sock_read(sfd, &zzz_recv, sizeof(zzz_recv)) == -1) {
         log_msg(L_ERR "Unable to read on TCP socket");
         return EXIT_FAILURE;
     }
 
     server_val = ebpf_ntohl(zzz_recv);
 
-    sk_close(sfd);
+    sock_close(sfd);
     return server_val;
 }

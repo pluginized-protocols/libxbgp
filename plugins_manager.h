@@ -17,6 +17,7 @@
 #include <include/context_hdr.h>
 #include "insertion_point.h"
 #include "log.h"
+#include "shared_memory.h"
 
 #define MAX_SIZE_PLUGIN 1048576
 #define MAX_SIZE_OBJ_CODE 1048576
@@ -111,7 +112,7 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
                        int seq_anchor, int jit,
                        const char *obj_path_code, size_t len_obj_path_code,
                        const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission,
-                       int add_memcheck_insts);
+                       int add_memcheck_insts, mem_type_t memory_mgt, int use_libffi);
 
 
 void ubpf_terminate(void);

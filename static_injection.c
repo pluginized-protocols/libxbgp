@@ -180,9 +180,6 @@ static int iter_anchors(json_object *insertion_point,
                         size_t insertion_point_name_len,
                         insertion_point_info_t *points_info,
                         struct insertion_point_parser **p_parser) {
-
-    assert(*p_parser == NULL);
-
     j_obj(const char *, anchor);
     anchor_t num_anchor;
     j_obj(const char *, seq);
@@ -409,6 +406,9 @@ static int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list
     int path_code_len;
     j_obj(permissions);
     j_obj(add_memcheck);
+    j_obj(const char *, memory_mgmt);
+    j_obj(int, use_libffi);
+    mem_type_t mt;
 
     obj_iter_end = json_object_iter_end(obj_code_list);
 
@@ -434,6 +434,25 @@ static int obj_code_list_parser(json_object *obj_code_list, struct obj_code_list
             curr_code->permissions = parse_permissions_pluglet(j_obj_json(permissions));
         } else {
             curr_code->permissions = 0;
+        }
+
+        if (j_obj_get_ex(j_obj_json(obj_code), memory_mgmt)) {
+            j_obj_val(memory_mgmt) = json_object_get_string(j_obj_json(memory_mgmt));
+            mt = str_memtype_to_enum(j_obj_val(memory_mgmt));
+            if (mt == MIN_MEM) {
+                fprintf(stderr, "Unknown memory manager: \"%s\" !\n", j_obj_val(memory_mgmt));
+                return -1;
+            }
+            curr_code->memory_mgt = mt;
+        } else {
+            curr_code->memory_mgt = BUMP_MEM;
+        }
+
+        if (j_obj_get_ex(j_obj_json(obj_code), use_libffi)) {
+            j_obj_val(use_libffi) = json_object_get_boolean(j_obj_json(use_libffi));
+            curr_code->use_libffi = j_obj_val(use_libffi);
+        } else {
+            curr_code->use_libffi = 0;
         }
 
         if (!j_obj_get_ex(j_obj_json(obj_code), obj)) {
@@ -650,7 +669,7 @@ static int load_pluglet(const char *path, const char *extension_code_dir,
                                curr_iter->name_insertion_len, curr_iter->anchor, curr_iter->seq,
                                obj_code_info->jit, obj_code_info->path_code, 0, curr_iter->pluglet_name,
                                curr_iter->pluglet_name_len, api_proto, obj_code_info->permissions,
-                               obj_code_info->add_memchecks) != 0) {
+                               obj_code_info->add_memchecks, obj_code_info->memory_mgt, obj_code_info->use_libffi) != 0) {
             goto end;
         }
 

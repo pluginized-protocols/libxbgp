@@ -45,7 +45,7 @@ static inline int job_cmp(void *job1_, void *job2_) {
     return diff;
 }
 
-static inline time_t monotime() {
+static inline time_t monotime(void) {
     struct timespec ts;
 
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {
@@ -74,6 +74,10 @@ void *job_loop(void *arg __attribute__((unused))) {
     int res;
     long delta_ms;
     time_t current_time;
+
+    exec_info_t info = {
+            .insertion_point_id = INSERTION_POINT_ID_RESERVED
+    };
 
     while (!cancel_jobs && active_jobs != NULL) {
         if (!has_active_jobs()) {
@@ -124,7 +128,7 @@ void *job_loop(void *arg __attribute__((unused))) {
         job->active = 0; // job no longer in active_jobs
         // but run plugin can reactivate it once via API
         // function __reschedule_plugin
-        run_plugin(job->plugin);
+        run_plugin(job->plugin, &info);
     }
     return NULL;
 }

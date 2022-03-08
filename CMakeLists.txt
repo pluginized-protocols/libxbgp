@@ -9,6 +9,7 @@ set(TESTS_DIR "${CMAKE_SOURCE_DIR}/tests")
 set(PLUGIN_TESTS_DIR "${TESTS_DIR}/plugins")
 set(MICHELFRALLOC_DIR "${CMAKE_SOURCE_DIR}/memalloc")
 set(UBPF_VM_DIR "${CMAKE_SOURCE_DIR}/ubpf_vm/vm")
+set(TOMMYDS_DIR "${CMAKE_SOURCE_DIR}/tommyds")
 
 set(UBPF_VM_SOURCES
         ${UBPF_VM_DIR}/ubpf_jit_x86_64.c
@@ -20,7 +21,7 @@ set(UBPF_VM_SOURCES
 add_custom_command(OUTPUT ${MICHELFRALLOC_DIR}/michelfralloc.o
                           ${MICHELFRALLOC_DIR}/sbrk.o
                           ${MICHELFRALLOC_DIR}/ptmalloc3/malloc.o
-                   COMMAND make
+                   COMMAND make clean && make
                    WORKING_DIRECTORY ${MICHELFRALLOC_DIR}
         )
 
@@ -29,18 +30,29 @@ set(MICHELFRA_OBJS
         "${MICHELFRALLOC_DIR}/sbrk.o"
         "${MICHELFRALLOC_DIR}/ptmalloc3/malloc.o")
 
+add_custom_command(OUTPUT ${TOMMYDS_DIR}/tommy.o
+        COMMAND make
+        WORKING_DIRECTORY ${TOMMYDS_DIR})
+
+set(TOMMYDS_OBJS "${TOMMYDS_DIR}/tommy.o")
+
 include_directories(.)
 include_directories(include)
 include_directories(ubpf_vm/vm)
 include_directories(ubpf_vm/vm/inc)
 include_directories(xbgp_deps)
+include_directories(tommyds/tommyds)
 
 # set default build type if not specified by user
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE debug)
 endif()
 
-set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
+set(DEBUG_SYMBOLS "-gdwarf -gdwarf-5 -g3 -fvar-tracking -fvar-tracking-assignments")
+
+set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} ${DEBUG_SYMBOLS} -flto -fno-plt -march=native -mtune=native")
+
+set(CMAKE_C_FLAGS_DEBUG  "-O0 ${DEBUG_SYMBOLS}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_WARNING_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
@@ -58,6 +70,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 add_library(xbgp
         ${UBPF_VM_SOURCES}
         ${MICHELFRA_OBJS}
+        ${TOMMYDS_OBJS}
         bpf_plugin.c bpf_plugin.h
         context_function.c context_function.h
         dict.c dict.h
@@ -79,7 +92,7 @@ add_library(xbgp
         ubpf_memory_pool.c ubpf_memory_pool.h
         ubpf_misc.c ubpf_misc.h
         url_parser.c url_parser.h
-        uthash.h utlist.h)
+        uthash.h utlist.h jhash.h)
 
 add_executable(libxbgp_tests ${TESTS_DIR}/main_tests.c
         ${TESTS_DIR}/extra_info_big.c ${TESTS_DIR}/extra_info_big.h

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "jhash.h"
 
 enum {
     MEMPOOL_TYPE_U64,
@@ -113,6 +114,26 @@ void delete_mempool(struct mem_pool *mp) {
         remove_memnode(mp, curr);
     }
     free(mp);
+}
+
+uint32_t jhash_mempool(struct mem_pool *mp) {
+    struct mem_node *node, *ntmp;
+    uint32_t key_hash;
+    void *data;
+
+    if (!mp) return 0;
+    key_hash = 0;
+
+    HASH_ITER(hh, mp->node, node, ntmp) {
+        if (node->value->raw) {
+            data = *(void **) node->value->data;
+        } else {
+            data = node->value->data;
+        }
+        key_hash = jhash(data, node->value->len, key_hash);
+    }
+
+    return key_hash;
 }
 
 struct mem_node_it *new_memnode_iterator(struct mem_node *node) {

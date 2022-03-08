@@ -10,11 +10,15 @@
 #include "uthash.h"
 #include <sys/ipc.h>
 #include <memalloc/michelfralloc.h>
+#include "tommy.h"
 
 #define MIN_MICHELFRA_MEM_SIZE (4096)
+#define MIN_MEM_SIZE_PLUGIN MIN_MICHELFRA_MEM_SIZE
+
+#define ONE_IF_ZERO(x) ((x) == 0 ? 1 : (x))
 
 #define MEM_ALIGN(x) \
-  ((((x) + MIN_MICHELFRA_MEM_SIZE - 1) / MIN_MICHELFRA_MEM_SIZE) * MIN_MICHELFRA_MEM_SIZE)
+  ((((ONE_IF_ZERO(x) - 1) | ((MIN_MEM_SIZE_PLUGIN) - 1)) + 1))
 
 typedef plugin_dynamic_memory_pool_t michelfra_mem_t;
 
@@ -67,6 +71,10 @@ typedef enum MEM_TYPE {
 } mem_type_t;
 
 
+
+mem_type_t str_memtype_to_enum(const char *memtype);
+
+
 int init_memory_manager(struct memory_manager *mgr, mem_type_t mem_type);
 
 void destroy_memory_manager(struct memory_manager *mgr);
@@ -84,19 +92,19 @@ void mem_reset(struct memory_manager *mgr);
 
 
 typedef struct map_shared {
-    UT_hash_handle hh;
+    tommy_hashdyn_node hash_node;
     int id;
     uint8_t *data;
 } map_shared_t;
 
-//void init_shared_map(map_shared_t *map);
+void init_shared_hash(tommy_hashdyn *hashdyn);
 
-void destroy_shared_map(map_shared_t **map);
+void destroy_shared_map(struct memory_manager *mgr, tommy_hashdyn *shared);
 
-void *shared_new(struct memory_manager *mgr, map_shared_t **shared, key_t key, size_t size);
+void *shared_new(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key, size_t size);
 
-void *shared_get(struct memory_manager *mgr, map_shared_t **shared, key_t key);
+void *shared_get(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key);
 
-void shared_rm(struct memory_manager *mgr, map_shared_t **shared, key_t key);
+void shared_rm(struct memory_manager *mgr, tommy_hashdyn *shared, key_t key);
 
 #endif //FRR_UBPF_SHARED_MEMORY_H

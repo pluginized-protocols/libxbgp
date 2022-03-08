@@ -14,7 +14,8 @@
 #include <assert.h>
 
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permissions) {
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name,
+                      size_t name_len, int permissions, mem_type_t memtype) {
 
     size_t total_allowed_mem;
     uint8_t *super_block;
@@ -51,8 +52,7 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
     if (heap_size > 0) {
         p->mem.has_heap = 1;
 
-        // TODO give to the user the ability to change memory type
-        if (init_memory_manager(&p->mem.mgr_heap, MICHELFRA_MEM) != 0) {
+        if (init_memory_manager(&p->mem.mgr_heap, memtype) != 0) {
             return NULL;
         }
 
@@ -64,6 +64,8 @@ plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, siz
 
     if (sheap_size > 0) {
         p->mem.has_shared_heap = 1;
+
+        init_shared_hash(&p->mem.shared_blocks);
 
         if (init_memory_manager(&p->mem.mgr_shared_heap, MICHELFRA_MEM) != 0) {
             return NULL;
@@ -83,9 +85,9 @@ static inline void destroy_plugin__(plugin_t *p, int free_p) {
     vm_container_t *curr_vm, *tmp;
     if (!p) return;
 
+    destroy_shared_map(&p->mem.mgr_shared_heap, &p->mem.shared_blocks);
     destroy_memory_manager(&p->mem.mgr_heap);
     destroy_memory_manager(&p->mem.mgr_shared_heap);
-    destroy_shared_map(&p->mem.shared_blocks);
     free(p->mem.master_block);
 
     HASH_ITER(hh_plugin, p->vms, curr_vm, tmp) {
@@ -129,14 +131,14 @@ int plugin_delete_vm(vm_container_t *vm) {
     return 0;
 }
 
-int run_plugin(plugin_t *p) {
+int run_plugin(plugin_t *p, exec_info_t *info) {
     vm_container_t *vm, *tmp;
     uint64_t ret_val;
 
     if (!p) return -1;
 
     HASH_ITER(hh_plugin, p->vms, vm, tmp) {
-        if (run_injected_code(vm, &ret_val) == -1) {
+        if (run_injected_code(vm, &ret_val, info) == -1) {
             return -1;
         }
     }

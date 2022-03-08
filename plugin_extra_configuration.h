@@ -10,6 +10,7 @@
 #include "uthash.h"
 #include "utlist.h"
 #include <xbgp_compliant_api/xbgp_common_vm_defs.h>
+#include "tommy.h"
 
 #define MAX_STR_BUF_PFX 45
 
@@ -44,14 +45,13 @@ struct prefix_ip4 {
 };*/
 
 struct conf_arg {
-    UT_hash_handle hh;
-
+    tommy_hashdyn_node hash_node;
     struct conf_val *val;
     size_t len_key;
     char key[0];
 };
 
-typedef struct conf_arg dict;
+typedef tommy_hashdyn dict;
 
 struct conf_val {
 
@@ -72,7 +72,7 @@ struct conf_val {
             size_t len;
             struct conf_val **array;
         } lst;
-        dict *dict;
+        dict dict;
     } val;
 
 };

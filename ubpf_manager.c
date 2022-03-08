@@ -63,34 +63,42 @@ int safe_ubpf_register(vm_container_t *vmc, const char *name, void *fn, int perm
 static inline int base_register(vm_container_t *vmc) {
     ssize_t i;
     closure_t *current_closure;
+    void *api_fun;
 
     for (i = 0; i < base_api_fun_len__; i++) {
-        current_closure = make_closure(base_api_fun__[i].closure_fn,
-                                       base_api_fun__[i].args_nb,
-                                       base_api_fun__[i].args_type,
-                                       base_api_fun__[i].return_type,
-                                       vmc->ctx);
-        if (!current_closure) return 0;
+        if (vmc->use_libffi) {
+            current_closure = make_closure(base_api_fun__[i].closure_fn,
+                                           base_api_fun__[i].args_nb,
+                                           base_api_fun__[i].args_type,
+                                           base_api_fun__[i].return_type,
+                                           vmc->ctx);
+            if (!current_closure) return 0;
+            api_fun = current_closure->fn;
+        } else {
+            api_fun = base_api_fun__[i].fn;
+        }
 
         /* special handling of function */
         if (base_api_fun__[i].fn == next) {
             // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO SWITCH TO THE NEXT PART OF THE REPLACE INSERTION POINT
             if (vmc->ctx->pop->anchor == BPF_REPLACE) {
-                if (ubpf_register(vmc->vm, 0x7F, base_api_fun__[i].name, current_closure->fn) == -1) return 0;
+                if (ubpf_register(vmc->vm, 0x7F, base_api_fun__[i].name, api_fun) == -1) return 0;
             }
         } else if (base_api_fun__[i].fn == membound_fail) {
             // DO NOT TOUCH THIS FUNCTION, NEITHER ITS ID.. USED TO INFORM ILLEGAL MEM ACCESS
-            if (ubpf_register(vmc->vm, 0x3F, base_api_fun__[i].name, current_closure->fn) == -1) return 0;
+            if (ubpf_register(vmc->vm, 0x3F, base_api_fun__[i].name, api_fun) == -1) return 0;
         } else {
-            if (!safe_ubpf_register(vmc, base_api_fun__[i].name, current_closure->fn,
+            if (!safe_ubpf_register(vmc, base_api_fun__[i].name, api_fun,
                                     base_api_fun__[i].attributes))
                 return 0;
         }
 
         /* add closure to the container */
-        if (add_closure(vmc, current_closure) != 0) {
-            remove_closures(vmc);
-            return 0;
+        if (vmc->use_libffi) {
+            if (add_closure(vmc, current_closure) != 0) {
+                remove_closures(vmc);
+                return 0;
+            }
         }
     }
 
@@ -123,8 +131,8 @@ static int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len)
     ok_len = (uint32_t) len;
     start_mem = (uintptr_t) vmc->mem;
 
-    /* disable rewrite of EBPF_CALL instructions */
-    ctx_id = 0; // (uintptr_t) vmc->ctx;
+    /* to disable the rewriting of EBPF_CALL instructions, use_libffi != 0 */
+    ctx_id = vmc->use_libffi ? 0 : ((uintptr_t) vmc->ctx);
 
     if (elf) {
         err = ubpf_load_elf(vmc->vm, data, ok_len, &errmsg, start_mem, (uint32_t) vmc->total_mem, ctx_id,
@@ -161,6 +169,7 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
     int i;
     closure_t *closure;
     proto_ext_fun_t *current_fun;
+    void *api_fun;
 
     assert(vmc->ctx != NULL);
     if (vmc == NULL) return 0;
@@ -174,16 +183,23 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
 
     for (i = 0; !proto_ext_func_is_null(&api_proto[i]); i++) {
         current_fun = &api_proto[i];
-        closure = make_closure(current_fun->closure_fn, current_fun->args_nb,
-                               current_fun->args_type, current_fun->return_type,
-                               vmc->ctx);
 
-        if (!closure) { goto end; }
+        if (vmc->use_libffi) {
+            closure = make_closure(current_fun->closure_fn, current_fun->args_nb,
+                                   current_fun->args_type, current_fun->return_type,
+                                   vmc->ctx);
 
-        if (add_closure(vmc, closure) != 0) { goto end; }
+            if (!closure) { goto end; }
+
+            if (add_closure(vmc, closure) != 0) { goto end; }
+
+            api_fun = closure->fn;
+        } else {
+            api_fun = current_fun->fn;
+        }
 
         if (!safe_ubpf_register(vmc, api_proto[i].name,
-                                closure->fn, api_proto[i].attributes)) {
+                                api_fun, api_proto[i].attributes)) {
             goto end;
         }
     }
@@ -191,7 +207,7 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
     return 1;
 
     end:
-    remove_closures(vmc);
+    if (vmc->use_libffi) remove_closures(vmc);
     return 0;
 }
 
@@ -199,7 +215,7 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
 vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8_t jit,
                        const char *name, size_t name_len, plugin_t *p,
                        const uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
-                       void (*on_delete)(void *), int add_memcheck_insts) {
+                       void (*on_delete)(void *), int add_memcheck_insts, int use_libffi) {
 
     vm_container_t *vm;
 
@@ -211,6 +227,7 @@ vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8
     vm->mem = p->mem.master_block;
     vm->total_mem = p->mem.len;
     vm->num_ext_fun = 0;
+    vm->use_libffi = use_libffi;
 
     if (vm->vm == NULL) {
         fprintf(stderr, "Unable to create uBPF machine\n");
@@ -257,18 +274,25 @@ void shutdown_vm(vm_container_t *vmc) {
     free(vmc);
 }
 
-int run_injected_code(vm_container_t *vmc, uint64_t *ret_val) {
-
+int run_injected_code(vm_container_t *vmc, uint64_t *ret_val, exec_info_t *info) {
     uint64_t ret;
     int this_fun_ret;
+    exec_info_t *in_vm_info;
 
     vmc->ctx->return_val = ret_val;
 
+    in_vm_info = ctx_malloc(vmc->ctx, sizeof(*info));
+    if (!in_vm_info) {
+        msg_log("Unable to allocate memory in vm\n");
+        return -1;
+    }
+    memcpy(in_vm_info, info, sizeof(*info));
+
     // arguments are accessed via helper functions
     if (vmc->jit) { // NON INTERPRETED MODE
-        ret = vmc->fun(NULL, 0);
+        ret = vmc->fun(in_vm_info, sizeof(*in_vm_info));
     } else {
-        ret = ubpf_exec(vmc->vm, NULL, 0);
+        ret = ubpf_exec(vmc->vm, in_vm_info, sizeof(*in_vm_info));
     }
 
     if (ret == UINT64_MAX) {

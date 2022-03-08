@@ -10,6 +10,8 @@
 #include "shared_memory.h"
 #include "uthash.h"
 #include "dict.h"
+#include "xbgp_compliant_api/xbgp_common_vm_defs.h"
+#include "tommy.h"
 
 #define MAX_HEAP_PLUGIN 1048576 // 1MB
 #define MAX_SIZE_ARGS_PLUGIN 512 // 512B must be checked before memcpy args
@@ -33,7 +35,7 @@ typedef struct plugin {
 
         struct memory_manager mgr_heap;
         struct memory_manager mgr_shared_heap;
-        map_shared_t *shared_blocks;
+        tommy_hashdyn shared_blocks;
     } mem;
 
     dict_t runtime_dict;
@@ -52,7 +54,9 @@ typedef struct plugin {
 
 } plugin_t;
 
-plugin_t *init_plugin(size_t heap_size, size_t sheap_size, const char *name, size_t name_len, int permission);
+plugin_t *init_plugin(size_t heap_size, size_t sheap_size,
+                      const char *name, size_t name_len,
+                      int permission, mem_type_t mem_mgt);
 
 /**
  * Increase the reference counter by one.
@@ -74,7 +78,7 @@ int plugin_add_vm(plugin_t *p, vm_container_t *vm);
 
 int plugin_delete_vm(vm_container_t *vm);
 
-int run_plugin(plugin_t *p);
+int run_plugin(plugin_t *p, exec_info_t *info);
 
 void *new_runtime_data(plugin_t *p, const char *key, size_t key_len, void *data, size_t data_len);
 

@@ -30,6 +30,8 @@ extern void remove_mempool(struct mem_pool *mp, uint32_t type);
 
 extern void delete_mempool(struct mem_pool *mp);
 
+extern uint32_t jhash_mempool(struct mem_pool *mp);
+
 extern mempool_iterator *new_mempool_iterator(struct mem_pool *mp);
 
 extern void delete_mempool_iterator(mempool_iterator *it);
