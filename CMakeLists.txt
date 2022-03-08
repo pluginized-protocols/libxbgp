@@ -48,9 +48,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE debug)
 endif()
 
-set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
+set(DEBUG_SYMBOLS "-gdwarf -gdwarf-5 -g3 -fvar-tracking -fvar-tracking-assignments")
 
-set(CMAKE_C_FLAGS_DEBUG  "-O0 -gdwarf -g3")
+set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} ${DEBUG_SYMBOLS} -flto -fno-plt -march=native -mtune=native")
+
+set(CMAKE_C_FLAGS_DEBUG  "-O0 ${DEBUG_SYMBOLS}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_WARNING_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
