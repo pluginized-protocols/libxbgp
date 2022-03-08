@@ -1,16 +1,18 @@
-ubpf_tools
-==========
+libxBGP
+=======
 
-`libubpf.a`
+`libxBGP.a`
 
 About
 -----
 
 Library containing a set of helpers to
-primarily pluginize a network protocol 
-implementation written in C.
+primarily pluginize a routing network
+protocol implementation written in C.
 
-`libubpf.a` is not meant to only work with network
+![Architecture of xBGP](docs/source/_static/architecture.svg)
+
+`libxBGP.a` is not meant to only work with network
 protocols, but with any other program written
 in C (e.g. Apache, SSHFS, etc.). In fact, all C
 programs can be concerned. 
@@ -18,17 +20,12 @@ programs can be concerned.
 Building
 --------
 
-Be sure to be on the production branch while building
-the project. The master branch is actually the 
-development branch pointing to a private version
-of the eBPF VM.
-
-The production branch instead points to a public
-release of the eBPF VM.
+We rely on several repositories to build libxBGP. A global architecture
+is depicted on the above picture
 
 ```bash
-$ git clone https://bitbucket.org/twirtgen/ubpf_tools.git
-$ git checkout production
+$ git clone https://github.com/pluginized-protocols/libxbgp.git libxbgp
+$ cd libxbgp
 $ git submodule update --init --recursive
 ```
 
@@ -36,26 +33,36 @@ The library you will build is relying on some other
 dependencies you need to download before linking
 libubpf.a inside a protocol implementation :
 
+
+- cmake
 - json-c 0.12
-- CUnit 2.1.3 (to test your build of `libubpf.a`)
+- CUnit 2.1.3 (to test your build of `libxbgp.a`)
 - C compiler supporting gnu11 standard
 - POSIX thread and XSI extensions
 - libmath (`-lm`)
+- libffi
 
 The compilation has been successful with GCC9 and
 glibc 2.30.
 
-The below commands are currently supported:
+We use cmake in order to build libxBGP. Just follow these
+simple commands to build your version of `libxbgp.a`:
 ```bash
-$ cd ubpf_tools
-$ make # build libubpf.a
+$ cd libxbgp
+$ mkdir build
+$ cd build && cmake -DCMAKE_BUILD_TYPE=Release ..
+$ make
 
 ### run tests ###
-$ make check && ./lib_tests --plugin-folder=./tests/plugins
+$ make test
 ```
 
 Documentation
 -------------
+
+TO BE UPDATED. THE DOCUMENTATION IS OBSOLETE AND
+DOES NOT REFLECT HOW TO INTERRACT WITH LIBXBGP ANYMORE !
+
 Everything is on the `docs` folder. The documentation is
 written with `sphinx` and `sphinx_rtd_theme`. Hence, to
 be able to build the documentation, it is needed to first
@@ -87,18 +94,12 @@ and tested at the time of writing.
 Linking
 -------
 
-This library is meant to be linked into the program to
+This library is meant to be linked into the protocol to
 be pluginized. The building steps will create a static
-library (`libubpf.a`). Public headers that manipulate
-functions of this library are stored in
-`./ubpf_tools/include`. Therefore, to "pluginize"
-your program, you need, during compilation time, to
-link both headers and the library.
+library (`libxbgp.a`). Public headers that communicate with
+the virtual machine are stored in `./libxbgp/include`.
+Therefore, to "pluginize".
 
-Example can be found on [pluginized_frr](https://bitbucket.org/twirtgen/pluginized_frr/src)
-or [pluginized_bird](https://bitbucket.org/twirtgen/pluginized_bird).
-It is showed, on those two implementations, the 
-pluginization of the BGP protocol.
-
-More information about the linkage can be found on
-the documentation.
+Two compatible BGP implementations using libxbgp can be
+found on [xbgp_frr](https://github.com/pluginized-protocols/xbgp_frr/tree/stable/7.3-xbgp)
+and [xbgp_bird](https://github.com/pluginized-protocols/xbgp_bird/tree/xbgp_compliant).
