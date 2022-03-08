@@ -27,6 +27,8 @@ is depicted on the above picture
 $ git clone https://github.com/pluginized-protocols/libxbgp.git libxbgp
 $ cd libxbgp
 $ git submodule update --init --recursive
+# Patch michelfralloc to avoid warnings
+$ patch -p0 < Make_dev_zero_fd_extern_in_header.patch
 ```
 
 The library you will build is relying on some other
@@ -98,7 +100,6 @@ This library is meant to be linked into the protocol to
 be pluginized. The building steps will create a static
 library (`libxbgp.a`). Public headers that communicate with
 the virtual machine are stored in `./libxbgp/include`.
-Therefore, to "pluginize".
 
 Two compatible BGP implementations using libxbgp can be
 found on [xbgp_frr](https://github.com/pluginized-protocols/xbgp_frr/tree/stable/7.3-xbgp)
