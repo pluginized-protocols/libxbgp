@@ -10,6 +10,7 @@ set(PLUGIN_TESTS_DIR "${TESTS_DIR}/plugins")
 set(MICHELFRALLOC_DIR "${CMAKE_SOURCE_DIR}/memalloc")
 set(UBPF_VM_DIR "${CMAKE_SOURCE_DIR}/ubpf_vm/vm")
 set(TOMMYDS_DIR "${CMAKE_SOURCE_DIR}/tommyds")
+set(MICROBENCH_DIR "${TESTS_DIR}/microbenchmarks")
 
 set(UBPF_VM_SOURCES
         ${UBPF_VM_DIR}/ubpf_jit_x86_64.c
@@ -107,7 +108,25 @@ add_executable(libxbgp_tests ${TESTS_DIR}/main_tests.c
         ${TESTS_DIR}/runtime_memcheck_test.c ${TESTS_DIR}/runtime_memcheck_test.h
         ${TESTS_DIR}/sockets_tests.c ${TESTS_DIR}/sockets_tests.h
         ${TESTS_DIR}/tree_test.c ${TESTS_DIR}/tree_test.h
+        ${TESTS_DIR}/test_rust_plugins.c ${TESTS_DIR}/test_rust_plugins.h
         ${TESTS_DIR}/ubpf_manager_test.c ${TESTS_DIR}/ubpf_manager_test.h)
+
+add_executable(microbench
+        ${MICROBENCH_DIR}/microbench_main.c
+        ${MICROBENCH_DIR}/defs_type.h
+        tests/microbenchmarks/check_ret_vals.c
+        tests/microbenchmarks/check_ret_vals.h
+        ${MICROBENCH_DIR}/plugins/no_insts.c
+        ${MICROBENCH_DIR}/plugins/10_insts.c
+        ${MICROBENCH_DIR}/plugins/100_insts.c
+        ${MICROBENCH_DIR}/plugins/1000_insts.c
+        ${MICROBENCH_DIR}/plugins/10000_insts.c
+        ${MICROBENCH_DIR}/plugins/100000_insts.c
+        ${MICROBENCH_DIR}/plugins/1000000_insts.c
+        tests/microbenchmarks/plugins/dumb_functions.h
+        tests/microbenchmarks/dumb_function_exec.c
+        tests/microbenchmarks/dumb_function_exec.h
+        tests/microbenchmarks/utils.h)
 
 
 pkg_check_modules(JSON-C REQUIRED json-c)
@@ -127,6 +146,9 @@ target_link_libraries(libxbgp_tests xbgp ${FFI_LIBRARIES}
         ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM})
 
 add_dependencies(libxbgp_tests gen_ebpf_test_obj)
+
+target_link_libraries(microbench xbgp ${FFI_LIBRARIES}
+        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM})
 
 
 enable_testing()
