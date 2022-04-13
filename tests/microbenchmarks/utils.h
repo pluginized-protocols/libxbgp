@@ -28,14 +28,14 @@ struct run_config {
     int err__ = 0;                                         \
     struct timespec start__, end__;                        \
     memset((tp), 0, sizeof(*(tp)));                        \
-    if (clock_gettime(CLOCK_MONOTONIC, &start__) != 0) {   \
+    if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start__) != 0) {   \
         err__ = 1;                                         \
     }                                                      \
     if (!err__) {                                          \
         do {                                               \
             __VA_ARGS__                                    \
         } while(0);                                        \
-        if (clock_gettime(CLOCK_MONOTONIC, &end__) != 0) { \
+        if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end__) != 0) { \
             err__ = 1;                                     \
         }   else {                                         \
             timespec_diff(&end__, &start__, tp);           \
