@@ -31,6 +31,7 @@ static struct {
         [dumb_fn_loop_10000] = {.str_id = "dumb_fn_loop_10000", .id = dumb_fn_loop_10000, .fn = loop_10000},
         [dumb_fn_loop_100000] = {.str_id = "dumb_fn_loop_100000", .id = dumb_fn_loop_100000, .fn = loop_100000},
         [dumb_fn_loop_1000000] = {.str_id = "dumb_fn_loop_1000000", .id = dumb_fn_loop_1000000, .fn = loop_1000000},
+        [dumb_fn_loop_1000_malloc] = {.str_id = "dumb_fn_loop_1000_malloc", .id = dumb_fn_loop_1000_malloc, .fn = loop_1000_malloc},
 };
 
 int run_native_function(enum dumb_fn_id id, struct timespec *tp) {
@@ -112,14 +113,20 @@ static int run_function(struct run_config *run_config, FILE *save_result, enum d
     static struct {
         int (*fn)(enum dumb_fn_id, struct timespec *);
         const char *str_type;
+        int type_id;
     } funs[] = {
-            {.fn = run_native_function, .str_type = "native"},
-            {.fn = run_plugin_function, .str_type = "plugin"},
+            {.fn = run_native_function, .str_type = "native", .type_id = NATIVE},
+            {.fn = run_plugin_function, .str_type = "plugin", .type_id = PLUGIN},
     };
 
     static size_t funs_size = sizeof(funs) / sizeof(funs[0]);
 
     for (j = 0; j < funs_size; j++) {
+        /* launch the mode only if it is authorized in the run_config */
+        if (!(funs[j].type_id & run_config->exec_mode)) {
+            continue;
+        }
+
         for (i = 0; i < run_config->nb_run; i++) {
             if (funs[j].fn(id, &total_time) != 0) {
                 return -1;

@@ -19,6 +19,7 @@ enum dumb_fn_id {
     dumb_fn_loop_10000,
     dumb_fn_loop_100000,
     dumb_fn_loop_1000000,
+    dumb_fn_loop_1000_malloc,
     dumb_fn_id_max
 };
 
@@ -30,5 +31,6 @@ uint64_t loop_1000(exec_info_t *info);
 uint64_t loop_10000(exec_info_t *info);
 uint64_t loop_100000(exec_info_t *info);
 uint64_t loop_1000000(exec_info_t *info);
+uint64_t loop_1000_malloc(exec_info_t *info);
 
 #endif //LIBXBGP_VM_DUMB_FUNCTIONS_H

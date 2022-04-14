@@ -7,6 +7,8 @@ CFLAGS += -fno-stack-protector
 CFLAGS += -Wall -Wextra
 CFLAGS += -Wno-pedantic
 
+CFLAGS += -DPLUGIN_MODE
+
 OUTDIR=ebpf
 
 SRC=$(shell find . -name '*.c')

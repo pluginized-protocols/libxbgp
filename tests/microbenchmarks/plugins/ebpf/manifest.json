@@ -59,6 +59,14 @@
         "write",
         "usr_ptr"
       ]
+    },
+    "1000_loop_malloc": {
+      "obj": "1000_insts_malloc.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
     }
   },
   "insertion_points": {
@@ -95,6 +103,11 @@
     "dumb_fn_loop_1000000": {
       "replace": {
         "0": "1000000_loop"
+      }
+    },
+    "dumb_fn_loop_1000_malloc": {
+      "replace": {
+        "0": "1000_loop_malloc"
       }
     }
   }

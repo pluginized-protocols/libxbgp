@@ -7,10 +7,14 @@
 
 #include <string.h>
 
+#define PLUGIN 1
+#define NATIVE 2
+
 struct run_config {
     long nb_run;
     const char *out_file;
     enum dumb_fn_id fn_to_run;
+    int exec_mode;
 };
 
 #define timespec_diff(a, b, result)                   \

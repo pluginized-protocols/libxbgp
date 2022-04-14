@@ -27,8 +27,34 @@ static insertion_point_info_t mock_insertion_points[] = {
         {.insertion_point_str="dumb_fn_loop_10000", .insertion_point_id = dumb_fn_loop_10000},
         {.insertion_point_str="dumb_fn_loop_100000", .insertion_point_id = dumb_fn_loop_100000},
         {.insertion_point_str="dumb_fn_loop_1000000", .insertion_point_id = dumb_fn_loop_1000000},
+        {.insertion_point_str="dumb_fn_loop_1000_malloc", .insertion_point_id = dumb_fn_loop_1000_malloc},
         insertion_point_info_null
 };
+
+
+static inline int get_type(const char *type) {
+    static struct {
+        int option;
+        const char *str_option;
+        size_t len_str;
+    } opts[] = {
+            {.option = PLUGIN, .str_option="plugin", .len_str=sizeof("plugin") - 1},
+            {.option = NATIVE, .str_option="native", .len_str=sizeof("native") - 1},
+    };
+    static size_t opts_len = sizeof(opts) / sizeof(opts[0]);
+
+    size_t i;
+    size_t curr_opt_len;
+    for (i = 0; i < opts_len; i++) {
+        curr_opt_len = opts[i].len_str;
+        if (strnlen(type, curr_opt_len + 1) == opts[i].len_str) {
+            if (strncmp(type, opts[i].str_option, curr_opt_len) == 0) {
+                return opts[i].option;
+            }
+        }
+    }
+    return -1;
+}
 
 
 static inline int setup(void) {
@@ -78,10 +104,12 @@ int main(int argc, char *const argv[]) {
     long nb_run_tmp;
     char *nb_ptr;
     enum dumb_fn_id tmp_fn_to_run;
+    int tmp_type;
     struct run_config run_config = {
             .out_file = NULL,
             .fn_to_run = dumb_fn_id_max,
-            .nb_run = 50
+            .nb_run = 50,
+            .exec_mode = 0,
     };
 
     if (setup() != 0) {
@@ -90,16 +118,17 @@ int main(int argc, char *const argv[]) {
     }
 
     static struct option long_options[] = {
-            {"manifest", required_argument, 0, 'm'},
+            {"manifest",   required_argument, 0, 'm'},
             {"plugin_dir", required_argument, 0, 'p'},
-            {"nb_run", required_argument, 0, 'n'},
-            {"fn_run", required_argument, 0, 'f'},
-            {"output", required_argument, 0, 'o'},
-            {0, 0, 0, 0}
+            {"nb_run",     required_argument, 0, 'n'},
+            {"fn_run",     required_argument, 0, 'f'},
+            {"output",     required_argument, 0, 'o'},
+            {"type",       required_argument, 0, 't'},
+            {0, 0,                            0, 0}
     };
 
     while (1) {
-        c = getopt_long(argc, argv, "m:p:n:f:o:",
+        c = getopt_long(argc, argv, "m:p:n:f:o:t:",
                         long_options, &option_index);
 
         if (c == EOF) {
@@ -138,7 +167,7 @@ int main(int argc, char *const argv[]) {
                 if (tmp_fn_to_run == dumb_fn_id_min) {
                     if (should_run_all(optarg)) {
                         tmp_fn_to_run = dumb_fn_id_max;
-                    } else  {
+                    } else {
                         fprintf(stderr, "You request to run \"%s\" but I don't know this function.\n",
                                 optarg);
                         return EXIT_FAILURE;
@@ -146,8 +175,16 @@ int main(int argc, char *const argv[]) {
                 }
                 run_config.fn_to_run = tmp_fn_to_run;
                 break;
-            case  'o':
+            case 'o':
                 run_config.out_file = optarg;
+                break;
+            case 't':
+                tmp_type = get_type(optarg);
+                if (tmp_type == -1) {
+                    fprintf(stderr, "Unknown type: '%s'\n", optarg);
+                    return EXIT_FAILURE;
+                }
+                run_config.exec_mode |= tmp_type;
                 break;
             default:
                 fprintf(stderr, "Unknown option: %o\n", c);
@@ -158,6 +195,14 @@ int main(int argc, char *const argv[]) {
     if (!manifest_path || !plugin_dir) {
         fprintf(stderr, "Manifest and plugin_dir must be set");
         return EXIT_FAILURE;
+    }
+
+    if (run_config.exec_mode == 0) {
+        /*
+         * if exec mode is not set in the program arguments,
+         * then run all modes by default
+         */
+        run_config.exec_mode = PLUGIN | NATIVE;
     }
 
     if (load_extension_code(manifest_path, plugin_dir,
@@ -171,9 +216,11 @@ int main(int argc, char *const argv[]) {
                     "   nb_run = %ld;\n"
                     "   out_file = %s;\n"
                     "   fn_to_run = %u;\n"
+                    "   exec_mode = %d;\n"
                     "}\n", run_config.nb_run,
-                    run_config.out_file,
-                    run_config.fn_to_run);
+            run_config.out_file,
+            run_config.fn_to_run,
+            run_config.exec_mode);
 
     if (run_functions(&run_config) != 0) {
         fprintf(stderr, "RUN FAILED\n");
