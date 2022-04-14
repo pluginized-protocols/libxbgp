@@ -11,7 +11,7 @@ CFLAGS += -DPLUGIN_MODE
 
 OUTDIR=ebpf
 
-SRC=$(shell find . -name '*.c')
+SRC=$(shell find . -name '*.c' -not -path './fake_api/*')
 OBJ=$(SRC:%.c=$(OUTDIR)/%.o)
 
 all: outdir $(OBJ)
