@@ -12,7 +12,7 @@
 #include "fake_api/fake_api.h"
 #endif
 
-uint64_t loop_1000_malloc(exec_info_t *info) {
+uint64_t loop_1000_1api(exec_info_t *info) {
     unsigned int i;
     uint64_t *my_mod_2;
     uint64_t my_mod = 0;
@@ -38,12 +38,6 @@ uint64_t loop_1000_malloc(exec_info_t *info) {
     for (i = 0; i < 5; i++) {
         my_mod += my_mod_2[i];
     }
-
-#ifdef PLUGIN_MODE
-    set_memory((int) my_mod);
-#else
-    set_memory(NULL, (int) my_mod);
-#endif
 
     return my_mod;
 }

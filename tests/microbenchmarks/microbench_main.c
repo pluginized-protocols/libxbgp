@@ -23,7 +23,9 @@ static insertion_point_info_t mock_insertion_points[] = {
         {.insertion_point_str="dumb_fn_loop_10000", .insertion_point_id = dumb_fn_loop_10000},
         {.insertion_point_str="dumb_fn_loop_100000", .insertion_point_id = dumb_fn_loop_100000},
         {.insertion_point_str="dumb_fn_loop_1000000", .insertion_point_id = dumb_fn_loop_1000000},
-        {.insertion_point_str="dumb_fn_loop_1000_malloc", .insertion_point_id = dumb_fn_loop_1000_malloc},
+        {.insertion_point_str="dumb_fn_loop_1000_1api", .insertion_point_id = dumb_fn_loop_1000_1api},
+        {.insertion_point_str="dumb_fn_loop_1000_2api", .insertion_point_id = dumb_fn_loop_1000_2api},
+        {.insertion_point_str="dumb_fn_loop_1000_3api", .insertion_point_id = dumb_fn_loop_1000_3api},
         insertion_point_info_null
 };
 

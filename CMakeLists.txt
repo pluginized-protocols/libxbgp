@@ -123,7 +123,9 @@ add_executable(microbench
         ${MICROBENCH_DIR}/plugins/10000_insts.c
         ${MICROBENCH_DIR}/plugins/100000_insts.c
         ${MICROBENCH_DIR}/plugins/1000000_insts.c
-        ${MICROBENCH_DIR}/plugins/1000_insts_malloc.c
+        ${MICROBENCH_DIR}/plugins/1000_insts_1api.c
+        ${MICROBENCH_DIR}/plugins/1000_insts_2api.c
+        ${MICROBENCH_DIR}/plugins/1000_insts_3api.c
         tests/microbenchmarks/plugins/dumb_functions.h
         tests/microbenchmarks/dumb_function_exec.c
         tests/microbenchmarks/dumb_function_exec.h

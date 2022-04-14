@@ -60,8 +60,24 @@
         "usr_ptr"
       ]
     },
-    "1000_loop_malloc": {
-      "obj": "1000_insts_malloc.o",
+    "1000_loop_1api": {
+      "obj": "1000_insts_1api.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_loop_2api": {
+      "obj": "1000_insts_2api.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_loop_3api": {
+      "obj": "1000_insts_3api.o",
       "permissions": [
         "read",
         "write",
@@ -105,9 +121,19 @@
         "0": "1000000_loop"
       }
     },
-    "dumb_fn_loop_1000_malloc": {
+    "dumb_fn_loop_1000_1api": {
       "replace": {
-        "0": "1000_loop_malloc"
+        "0": "1000_loop_1api"
+      }
+    },
+    "dumb_fn_loop_1000_2api": {
+      "replace": {
+        "0": "1000_loop_2api"
+      }
+    },
+    "dumb_fn_loop_1000_3api": {
+      "replace": {
+        "0": "1000_loop_3api"
       }
     }
   }

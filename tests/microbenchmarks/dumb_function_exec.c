@@ -31,7 +31,9 @@ static struct {
         [dumb_fn_loop_10000] = {.str_id = "dumb_fn_loop_10000", .id = dumb_fn_loop_10000, .fn = loop_10000},
         [dumb_fn_loop_100000] = {.str_id = "dumb_fn_loop_100000", .id = dumb_fn_loop_100000, .fn = loop_100000},
         [dumb_fn_loop_1000000] = {.str_id = "dumb_fn_loop_1000000", .id = dumb_fn_loop_1000000, .fn = loop_1000000},
-        [dumb_fn_loop_1000_malloc] = {.str_id = "dumb_fn_loop_1000_malloc", .id = dumb_fn_loop_1000_malloc, .fn = loop_1000_malloc},
+        [dumb_fn_loop_1000_1api] = {.str_id = "dumb_fn_loop_1000_1api", .id = dumb_fn_loop_1000_1api, .fn = loop_1000_1api},
+        [dumb_fn_loop_1000_2api] = {.str_id = "dumb_fn_loop_1000_2api", .id = dumb_fn_loop_1000_1api, .fn = loop_1000_2api},
+        [dumb_fn_loop_1000_3api] = {.str_id = "dumb_fn_loop_1000_3api", .id = dumb_fn_loop_1000_1api, .fn = loop_1000_3api},
 };
 
 int run_native_function(enum dumb_fn_id id, struct timespec *tp) {
