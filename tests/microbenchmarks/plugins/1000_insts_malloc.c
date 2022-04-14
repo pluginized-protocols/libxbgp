@@ -6,29 +6,44 @@
 #include  "../../../xbgp_deps/xbgp_compliant_api/xbgp_plugin_api.h"
 #include "../defs_type.h"
 
-#ifndef PLUGIN_MODE
-extern void *fake_alloc(size_t size);
+#ifdef PLUGIN_MODE
+#include "./fake_api/fake_api_plugin.h"
+#else
+#include "fake_api/fake_api.h"
 #endif
 
 uint64_t loop_1000_malloc(exec_info_t *info) {
-    int i;
+    unsigned int i;
     uint64_t *my_mod_2;
-    uint64_t my_mod;
+    uint64_t my_mod = 0;
 
 #ifdef PLUGIN_MODE
-    my_mod_2 = ctx_malloc(sizeof(my_mod_2));
+    my_mod_2 = fake_alloc(sizeof(*my_mod_2) * 5);
 #else
-    my_mod_2 = fake_alloc(sizeof(my_mod_2));
+    my_mod_2 = fake_alloc(NULL, sizeof(*my_mod_2) * 5);
 #endif
     if (!my_mod_2) {
         ebpf_print("[Warning] Unable to allocate memory");
         return -1;
     }
-
-    *my_mod_2 = info->replace_return_value;
-    for (i = 0; i < 1000; i++) {
-        *my_mod_2 = (*my_mod_2 + i) % info->insertion_point_id;
+#ifdef PLUGIN_MODE
+    my_mod_2[0] = *get_memory();
+#else
+    my_mod_2[0] = *get_memory(NULL);
+#endif
+    for (i = 1; i <= 1000; i++) {
+        my_mod_2[i % 5] = (my_mod_2[(i-1) % 5]) % info->insertion_point_id;
     }
-    my_mod = *my_mod_2;
+
+    for (i = 0; i < 5; i++) {
+        my_mod += my_mod_2[i];
+    }
+
+#ifdef PLUGIN_MODE
+    set_memory((int) my_mod);
+#else
+    set_memory(NULL, (int) my_mod);
+#endif
+
     return my_mod;
 }

@@ -129,7 +129,8 @@ add_executable(microbench
         tests/microbenchmarks/dumb_function_exec.h
         tests/microbenchmarks/utils.h
         ${MICROBENCH_DIR}/plugins/fake_api/fake_api.c
-        ${MICROBENCH_DIR}/plugins/fake_api/fake_api.h)
+        ${MICROBENCH_DIR}/plugins/fake_api/fake_api.h
+        tests/microbenchmarks/plugins/fake_api/fake_api_plugin.h)
 
 
 pkg_check_modules(JSON-C REQUIRED json-c)

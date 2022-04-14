@@ -9,15 +9,11 @@
 #include <getopt.h>
 #include <string.h>
 #include <errno.h>
-#include "defs_type.h"
 #include "tests/microbenchmarks/plugins/dumb_functions.h"
 #include "dumb_function_exec.h"
-#include <unistd.h>
 #include "utils.h"
+#include "tests/microbenchmarks/plugins/fake_api/fake_api.h"
 
-static proto_ext_fun_t ext_funcs[] = {
-        proto_ext_func_null
-};
 
 static insertion_point_info_t mock_insertion_points[] = {
         {.insertion_point_str="dumb_fn_no_insts", .insertion_point_id = dumb_fn_no_insts},
@@ -58,7 +54,7 @@ static inline int get_type(const char *type) {
 
 
 static inline int setup(void) {
-    if (init_plugin_manager(ext_funcs, "/tmp",
+    if (init_plugin_manager(fake_funcs, "/tmp",
                             mock_insertion_points, 0, NULL)) {
         return -1;
     }
@@ -206,7 +202,7 @@ int main(int argc, char *const argv[]) {
     }
 
     if (load_extension_code(manifest_path, plugin_dir,
-                            ext_funcs, mock_insertion_points) != 0) {
+                            fake_funcs, mock_insertion_points) != 0) {
         fprintf(stderr, "Unable to load plugins from manifest\n");
         return EXIT_FAILURE;
     }
