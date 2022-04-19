@@ -10,11 +10,13 @@
 #include "xbgp_compliant_api/xbgp_common.h"
 #include "context_function.h"
 
+#define NOINLINE __attribute__ ((noinline))
+
 static char available_mem[4096];
 
 static int my_mem = 0;
 
-void *fake_alloc(context_t *ctx UNUSED, size_t size) {
+void * NOINLINE fake_alloc(context_t *ctx UNUSED, size_t size) {
     void *ptr;
     size_t aligned_size = (size + 7u) & (-8u);
     if (aligned_size > sizeof(available_mem)) return NULL;
@@ -26,7 +28,7 @@ void *fake_alloc(context_t *ctx UNUSED, size_t size) {
     return ptr;
 }
 
-int *get_memory(context_t *ctx UNUSED) {
+int * NOINLINE get_memory(context_t *ctx UNUSED) {
     int *ptr_to_data = fake_alloc(NULL, sizeof(my_mem));
 
     *ptr_to_data = my_mem + *((int *) ptr_to_data);
@@ -34,7 +36,7 @@ int *get_memory(context_t *ctx UNUSED) {
     return ptr_to_data;
 }
 
-int set_memory(context_t *ctx UNUSED, int value) {
+int NOINLINE set_memory(context_t *ctx UNUSED, int value) {
     int *random_val = fake_alloc(NULL, sizeof(value));
     my_mem = value + *random_val;
     return 0;

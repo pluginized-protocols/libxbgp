@@ -26,6 +26,7 @@ static insertion_point_info_t mock_insertion_points[] = {
         {.insertion_point_str="dumb_fn_loop_1000_1api", .insertion_point_id = dumb_fn_loop_1000_1api},
         {.insertion_point_str="dumb_fn_loop_1000_2api", .insertion_point_id = dumb_fn_loop_1000_2api},
         {.insertion_point_str="dumb_fn_loop_1000_3api", .insertion_point_id = dumb_fn_loop_1000_3api},
+        {.insertion_point_str="dumb_fn_loop_1000_getset", .insertion_point_id = dumb_fn_loop_1000_getset},
         insertion_point_info_null
 };
 

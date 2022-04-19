@@ -126,6 +126,7 @@ add_executable(microbench
         ${MICROBENCH_DIR}/plugins/1000_insts_1api.c
         ${MICROBENCH_DIR}/plugins/1000_insts_2api.c
         ${MICROBENCH_DIR}/plugins/1000_insts_3api.c
+        ${MICROBENCH_DIR}/plugins/1000_insts_getset.c
         tests/microbenchmarks/plugins/dumb_functions.h
         tests/microbenchmarks/dumb_function_exec.c
         tests/microbenchmarks/dumb_function_exec.h

@@ -83,6 +83,14 @@
         "write",
         "usr_ptr"
       ]
+    },
+    "1000_insts_getset": {
+      "obj": "1000_insts_getset.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
     }
   },
   "insertion_points": {
@@ -134,6 +142,11 @@
     "dumb_fn_loop_1000_3api": {
       "replace": {
         "0": "1000_loop_3api"
+      }
+    },
+    "dumb_fn_loop_1000_getset": {
+      "replace": {
+        "0": "1000_insts_getset"
       }
     }
   }

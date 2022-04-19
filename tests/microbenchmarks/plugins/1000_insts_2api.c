@@ -14,31 +14,25 @@
 
 uint64_t loop_1000_2api(exec_info_t *info) {
     unsigned int i;
-    uint64_t *my_mod_2;
     uint64_t my_mod = 0;
+    unsigned int nimp;
+    unsigned int bizarre;
 
 #ifdef PLUGIN_MODE
-    my_mod_2 = fake_alloc(sizeof(*my_mod_2) * 5);
+    nimp = *get_memory();
 #else
-    my_mod_2 = fake_alloc(NULL, sizeof(*my_mod_2) * 5);
+    nimp = *get_memory(NULL);
 #endif
-    if (!my_mod_2) {
-        ebpf_print("[Warning] Unable to allocate memory");
-        return -1;
-    }
-
+    bizarre = nimp + 1;
     for (i = 1; i <= 1000; i++) {
-        my_mod_2[i % 5] = (my_mod_2[(i-1) % 5]) % info->insertion_point_id;
-    }
-
-    for (i = 0; i < 5; i++) {
-        my_mod += my_mod_2[i];
+        nimp += (nimp - bizarre + (42u * i));
+        bizarre += i * nimp - 2u + bizarre + nimp * bizarre;
     }
 
 #ifdef PLUGIN_MODE
-    set_memory((int) my_mod);
+    set_memory((int) nimp);
 #else
-    set_memory(NULL, (int) my_mod);
+    set_memory(NULL, (int) nimp);
 #endif
 
     return my_mod;

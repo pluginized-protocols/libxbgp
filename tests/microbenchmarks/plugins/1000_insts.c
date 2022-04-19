@@ -6,13 +6,19 @@
 #include  "../../../xbgp_deps/xbgp_compliant_api/xbgp_plugin_api.h"
 #include "../defs_type.h"
 
-uint64_t loop_1000(exec_info_t *info) {
-    int i;
-    uint64_t my_mod;
+uint64_t loop_1000(exec_info_t *info UNUSED) {
+    unsigned int i;
+    unsigned int nimp;
+    unsigned int bizarre;
 
-    my_mod = info->replace_return_value;
-    for (i = 0; i < 1000; i++) {
-        my_mod = (my_mod + i) % info->insertion_point_id;
+    nimp = 56;
+
+    bizarre = nimp + 1;
+    for (i = 1; i <= 1000; i++) {
+        nimp += (nimp - bizarre + (42u * i));
+        bizarre += i * nimp - 2u + bizarre + nimp * bizarre;
     }
-    return my_mod;
+
+
+    return nimp;
 }

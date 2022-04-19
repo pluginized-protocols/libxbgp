@@ -22,6 +22,7 @@ enum dumb_fn_id {
     dumb_fn_loop_1000_1api,
     dumb_fn_loop_1000_2api,
     dumb_fn_loop_1000_3api,
+    dumb_fn_loop_1000_getset,
     dumb_fn_id_max
 };
 
@@ -36,5 +37,6 @@ uint64_t loop_1000000(exec_info_t *info);
 uint64_t loop_1000_1api(exec_info_t *info);
 uint64_t loop_1000_2api(exec_info_t *info);
 uint64_t loop_1000_3api(exec_info_t *info);
+uint64_t loop_1000_getset(exec_info_t *info);
 
 #endif //LIBXBGP_VM_DUMB_FUNCTIONS_H
