@@ -135,6 +135,9 @@ add_executable(microbench
         ${MICROBENCH_DIR}/plugins/fake_api/fake_api.h
         tests/microbenchmarks/plugins/fake_api/fake_api_plugin.h)
 
+add_executable(ebpf_inst_counter
+        misc/insts_counter/ebpf_insts_counter.c)
+
 
 pkg_check_modules(JSON-C REQUIRED json-c)
 pkg_check_modules(FFI REQUIRED libffi)
@@ -157,6 +160,8 @@ add_dependencies(libxbgp_tests gen_ebpf_test_obj)
 target_link_libraries(microbench xbgp ${FFI_LIBRARIES}
         ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM})
 
+target_link_libraries(ebpf_inst_counter xbgp ${FFI_LIBRARIES}
+        ${JSON-C_LIBRARIES} ${CUNIT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${LIBM})
 
 enable_testing()
 add_test(Working_uBPF_VM libxbgp_tests -p ${PLUGIN_TESTS_DIR})
