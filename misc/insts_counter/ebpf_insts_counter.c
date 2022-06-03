@@ -64,6 +64,11 @@ int schedule_bgp_message(context_t *ctx, int type, struct bgp_message *message, 
 
 int peer_session_reset(context_t *ctx, const char *peer_ip) {}
 
+struct bgp_rte_info *get_route_info(context_t *ctx) {}
+
+int set_attr_to_route(context_t *ctx, struct path_attribute *attr, int rte) {}
+
+
 /* end trick */
 
 
@@ -95,7 +100,7 @@ int count_ebpf_insts(const char *elf_file, int enable_memchecks, int *elf_inst, 
     status = add_extension_code("dummy_plugin", 12, 8,
                                 0, 1, "dummy_insertion_point", 21,
                                 BPF_REPLACE, 0, 0, elf_file, 0,
-                                "dummy_vm", 8, api_funcs, 0777, enable_memchecks);
+                                "dummy_vm", 8, api_funcs, 0777, enable_memchecks, BUMP_MEM, 0);
 
     if (status != 0) {
         fprintf(stderr, "Unable to load xBGP program\n");

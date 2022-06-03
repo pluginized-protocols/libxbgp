@@ -1,0 +1,153 @@
+{
+  "jit_all": true,
+  "name": "dumb_funcions",
+  "extra_mem": 4096,
+  "shared_mem": 4096,
+  "obj_code_list": {
+    "direct_return": {
+      "obj": "no_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "10_loop": {
+      "obj": "10_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "100_loop": {
+      "obj": "100_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_loop": {
+      "obj": "1000_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "10000_loop": {
+      "obj": "10000_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "100000_loop": {
+      "obj": "100000_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000000_loop": {
+      "obj": "1000000_insts.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_loop_1api": {
+      "obj": "1000_insts_1api.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_loop_2api": {
+      "obj": "1000_insts_2api.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_loop_3api": {
+      "obj": "1000_insts_3api.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    },
+    "1000_insts_getset": {
+      "obj": "1000_insts_getset.o",
+      "permissions": [
+        "read",
+        "write",
+        "usr_ptr"
+      ]
+    }
+  },
+  "insertion_points": {
+    "dumb_fn_no_insts": {
+      "replace": {
+        "0": "direct_return"
+      }
+    },
+    "dumb_fn_loop_10": {
+      "replace": {
+        "0": "10_loop"
+      }
+    },
+    "dumb_fn_loop_100": {
+      "replace": {
+        "0": "100_loop"
+      }
+    },
+    "dumb_fn_loop_1000": {
+      "replace": {
+        "0": "1000_loop"
+      }
+    },
+    "dumb_fn_loop_10000": {
+      "replace": {
+        "0": "10000_loop"
+      }
+    },
+    "dumb_fn_loop_100000": {
+      "replace": {
+        "0": "100000_loop"
+      }
+    },
+    "dumb_fn_loop_1000000": {
+      "replace": {
+        "0": "1000000_loop"
+      }
+    },
+    "dumb_fn_loop_1000_1api": {
+      "replace": {
+        "0": "1000_loop_1api"
+      }
+    },
+    "dumb_fn_loop_1000_2api": {
+      "replace": {
+        "0": "1000_loop_2api"
+      }
+    },
+    "dumb_fn_loop_1000_3api": {
+      "replace": {
+        "0": "1000_loop_3api"
+      }
+    },
+    "dumb_fn_loop_1000_getset": {
+      "replace": {
+        "0": "1000_insts_getset"
+      }
+    }
+  }
+}
