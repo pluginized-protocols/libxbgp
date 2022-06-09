@@ -72,8 +72,15 @@ static inline int base_register(vm_container_t *vmc) {
                                            base_api_fun__[i].args_type,
                                            base_api_fun__[i].return_type,
                                            vmc->ctx);
-            if (!current_closure) return 0;
+            if (!current_closure) {
+                goto err;
+            }
             api_fun = current_closure->fn;
+
+            /* add closure to the current container */
+            if (add_closure(vmc, current_closure) != 0) {
+                goto err;
+            }
         } else {
             api_fun = base_api_fun__[i].fn;
         }
@@ -90,20 +97,15 @@ static inline int base_register(vm_container_t *vmc) {
         } else {
             if (!safe_ubpf_register(vmc, base_api_fun__[i].name, api_fun,
                                     base_api_fun__[i].attributes))
-                return 0;
-        }
-
-        /* add closure to the container */
-        if (vmc->use_libffi) {
-            if (add_closure(vmc, current_closure) != 0) {
-                remove_closures(vmc);
-                return 0;
-            }
+                goto err;
         }
     }
 
 
     return 1;
+    err:
+    remove_closures(vmc);
+    return 0;
 }
 
 
@@ -162,7 +164,6 @@ static int inject_code_ptr(vm_container_t *vmc, const uint8_t *data, size_t len)
 
     free(errmsg);
     return 1;
-
 }
 
 static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
@@ -214,7 +215,7 @@ static int start_vm(vm_container_t *vmc, proto_ext_fun_t *api_proto) {
 
 vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8_t jit,
                        const char *name, size_t name_len, plugin_t *p,
-                       const uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
+                       const void *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
                        void (*on_delete)(void *), int add_memcheck_insts, int use_libffi) {
 
     vm_container_t *vm;
@@ -335,6 +336,7 @@ int run_injected_code(vm_container_t *vmc, uint64_t *ret_val, exec_info_t *info)
 
 int add_closure(vm_container_t *vmc, closure_t *closure) {
     struct api_functions *api_closure;
+    if (!closure) return -1;
 
     api_closure = malloc(sizeof(*api_closure));
     if (!api_closure) return -1;

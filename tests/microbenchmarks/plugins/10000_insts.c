@@ -6,7 +6,7 @@
 #include  "../../../xbgp_deps/xbgp_compliant_api/xbgp_plugin_api.h"
 #include "../defs_type.h"
 
-uint64_t loop_10000(exec_info_t *info) {
+uint64_t loop_10000(exec_info_t *info UNUSED) {
     unsigned int i;
     unsigned int nimp;
     unsigned int bizarre;

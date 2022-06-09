@@ -27,9 +27,13 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-static char plugin_folder_path[PATH_MAX - NAME_MAX];
+static char plugin_folder_path[8192];
 
 static proto_ext_fun_t funcs[] = { proto_ext_func_null };
+
+static int tmp_file_open_fd = -1;
+static char log_tmp_name[] = "/tmp/test_monitubpflogXXXXXX";
+static const char log_name_template[] = "/tmp/test_monitubpflogXXXXXX";
 
 static insertion_point_info_t plugins[] = {
         {.insertion_point_str = "send_monitoring_data", .insertion_point_id = 1},
@@ -39,13 +43,10 @@ static insertion_point_info_t plugins[] = {
 };
 
 static int setup(void) {
-
-    char log_tmp_name[] = "/tmp/test_monitubfplogXXXXXX";
     log_config_t *conf = NULL;
 
-
-    if (mktemp(log_tmp_name) == NULL) {
-        perror("mktemp");
+    if ((tmp_file_open_fd = mkstemp(log_tmp_name)) == -1) {
+        perror("mkstemp");
         return -1;
     }
 
@@ -57,6 +58,15 @@ static int setup(void) {
 
 static int teardown(void) {
     ubpf_terminate();
+    if (tmp_file_open_fd >= 0) {
+        close(tmp_file_open_fd);
+    }
+
+    /* if mkstemp does not fail */
+    if (strncmp(log_tmp_name, log_name_template, sizeof(log_name_template)) != 0) {
+        unlink(log_tmp_name);
+    }
+
     return 0;
 }
 
@@ -65,12 +75,15 @@ void send_monitoring_record_test(void) {
     uint64_t ret_val;
     int status;
     int dummy_arg = 0;
-    char path_pluglet[PATH_MAX];
+    char path_pluglet[8192];
     args_t fargs;
     insertion_point_t *point;
 
     memset(path_pluglet, 0, sizeof(path_pluglet));
-    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "send_monitoring_data.o");
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "send_monitoring_data.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output is truncated");
+    }
 
     entry_arg_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -95,12 +108,15 @@ static void send_multiple_records_test(void) {
     uint64_t ret_val;
     int status;
     int dummy_arg = 0;
-    char path_pluglet[PATH_MAX];
+    char path_pluglet[8192];
     args_t fargs;
     insertion_point_t *point;
 
     memset(path_pluglet, 0, sizeof(path_pluglet));
-    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "send_a_lot_of_record.o");
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "send_a_lot_of_record.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     entry_arg_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -124,12 +140,15 @@ static void send_multiple_records_type_test(void) {
     uint64_t ret_val;
     int status;
     int dummy_arg = 0;
-    char path_pluglet[PATH_MAX];
+    char path_pluglet[8192];
     args_t fargs;
     insertion_point_t *point;
 
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, "multiple_type_record.o");
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "multiple_type_record.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output is truncated");
+    }
 
     entry_arg_t args[] = {
             {.arg = &dummy_arg, .len = sizeof(int), .kind = kind_primitive, .type = 0},
@@ -154,7 +173,10 @@ CU_ErrorCode ubpf_monitoring_tests(const char *plugin_folder) {
 
     CU_pSuite pSuite = NULL;
     memset(plugin_folder_path, 0, sizeof(plugin_folder_path));
-    realpath(plugin_folder, plugin_folder_path);
+    if (realpath(plugin_folder, plugin_folder_path) != plugin_folder_path) {
+        CU_cleanup_registry();
+        return CU_get_error();
+    }
 
     pSuite = CU_add_suite("ubpf_monitoring_tests_suite", setup, teardown);
     if (NULL == pSuite) {

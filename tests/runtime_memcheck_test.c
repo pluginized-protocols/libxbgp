@@ -13,7 +13,7 @@
 #define MAGIC 0xcafebabe
 #define BASE_FOLDER "memcheck_runtime"
 
-static char plugin_folder_path[PATH_MAX - 2 * NAME_MAX]; // Mystic length to avoid compiler warnings....
+static char plugin_folder_path[8192]; // Mystic length to avoid compiler warnings....
 
 static proto_ext_fun_t funcs[] = {
         proto_ext_func_null
@@ -40,7 +40,7 @@ do {                                                                            
     int  status;                                                                                                \
     uint64_t ret_val;                                                                                           \
     insertion_point_t *point;                                                                                   \
-    char path_pluglet[PATH_MAX];                                                                                \
+    char path_pluglet[8192];                                                                                \
     int *super_malloc = malloc(sizeof(int));                                                                    \
     if (!super_malloc)   {                                                                                      \
         CU_FAIL_FATAL("Unable to retrieve memory");                                                             \
@@ -48,7 +48,10 @@ do {                                                                            
     }                                                                                                           \
     *super_malloc = MAGIC;                                                                                      \
     memset(path_pluglet, 0, sizeof(path_pluglet));                                                              \
-    snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s", plugin_folder_path, extension_code_name);             \
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",                                                   \
+                 plugin_folder_path, extension_code_name) >= (int) sizeof(path_pluglet)) {                      \
+                 CU_FAIL_FATAL("Output trucated");                                                              \
+    }                                                                                                           \
                                                                                                                 \
     entry_arg_t args[] = {                                                                                     \
             {.arg = &super_malloc, .len = sizeof(void *), .kind = kind_primitive, .type = 42},                  \
@@ -112,7 +115,7 @@ static void invalid_rw_with_memcheck(void) {
 // manifest
 static void load_with_manifest(void) {
     int status;
-    char sub_dir[PATH_MAX - NAME_MAX];
+    char sub_dir[8192];
     memset(sub_dir, 0, sizeof(sub_dir));
 
     uint64_t ret_val = 0;
@@ -127,7 +130,9 @@ static void load_with_manifest(void) {
 
     *super_malloc = MAGIC;
 
-    snprintf(sub_dir, sizeof(sub_dir), "%s/"BASE_FOLDER, plugin_folder_path);
+    if (snprintf(sub_dir, sizeof(sub_dir), "%s/"BASE_FOLDER, plugin_folder_path) >= (int) sizeof(sub_dir)) {
+        CU_FAIL_FATAL("Output truncated")
+    }
 
 
     entry_arg_t args[] = {
@@ -135,8 +140,10 @@ static void load_with_manifest(void) {
             entry_arg_null
     };
 
-    char path_json[PATH_MAX];
-    snprintf(path_json, sizeof(path_json), "%s/meta_manifest.conf", sub_dir);
+    char path_json[8192];
+    if (snprintf(path_json, sizeof(path_json), "%s/meta_manifest.conf", sub_dir) >= (int) sizeof(path_json)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     status = load_extension_code(path_json, sub_dir, funcs, plugins);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -169,7 +176,10 @@ CU_ErrorCode runtime_memcheck_test_suite(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
     memset(plugin_folder_path, 0, sizeof(plugin_folder_path));
-    realpath(plugin_folder, plugin_folder_path);
+    if (realpath(plugin_folder, plugin_folder_path) != plugin_folder_path) {
+        CU_cleanup_registry();
+        return -1;
+    }
     // ...
     pSuite = CU_add_suite("runtime_memcheck_test_suite", setup, teardown);
     if (NULL == pSuite) {

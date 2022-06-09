@@ -51,7 +51,7 @@ endif()
 
 set(DEBUG_SYMBOLS "-gdwarf -gdwarf-5 -g3 -fvar-tracking -fvar-tracking-assignments")
 
-set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} ${DEBUG_SYMBOLS} -flto -fno-plt -march=native -mtune=native")
+set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -march=native -mtune=native")
 
 set(CMAKE_C_FLAGS_DEBUG  "-O0 ${DEBUG_SYMBOLS}")
 

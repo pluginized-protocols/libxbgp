@@ -6,6 +6,6 @@
 #include "defs_type.h"
 
 
-int check_fake_call_vm(uint64_t ret) {
+int check_fake_call_vm(uint64_t ret UNUSED) {
     return 1;
 }

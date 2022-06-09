@@ -14,6 +14,10 @@
 #include <xbgp_compliant_api/xbgp_api_vars.h>
 #include <xbgp_compliant_api/xbgp_defs.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wreturn-type"
+
 /* set all xBGP api to extern function */
 int add_attr(context_t *ctx, uint8_t code, uint8_t flags, uint16_t length, uint8_t *decoded_attr) {}
 
@@ -68,6 +72,7 @@ struct bgp_rte_info *get_route_info(context_t *ctx) {}
 
 int set_attr_to_route(context_t *ctx, struct path_attribute *attr, int rte) {}
 
+#pragma GCC diagnostic pop
 
 /* end trick */
 
@@ -87,9 +92,9 @@ static inline void usage(const char *prog_name) {
 
 int count_ebpf_insts(const char *elf_file, int enable_memchecks, int *elf_inst, int *tot_insts) {
     vm_container_t *super_vm_de_ses_morts;
-    void *data;
-    long data_size;
-    char dummy_space[16];
+    //void *data;
+    //long data_size;
+    //char dummy_space[16];
     int status;
 
     if (init_plugin_manager(api_funcs, ".", insertion_points, 0, NULL) != 0) {

@@ -109,6 +109,7 @@ static int run_function(struct run_config *run_config, FILE *save_result, enum d
     int i;
     size_t j;
     int line_len;
+    size_t line_len_;
     size_t tot_written;
     struct timespec total_time;
     char buf_str[4096];
@@ -138,12 +139,17 @@ static int run_function(struct run_config *run_config, FILE *save_result, enum d
             line_len = snprintf(buf_str, sizeof(buf_str), "%s_%s,%ld,%ld\n",
                                 funs[j].str_type, dumb_functions[id].str_id, total_time.tv_sec, total_time.tv_nsec);
 
-            if (line_len == sizeof(buf_str)) {
+            if (line_len <= 0) {
+                fprintf(stderr, "Nothing has been written to buf_str: %s\n", __FILE__);
+            } if (line_len == sizeof(buf_str)) {
                 fprintf(stderr, "Output may be truncated !\n");
             }
 
+            line_len_ = line_len;
             tot_written = fwrite(buf_str, 1, line_len, save_result);
-            assert(tot_written == line_len);
+            if (tot_written != line_len_) {
+                return -1;
+            }
         }
     }
 
@@ -171,7 +177,10 @@ int run_functions(struct run_config *run_config) {
     }
 
     nb_written = fwrite(csv_hdr, 1, sizeof(csv_hdr) - 1, csv_results);
-    assert(nb_written == sizeof(csv_hdr) - 1);
+    if(nb_written != sizeof(csv_hdr) - 1) {
+        fprintf(stderr, "fwrite\n");
+        goto err;
+    }
 
     if (run_config->fn_to_run == dumb_fn_id_max) {
         for (curr_fn = dumb_fn_no_insts; curr_fn < dumb_fn_id_max; curr_fn++) {

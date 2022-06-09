@@ -139,7 +139,10 @@ static inline int get_real_path(const char *base_dir, const char *decoded_path, 
     char tmp_path[PATH_MAX];
     const char *working_path;
 
-    assert(out_len >= PATH_MAX);
+    if (out_len < PATH_MAX) {
+        fprintf(stderr, "Out len parameter must be >= PATH_MAX\n");
+        return -1;
+    }
 
     if (!absolute_path(decoded_path)) {
         if (join_path(base_dir, decoded_path, tmp_path, sizeof(tmp_path)) < 0) {
@@ -754,7 +757,8 @@ int load_extension_code(const char *path, const char *extension_code_dir,
         goto end;
     }
 
-    strncpy(mate_manifest_base_dir, path, PATH_MAX);
+    strncpy(mate_manifest_base_dir, path, PATH_MAX-1);
+    mate_manifest_base_dir[PATH_MAX-1] = 0;
     base_dir_meta_manifest = dirname(mate_manifest_base_dir);
 
     while (fgets(line, sizeof(line), meta_manifest)) {

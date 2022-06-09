@@ -12,7 +12,7 @@
 #include "fake_api/fake_api.h"
 #endif
 
-uint64_t loop_1000_2api(exec_info_t *info) {
+uint64_t loop_1000_2api(exec_info_t *info UNUSED) {
     unsigned int i;
     uint64_t my_mod = 0;
     unsigned int nimp;
