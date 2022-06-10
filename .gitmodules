@@ -1,6 +1,6 @@
-[submodule "context-mtsafe"]
+[submodule "ubpf_vm"]
 	path = ubpf_vm
-	url = https://bitbucket.org/twirtgen/ubpf.git
+	url = git@bitbucket.org:twirtgen/ubpf.git
 	branch = context-mtsafe
 [submodule "memalloc"]
 	path = memalloc
