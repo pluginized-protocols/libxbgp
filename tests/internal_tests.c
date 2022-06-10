@@ -162,12 +162,13 @@ static inline void id_file(char *buf, size_t len) {
 
 static void test_fetch_file_api_fun(void) {
     uint8_t one_byte = 1;
-    int i, err;
+    ssize_t i;
+    ssize_t err;
     int fd_tmp, fd_urandom, fd_fetch;
     char name_tmp[] = "/tmp/test_ubpfXXXXXX";
     char template2[] = "/tmp/test_ubpfXXXXXX";
     char id_ssh_file[PATH_MAX];
-    const char *urandom = "/dev/urandom";
+    static const char *urandom = "/dev/urandom";
     char *dest_buf, *fetch_buf;
     char *name_fetch;
     int length_file = 1048576; // (1MB)
@@ -224,7 +225,9 @@ static void test_fetch_file_api_fun(void) {
     close(fd_urandom);
 
     memset(url_rsync, 0, sizeof(url_rsync));
-    snprintf(url_rsync, PATH_MAX, "rsync://localhost%s", name_tmp);
+    if (snprintf(url_rsync, PATH_MAX, "rsync://localhost%s", name_tmp) >= (int) PATH_MAX) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     id_file(id_ssh_file, sizeof(id_ssh_file));
 
@@ -237,10 +240,14 @@ static void test_fetch_file_api_fun(void) {
     }
 
     // test if the two files are the same
-    // fd_fetch = open(name_fetch, O_RDONLY);
-    // if (fd_fetch < 0) {
-    //     CU_FAIL_FATAL("Unable to open fetched file");
-    // }
+    // reopen the file (resync changes made by "rsync" child process)
+    if (close(fd_fetch) != 0) {
+        CU_FAIL_FATAL("Close failed");
+    }
+    fd_fetch = open(name_fetch, O_RDONLY);
+    if (fd_fetch < 0) {
+        CU_FAIL_FATAL("Unable to open fetched file");
+    }
 
     // mmap because its simpler lol
     fetch_buf = mmap(NULL, length_file, PROT_READ, MAP_PRIVATE, fd_fetch, 0);
