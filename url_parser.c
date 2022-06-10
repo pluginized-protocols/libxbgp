@@ -67,6 +67,9 @@ struct parsed_url *parse_url(const char *url) {
     }
     /* Get the scheme length */
     len = tmpstr - curstr;
+    if (len <= 0) {
+        return NULL;
+    }
     /* Check restrictions */
     for (i = 0; i < len; i++) {
         if (!_is_scheme_char(curstr[i])) {
@@ -128,6 +131,9 @@ struct parsed_url *parse_url(const char *url) {
             tmpstr++;
         }
         len = tmpstr - curstr;
+        if (len <= 0) {
+            return NULL;
+        }
         purl->username = malloc(sizeof(char) * (len + 1));
         if (NULL == purl->username) {
             parsed_url_free(purl);

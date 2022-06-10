@@ -29,6 +29,7 @@ uint64_t loop_1000_1api(exec_info_t *info UNUSED) {
         return -1;
     }
 
+    nimp = 0;
     bizarre = nimp + 1;
     for (i = 1; i <= 1000; i++) {
         nimp += (nimp - bizarre + (42u * i));
