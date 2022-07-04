@@ -1,4 +1,4 @@
-[submodule "context-mtsafe"]
+[submodule "ubpf_vm"]
 	path = ubpf_vm
 	url = https://github.com/pluginized-protocols/xbgp_ubpf_vm.git
 	branch = master

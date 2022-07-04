@@ -33,15 +33,12 @@ static int setup(void) {
         perror("fork");
         return -1;
     } else if (tcp_server == 0) {
-        char *const argv[] = {
-                "exporter_example.py",
-                NULL,
-        };
+        static const char *program_name = "exporter_example.py";
         memset(final_path, 0, sizeof(final_path));
         snprintf(final_path, sizeof(final_path), "%s/exporter_example.py", bytecode_dir);
 
         devnull_all_stdstream();
-        if (execve(final_path, argv, NULL) == -1) {
+        if (execle(final_path, program_name, (char *) NULL, NULL) == -1) {
             msg_log(L_ERR "Execve failed %s\n", strerror(errno));
             exit(1);
         }

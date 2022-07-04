@@ -1087,16 +1087,13 @@ int fetch_file(context_t *ctx UNUSED, char *url, const char *dest) {
     if (pid == -1) { // unable to fork
         perror("Unable to fork");
     } else if (pid == 0) { // in the child
-        const char *const argv[] = {
-                "rsync", "--archive", "-hh",
-                "--partial", "--modify-window=2",
-                "-e", ssh_info,
-                src, dest,
-                NULL
-        };
         close(STDERR_FILENO);
         close(STDIN_FILENO);
-        if (execve("/usr/bin/rsync", argv, NULL) == -1) { exit(EXIT_FAILURE); }
+        if (execle("/usr/bin/rsync",
+                   "rsync", "--archive", "-hh",
+                   "--partial", "--modify-window=2",
+                   "-e", ssh_info,
+                   src, dest, (char *)0, NULL) == -1) { exit(EXIT_FAILURE); }
     }
 
     ret = waitpid(pid, &wstatus, 0);

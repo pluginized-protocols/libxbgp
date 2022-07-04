@@ -140,11 +140,12 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
                        const char *vm_name, size_t vm_name_len, proto_ext_fun_t *api_proto, int permission,
                        int add_memcheck_insts, mem_type_t memory_mgt, int use_libffi) {
 
-    const uint8_t *bytecode;
+    char *bytecode;
     size_t bytecode_len;
     vm_container_t *vm = NULL;
     plugin_t *p;
     insertion_point_t *point;
+    int should_free = 0;
 
     /* 0. Read ELF/Obj file */
 
@@ -152,8 +153,9 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
     if (memcmp(obj_path_code, ELFMAG, SELFMAG) != 0) {
         // ELF MAGIC does not match, this is file based
         bytecode = readfile(obj_path_code, MAX_SIZE_PLUGIN, &bytecode_len);
+        should_free = 1;
     } else {
-        bytecode = obj_path_code;
+        bytecode = NULL;
         bytecode_len = len_obj_path_code;
     }
 
@@ -186,9 +188,11 @@ int add_extension_code(const char *plugin_name, size_t plugin_name_len, uint64_t
         vm = NULL;
     }
 
-    vm = new_vm(type_anchor, seq_anchor, point, jit, vm_name, vm_name_len, p, bytecode, bytecode_len, api_proto,
+    vm = new_vm(type_anchor, seq_anchor, point, jit, vm_name, vm_name_len, p,
+                bytecode ? bytecode : obj_path_code,
+                bytecode_len, api_proto,
                 on_delete_vm, add_memcheck_insts, use_libffi);
-    free(bytecode);
+    if (should_free) free(bytecode);
     if (!vm) goto fail;
     if (register_vm(&master, vm) != 0) goto fail;
 
@@ -437,7 +441,7 @@ void *readfile(const char *path, size_t maxlen, size_t *len) {
 
     uint8_t *data;
     uint8_t *src_data;
-    char absolute_path[PATH_MAX];
+    char absolute_path[8192];
     const char *sel_path;
     unsigned long size;
 
@@ -447,7 +451,10 @@ void *readfile(const char *path, size_t maxlen, size_t *len) {
         return NULL;
     } else {
         memset(absolute_path, 0, PATH_MAX * sizeof(char));
-        realpath(path, absolute_path);
+        if (realpath(path, absolute_path) != absolute_path) {
+            fprintf(stderr, "Realpath error\n");
+            return NULL;
+        };
         sel_path = absolute_path;
         file = fopen(sel_path, "r");
     }

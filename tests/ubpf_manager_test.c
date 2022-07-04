@@ -29,7 +29,7 @@ static int replace_var = -1;
 
 static int plugin_set_post = 0;
 
-static char plugin_folder_path[PATH_MAX - NAME_MAX - 1];
+static char plugin_folder_path[8192];
 
 static inline int check(uint64_t l UNUSED) {
     return 1;
@@ -68,6 +68,7 @@ static inline void my_function_void(int *a) {
     };
     CALL_ALL(1, args, check, NULL, {
         *a = 42;
+        RETURN();
     });
 }
 
@@ -174,9 +175,13 @@ void test_add_plugin(void) {
     int super_arg = 40;
     uint64_t ret_val = 0;
 
-    char path_pluglet[PATH_MAX];
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 19, "%s/%s", plugin_folder_path, "simple_test_api.o");
+    char path_pluglet[8192];
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "simple_test_api.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     entry_arg_t args[2] = {
             {.arg = &super_arg, .len = sizeof(int), .kind = kind_primitive, .type = 42},
@@ -215,8 +220,11 @@ static void test_read_json_add_plugins(void) {
             entry_arg_null
     };
 
-    char path_json[PATH_MAX];
-    snprintf(path_json, PATH_MAX - 14, "%s/meta_manifest.conf", plugin_folder_path);
+    char path_json[8192];
+    if (snprintf(path_json, sizeof(path_json), "%s/meta_manifest.conf",
+                 plugin_folder_path) >= (int) sizeof(path_json)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
     int status;
 
     status = load_extension_code(path_json, plugin_folder_path, funcs, plugins);
@@ -249,9 +257,12 @@ static void test_macro_function(void) {
 
     int return_value, status;
 
-    char path_pluglet[PATH_MAX];
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 20, "%s/%s", plugin_folder_path, "replace_fun_macro.o");
+    char path_pluglet[8192];
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+             plugin_folder_path, "replace_fun_macro.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output truncated")
+    }
 
     // should not execute any plugins
     return_value = my_very_super_function_to_pluginize(1, 2, 3, 4);
@@ -272,10 +283,13 @@ static void test_macro_function(void) {
 
 static void test_macro_post_return_value(void) {
     int return_value, status;
-    char path_pluglet[PATH_MAX];
+    char path_pluglet[8192];
 
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 20, "%s/%s", plugin_folder_path, "post_fun_macro.o");
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "post_fun_macro.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 3, "macro_test", 10,
@@ -299,8 +313,11 @@ static void macro_void_example_with_set(void) {
     char path_pluglet[PATH_MAX];
     int my_arg_to_be_modified = 2142;
 
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 23, "%s/%s", plugin_folder_path, "macro_void_test.o");
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "macro_void_test.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     my_function_void(&my_arg_to_be_modified);
     XCU_ASSERT_EQUAL(my_arg_to_be_modified, 42);
@@ -314,8 +331,11 @@ static void macro_void_example_with_set(void) {
                                 "super_vm", 8, funcs, 0, 1, MICHELFRA_MEM, 0);
     CU_ASSERT_EQUAL(status, 0);
 
-    memset(path_pluglet, 0, PATH_MAX * sizeof(char));
-    snprintf(path_pluglet, PATH_MAX - 25, "%s/%s", plugin_folder_path, "macro_void_test_post.o");
+    memset(path_pluglet, 0, sizeof(path_pluglet));
+    if (snprintf(path_pluglet, sizeof(path_pluglet), "%s/%s",
+                 plugin_folder_path, "macro_void_test_post.o") >= (int) sizeof(path_pluglet)) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     status = add_extension_code("my_plugin", 9, 64,
                                 0, 1, "add_two_insert_ip",
@@ -338,7 +358,10 @@ CU_ErrorCode ubpf_manager_tests(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
     memset(plugin_folder_path, 0, sizeof(plugin_folder_path));
-    realpath(plugin_folder, plugin_folder_path);
+    if (realpath(plugin_folder, plugin_folder_path) != plugin_folder_path) {
+        CU_cleanup_registry();
+        return CU_get_error();
+    }
     // ...
     pSuite = CU_add_suite("ubpf_manager_test_suite", setup, teardown);
     if (NULL == pSuite) {

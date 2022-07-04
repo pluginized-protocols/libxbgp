@@ -176,7 +176,10 @@ CU_ErrorCode next_replace_tests(const char *plugin_folder) {
     // ...
     CU_pSuite pSuite = NULL;
     memset(plugin_folder_path, 0, PATH_MAX * sizeof(char));
-    realpath(plugin_folder, plugin_folder_path);
+    if (realpath(plugin_folder, plugin_folder_path) != plugin_folder_path) {
+        CU_cleanup_registry();
+        return CU_get_error();
+    }
     // ...
     pSuite = CU_add_suite("next_replace_tests", setup, teardown);
     if (NULL == pSuite) {

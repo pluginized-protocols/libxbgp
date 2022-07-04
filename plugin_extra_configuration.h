@@ -15,7 +15,8 @@
 #define MAX_STR_BUF_PFX 45
 
 enum type_val {
-    conf_val_type_int = 0,
+    conf_val_type_undef = 0,
+    conf_val_type_int,
     conf_val_type_double,
     conf_val_type_ipv4,
     conf_val_type_ipv6,
@@ -86,7 +87,7 @@ struct conf_val *get_extra_from_key(const char *key);
 
 int get_global_info(const char *key, struct global_info *info);
 
-int get_info_lst_idx(struct global_info *info, unsigned int array_idx, struct global_info *value);
+int get_info_lst_idx(const struct global_info *info, unsigned int array_idx, struct global_info *value);
 
 int get_info_dict(struct global_info *info, const char *key, struct global_info *value);
 

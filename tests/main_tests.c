@@ -26,6 +26,7 @@
 #include "runtime_memcheck_test.h"
 #include "job_plugins_tests.h"
 #include "ffi_closure_tests.h"
+#include "test_rust_plugins.h"
 
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 
@@ -143,6 +144,7 @@ int main(int argc, char *argv[]) {
         (test_socket_api(plugin_folder_path) != CUE_SUCCESS) ||
         (mem_pool_tests() != CUE_SUCCESS) ||
         (ubpf_manager_tests(plugin_folder_path) != CUE_SUCCESS) ||
+        (rust_plugins_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (job_plugins_tests(plugin_folder_path) != CUE_SUCCESS) ||
         (runtime_memcheck_test_suite(plugin_folder_path) != CUE_SUCCESS) ||
         (next_replace_tests(plugin_folder_path) != CUE_SUCCESS) ||

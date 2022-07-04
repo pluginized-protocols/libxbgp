@@ -124,13 +124,17 @@ static void test_my_snprintf_ptr(void) {
 static char *get_dir_path(char *dir, size_t len) {
     char this_file_path[PATH_MAX];
     char real_path_this_file[PATH_MAX];
-    memcpy(this_file_path, __FILE__, sizeof(this_file_path));
+    strncpy(this_file_path, __FILE__, sizeof(this_file_path)-1);
+    this_file_path[PATH_MAX-1] = 0;
 
-    realpath(this_file_path, real_path_this_file);
+    if (realpath(this_file_path, real_path_this_file) != real_path_this_file) {
+        return NULL;
+    };
 
     memset(dir, 0, len);
 
-    strncpy(dir, dirname(real_path_this_file), len);
+    strncpy(dir, dirname(real_path_this_file), len-1);
+    dir[len-1] = 0;
 
     return dir;
 }
@@ -146,19 +150,25 @@ static inline void id_file(char *buf, size_t len) {
 
     get_dir_path(tmp_dir_buf, sizeof(tmp_dir_buf));
 
-    snprintf(buf, len, "%s/id_test", tmp_dir_buf);
+    if (snprintf(buf, len, "%s/id_test", tmp_dir_buf) >= (int) len) {
+        fprintf(stderr, "Output is truncated! %s", __FUNCTION__ );
+        return;
+    }
 
-    realpath(tmp_buf, buf);
+    if (realpath(tmp_buf, buf)) {
+        fprintf(stderr, "realpath failed\n");
+    }
 }
 
 static void test_fetch_file_api_fun(void) {
     uint8_t one_byte = 1;
-    int i, err;
+    ssize_t i;
+    ssize_t err;
     int fd_tmp, fd_urandom, fd_fetch;
     char name_tmp[] = "/tmp/test_ubpfXXXXXX";
     char template2[] = "/tmp/test_ubpfXXXXXX";
     char id_ssh_file[PATH_MAX];
-    const char *urandom = "/dev/urandom";
+    static const char *urandom = "/dev/urandom";
     char *dest_buf, *fetch_buf;
     char *name_fetch;
     int length_file = 1048576; // (1MB)
@@ -177,13 +187,20 @@ static void test_fetch_file_api_fun(void) {
         CU_FAIL_FATAL("Unable to create tmpfile");
     }
 
-    name_fetch = mktemp(template2);
+    if ((fd_fetch = mkstemp(template2)) == -1) {
+        perror("mkstemp");
+        CU_FAIL_FATAL("Unable to create tmpfile");
+    } else {
+        name_fetch = template2;
+    }
 
     // lseek to the end of the file
     if (lseek(fd_tmp, length_file - 1, SEEK_SET) == -1) {
         CU_FAIL_FATAL("Unable to fseek");
     }
-    write(fd_tmp, &one_byte, sizeof(one_byte));
+    if (write(fd_tmp, &one_byte, sizeof(one_byte)) != sizeof(one_byte)) {
+        CU_FAIL_FATAL("Unable to write");
+    }
     // and lseek to the beginning
     if (lseek(fd_tmp, 0, SEEK_SET) == -1) {
         CU_FAIL_FATAL("Unable to fseek");
@@ -208,7 +225,9 @@ static void test_fetch_file_api_fun(void) {
     close(fd_urandom);
 
     memset(url_rsync, 0, sizeof(url_rsync));
-    snprintf(url_rsync, PATH_MAX, "rsync://localhost%s", name_tmp);
+    if (snprintf(url_rsync, PATH_MAX, "rsync://localhost%s", name_tmp) >= (int) PATH_MAX) {
+        CU_FAIL_FATAL("Output truncated");
+    }
 
     id_file(id_ssh_file, sizeof(id_ssh_file));
 
@@ -221,6 +240,10 @@ static void test_fetch_file_api_fun(void) {
     }
 
     // test if the two files are the same
+    // reopen the file (resync changes made by "rsync" child process)
+    if (close(fd_fetch) != 0) {
+        CU_FAIL_FATAL("Close failed");
+    }
     fd_fetch = open(name_fetch, O_RDONLY);
     if (fd_fetch < 0) {
         CU_FAIL_FATAL("Unable to open fetched file");

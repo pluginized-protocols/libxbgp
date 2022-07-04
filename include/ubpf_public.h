@@ -100,6 +100,7 @@ do {                                                                            
 } while(0)
 
 #define RETURN_VOID() do { \
+    (void) MAP_RET_TO_VM;\
     run_post_functions(INSERTION_POINT, &FULL_ARGS, NULL, 0); \
     return;                                                   \
 } while(0)

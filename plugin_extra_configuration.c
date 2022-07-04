@@ -48,6 +48,7 @@ struct json_conf_parse {
 #define null_json_conf_parse {.val_id = 0, .str = NULL, .len_str = 0, .parser = NULL, .delete = NULL, .copy = NULL}
 
 struct json_conf_parse val_parsers[] = {
+        [conf_val_type_undef] = null_json_conf_parse,
         [conf_val_type_int] = {.val_id = conf_val_type_int, .str = "int", .len_str = 3, .parser = extra_conf_parse_int, .delete = extra_conf_parse_delete_int, .copy = extra_conf_copy_int},
         [conf_val_type_double] = {.val_id = conf_val_type_double, .str = "float", .len_str = 5, .parser = extra_conf_parse_float, .delete = extra_conf_parse_delete_float, .copy = extra_conf_copy_float},
         [conf_val_type_ipv4] = {.val_id = conf_val_type_ipv4, .str = "ipv4", .len_str = 4, .parser = extra_conf_parse_ip4, .delete = extra_conf_parse_delete_ip4, .copy = extra_conf_copy_ip4},
@@ -132,7 +133,10 @@ int get_global_info(const char *key, struct global_info *info) {
     struct conf_arg *the_arg;
     the_arg = get_conf_arg_entry(&global_conf, search_conf_arg, key);
 
-    if (!the_arg) return -1;
+    if (!the_arg) {
+        info->type = conf_val_type_undef;
+        return -1;
+    }
 
     info->type = the_arg->val->type;
     info->hidden_ptr = the_arg->val;
@@ -140,7 +144,7 @@ int get_global_info(const char *key, struct global_info *info) {
     return 0;
 }
 
-int get_info_lst_idx(struct global_info *info, unsigned int array_idx, struct global_info *value) {
+int get_info_lst_idx(const struct global_info *info, unsigned int array_idx, struct global_info *value) {
 
     struct conf_val *val;
 
@@ -159,13 +163,21 @@ int get_info_dict(struct global_info *info, const char *key, struct global_info 
 
     struct conf_val *val;
     struct conf_arg *entry;
-    if (info->type != conf_val_type_dict) return -1;
+    if (info->type != conf_val_type_dict) {
+        value->type = conf_val_type_undef;
+        value->hidden_ptr = NULL;
+        return -1;
+    }
 
     val = info->hidden_ptr;
 
     entry = get_conf_arg_entry(&val->val.dict, search_conf_arg, key);
 
-    if (!entry) return -1;
+    if (!entry) {
+        value->type = conf_val_type_undef;
+        value->hidden_ptr = NULL;
+        return -1;
+    }
 
     value->type = entry->val->type;
     value->hidden_ptr = entry->val;
@@ -185,7 +197,7 @@ int extra_info_copy_data(struct global_info *info, void *buf, size_t len) {
 
 static int parse_current_info(const char *type, size_t len, json_object *value, struct conf_val *val) {
     int i;
-    for (i = 0; i < conf_val_type_max; i++) {
+    for (i = conf_val_type_undef + 1; i < conf_val_type_max; i++) {
         if (strncmp(type, val_parsers[i].str, MAX(val_parsers[i].len_str, len)) == 0) {
             if (val_parsers[i].parser(value, val) != 0) return -1;
             return 0;
@@ -197,7 +209,7 @@ static int parse_current_info(const char *type, size_t len, json_object *value, 
 
 inline int delete_current_info(struct conf_val *val) {
 
-    if (0 > val->type || val->type >= conf_val_type_max) return -1;
+    if (0 >= val->type || val->type >= conf_val_type_max) return -1;
 
     return val_parsers[val->type].delete(val);
 

@@ -1,5 +1,7 @@
 #ifndef _LINUX_JHASH_H
 #define _LINUX_JHASH_H
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 
 /* jhash.h: Jenkins hash support.
  *
@@ -183,5 +185,5 @@ static inline uint32_t jhash_1word(uint32_t a, uint32_t initval)
 {
     return __jhash_nwords(a, 0, 0, initval + JHASH_INITVAL + (1 << 2));
 }
-
+#pragma GCC diagnostic pop
 #endif /* _LINUX_JHASH_H */

@@ -46,12 +46,14 @@ static void test_single_value_u16(void) {
     mp = new_mempool();
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
 
+    memset(&data, 0, sizeof(data));
 
     u16bval = 63311;
     add_mempool(mp, TYPE_U16, NULL, sizeof(uint16_t), &u16bval, 0);
 
     get_mempool_data(mp, TYPE_U16, &data);
 
+    CU_ASSERT_PTR_NOT_NULL_FATAL(data.data);
     CU_ASSERT_EQUAL(*(uint16_t *) data.data, u16bval);
 
     delete_mempool(mp);
@@ -65,6 +67,7 @@ static void test_ptr_value(void) {
     mem_pool *mp;
     mp = new_mempool();
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
+    memset(&data, 0, sizeof(data));
 
     ts.a = 4937063535816211458;
     ts.b = 74391594270028887;
@@ -75,6 +78,8 @@ static void test_ptr_value(void) {
     get_mempool_data(mp, TYPE_SUPER_STRUCT_PTR, &data);
 
     retrieved = data.data;
+
+    CU_ASSERT_PTR_NOT_NULL_FATAL(data.data);
 
     CU_ASSERT_EQUAL(retrieved->a, ts.a);
     CU_ASSERT_EQUAL(retrieved->b, ts.b);
@@ -159,6 +164,7 @@ static void test_raw_pointer(void) {
     mp = new_mempool();
     CU_ASSERT_PTR_NOT_NULL_FATAL(mp);
     char *my_string = calloc(18, sizeof(char));
+    memset(&data, 0, sizeof(data));
 
     strncpy(my_string, string, 18);
     my_string[17] = 0;
@@ -167,6 +173,8 @@ static void test_raw_pointer(void) {
 
     get_mempool_data(mp, TYPE_RAW, &data);
     rtv = data.data;
+
+    CU_ASSERT_PTR_NOT_NULL_FATAL(rtv);
 
     CU_ASSERT_NSTRING_EQUAL(rtv, string, 18);
     delete_mempool(mp);

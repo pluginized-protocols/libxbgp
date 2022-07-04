@@ -9,7 +9,7 @@
 #include "context_function.h"
 
 
-char plugin_dir[PATH_MAX - NAME_MAX];
+char plugin_dir[8192];
 
 
 static uint64_t perm_none(context_t *ctx UNUSED) {
@@ -149,7 +149,7 @@ static int teardown(void) {
 
 
 static void permissions_test(void) {
-    char path[PATH_MAX];
+    char path[8192];
     int status;
 
     struct {
@@ -180,7 +180,9 @@ static void permissions_test(void) {
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
         memset(path, 0, sizeof(path));
-        snprintf(path, sizeof(path), "%s/permissions/%s", plugin_dir, tests[i].name);
+        if (snprintf(path, sizeof(path), "%s/permissions/%s", plugin_dir, tests[i].name) >= (int) sizeof(path)) {
+            CU_FAIL_FATAL("Output truncated");
+        }
 
         /* test load */
         status = add_extension_code("perm_test", 14, 8,
@@ -204,7 +206,10 @@ static void permissions_test(void) {
 CU_ErrorCode test_permissions_plugins(const char *plugin_folder) {
     CU_pSuite pSuite = NULL;
     memset(plugin_dir, 0, sizeof(plugin_dir));
-    realpath(plugin_folder, plugin_dir);
+    if (realpath(plugin_folder, plugin_dir) != plugin_dir) {
+        CU_cleanup_registry();
+        return CU_get_error();
+    };
 
 
     pSuite = CU_add_suite("ubpf_manager_test_suite", setup, teardown);

@@ -6,6 +6,6 @@
 #include  "../../../xbgp_deps/xbgp_compliant_api/xbgp_plugin_api.h"
 #include "../defs_type.h"
 
-uint64_t direct_return(exec_info_t *info) {
+uint64_t direct_return(exec_info_t *info UNUSED) {
     return EXIT_BPF_SUCCESS;
 }

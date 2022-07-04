@@ -57,7 +57,7 @@ typedef struct vm_container {
  */
 vm_container_t *new_vm(anchor_t anchor, int seq, insertion_point_t *point, uint8_t jit,
                        const char *name, size_t name_len, plugin_t *p,
-                       const uint8_t *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
+                       const void *obj_data, size_t obj_len, proto_ext_fun_t *api_proto,
                        void (*on_delete)(void *), int add_memcheck_insts, int use_libffi);
 
 /**
