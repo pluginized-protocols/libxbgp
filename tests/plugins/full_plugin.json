@@ -3,6 +3,7 @@
   "name": "full_plugin",
   "extra_mem": 64,
   "shared_mem": 64,
+  "memory_mgmt": "michelfra",
   "obj_code_list": {
     "pre_simple_ten": {
       "obj": "pre_simple_ten.o",
@@ -14,17 +15,14 @@
     },
     "pre_simple_zero": {
       "obj": "pre_simple_zero.o",
-      "memory_mgmt": "michelfra",
       "use_libffi": true
     },
     "replace_simple": {
       "obj": "replace_simple.o",
-      "memory_mgmt": "bump",
       "use_libffi": false
     },
     "post_simple": {
       "obj": "post_simple.o",
-      "memory_mgmt": "michelfra",
       "use_libffi": true
     }
   },
