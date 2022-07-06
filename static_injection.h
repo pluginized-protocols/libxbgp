@@ -40,7 +40,6 @@ struct obj_code_list_parser {
 
     int jit;
     int permissions;
-    int memory_mgt;
     int add_memchecks;
     int use_libffi;
 
@@ -54,6 +53,7 @@ struct obj_code_list_parser {
 struct global_opts_parser {
     int extra_mem;
     int shared_mem;
+    int memory_mgt;
     int jit_all;
     char pluglet_dir[PATH_MAX];
     size_t plugin_name_len;
