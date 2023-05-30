@@ -1,0 +1,111 @@
+FROM alpine:3.18.0
+
+RUN apk update && apk upgrade --available &&\
+    apk add git cmake patch build-base pkgconf \
+        json-c-dev libffi-dev cunit-dev bash llvm16 \
+        clang16 bsd-compat-headers autoconf automake \
+        autoconf-archive libtool bison c-ares-dev \
+        elfutils-dev flex libcap-dev pcre-dev \
+        linux-headers net-snmp-dev py3-sphinx python3-dev \
+        readline-dev rtrlib-dev texinfo iproute2
+
+# Build libxbgp
+RUN git clone https://github.com/pluginized-protocols/libxbgp /opt/libxbgp && \
+    cd /opt/libxbgp && \
+    git submodule update --init --recursive && \
+    patch -p0 < Make_dev_zero_fd_extern_in_header.patch && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j$(nproc)
+
+
+# Build libyang v1
+RUN git clone https://github.com/CESNET/libyang.git /opt/libyang && \
+    cd /opt/libyang && \
+    git checkout v1.0.240 && \
+    mkdir build && \
+    cd build && \
+    cmake -DENABLE_LYD_PRIV=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+      -D CMAKE_BUILD_TYPE:String="Release" .. && \
+    make -j$(nproc) && \
+    make install
+    
+
+# Pre-Build xFRR
+RUN addgroup -S frr 2>/dev/null && \
+    addgroup -S frrvty 2>/dev/null && \
+    adduser -S -D -H -h /var/run/frr -s /sbin/nologin -G frr -g frr frr 2>/dev/null && \
+    adduser frr frrvty 2>/dev/null
+
+
+# Build xFRR
+RUN git clone https://github.com/pluginized-protocols/xbgp_frr.git /opt/xfrr && \
+    cd /opt/xfrr && \
+    git checkout stable/7.3-xbgp && \
+    cd m4 && \
+    sed -i 's/if test x"${py_ver}" == x"3.8" || test x"{py_ver}" == x"3.9"; then/minor_ver=${py_ver#*\.}\n      if test $((minor_ver)) -gt 7; then/g' ax_python.m4 && \
+    cd .. && \
+    ./bootstrap.sh && \
+    ./configure \
+      --prefix=/usr \
+      --localstatedir=/run/frr \
+      --sbindir=/usr/lib/frr \
+      --sysconfdir=/etc/frr \
+      --libdir=/usr/lib/frr \
+      --with-moduledir=/usr/lib/frr/modules \
+      LIBTOOLFLAGS="-rpath /usr/lib/frr" \
+      --disable-dependency-tracking \
+      --enable-rpki \
+      --with-libpam \
+      --enable-snmp \
+      --enable-fpm \
+      --disable-protobuf \
+      --disable-zeromq \
+      --enable-ospfapi \
+      --enable-bgp-vnc \
+      --enable-multipath=256 \
+      --enable-user=frr \
+      --enable-group=frr \
+      --enable-vty-group=frrvty \
+      --enable-configfile-mask=0640 \
+      --enable-logfile-mask=0640 \
+      --disable-doc \
+      UBPF_LIB=/opt/libxbgp/build \
+      UBPF_INC=/opt/libxbgp/include \
+      XBGP_INC=/opt/libxbgp/xbgp_deps && \
+    make -j$(nproc) && \
+    make install && \
+    mkdir /etc/frr/plugins && \
+    chown -R frr:frrvty /etc/frr && \
+    mkdir /run/frr && \
+    chown frr:frrvty /run/frr
+
+# Add xBGP plugin repos && example with hello world plugin.
+#
+# Each folder in the repository represents one or more
+# plugins. Here are the file types and their purposes:
+#
+##    *.meta: This file is a manifest used by FRR
+##            to load the plugins.
+##  *.plugin: These files provide descriptions of each plugin,
+##            including instructions on how to load them in the
+##            xBGP VM, details about memory allocation, etc.
+##       *.o: These are actual ELF files that contain eBPF
+##            bytecode. The *.o files are referenced in the
+##            *.plugin files.
+##
+###  In short, the structure of the repository is as follows:
+###  Each folder contains one or more plugins. The .meta file(s)
+###  describe the plugins to be loaded inside the BGP implemenation,
+###  the .plugin file(s), provide further information and reference
+###  the corresponding .o file(s), which contain the actual eBPF bytecode.
+RUN git clone https://github.com/pluginized-protocols/xbgp_plugins.git /opt/xbgp_plugins && \
+    cd /opt/xbgp_plugins && \
+    make && \
+    cp hello_world/0_hello_world.meta /etc/frr/plugins/manifest.conf && \
+    cp hello_world/*.plugin /etc/frr/plugins && \
+    cp hello_world/*.o /etc/frr/plugins && \
+    chown -R frr:frr /etc/frr/plugins
+    
+    
