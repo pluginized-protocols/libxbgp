@@ -5,6 +5,7 @@
 #ifndef UBPF_TOOLS_EVT_PLUGINS_H
 #define UBPF_TOOLS_EVT_PLUGINS_H
 
+#include <time.h>
 #include <stddef.h>
 #include "bpf_plugin.h"
 

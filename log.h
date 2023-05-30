@@ -5,6 +5,7 @@
 #ifndef UBPF_TOOLS_LOG_H
 #define UBPF_TOOLS_LOG_H
 
+#include <sys/types.h>
 #include <stdint.h>
 #include <stdio.h>
 
